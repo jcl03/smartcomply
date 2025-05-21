@@ -24,7 +24,12 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      {/* 
+        Add suppressHydrationWarning to prevent errors from browser extensions
+        that add attributes to the body tag
+      */}
       <body
+        suppressHydrationWarning
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         {children}
