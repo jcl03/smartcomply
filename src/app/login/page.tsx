@@ -1,30 +1,53 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { createClient } from '@/lib/supabase/supabaseClient';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { handleLoginController, verifyResetTokenController } from '@/controllers/authController';
 
+/**
+ * Login Page (View Component)
+ * 
+ * Traditional MVC View:
+ * - Renders UI
+ * - Captures user input
+ * - Calls controller methods
+ * - Displays results to the user
+ * - Does NOT contain business logic
+ */
 export default function LoginPage() {
+  // View state (UI-related state only)
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const supabase = createClient();
   const router = useRouter();
 
+  // Check session on component mount
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) router.replace('/dashboard');
-    });
-  }, [router, supabase]);
+    const checkSession = async () => {
+      const { isValid } = await verifyResetTokenController();
+      if (isValid) {
+        router.replace('/dashboard');
+      }
+    };
+    
+    checkSession();
+  }, [router]);
 
+  // Handle form submission - delegates to controller
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Update view state
     setLoading(true);
     setError(null);
-    const { error: err } = await supabase.auth.signInWithPassword({ email, password });
+    
+    // Call controller (business logic) and get result
+    const { error: err } = await handleLoginController(email, password);
+    
+    // Update view based on controller response
     setLoading(false);
     if (err) setError(err.message);
     else router.push('/dashboard');

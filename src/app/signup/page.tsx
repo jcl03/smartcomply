@@ -1,22 +1,38 @@
 'use client';
 
 import { useState } from 'react';
-import { createClient } from '@/lib/supabase/supabaseClient';
 import { handleSignupController } from '@/controllers/authController';
 
+/**
+ * Signup Page (View Component)
+ * 
+ * Traditional MVC View:
+ * - Renders UI
+ * - Captures user input
+ * - Calls controller methods
+ * - Displays results to the user
+ * - Does NOT contain business logic
+ */
 export default function SignupPage() {
+  // View state (UI-related state only)
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const supabase = createClient();
 
+  // Handle form submission - delegates to controller
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Update view state
     setLoading(true);
     setError(null);
+    
+    // Call controller (business logic) and get result
     const { error: err } = await handleSignupController(email, password);
+    
+    // Update view based on controller response
     setLoading(false);
     if (err) setError(err.message);
     else setMessage('Signup successful! Check your email for confirmation.');

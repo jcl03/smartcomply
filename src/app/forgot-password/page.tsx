@@ -17,12 +17,17 @@ export default function ForgotPasswordPage() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-
   const handleReset = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Update view state
     setLoading(true);
     setError(null);
+    
+    // Call controller (business logic) and get result
     const { error: err } = await handlePasswordResetController(email);
+    
+    // Update view based on controller response
     setLoading(false);
     if (err) {
       setError(err.message);

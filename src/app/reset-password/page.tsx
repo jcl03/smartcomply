@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { verifyResetTokenController } from '@/controllers/authController';
+import { verifyResetTokenController, updatePasswordController } from '@/controllers/authController';
 
 /**
  * Reset Password Page Component
@@ -41,10 +41,10 @@ export default function ResetPassword() {
       setLoading(true);
       try {
         // Call the controller function
-        const { data, error } = await verifyResetTokenController();
+        const { isValid, error } = await verifyResetTokenController();
         
         // Update view state based on controller response
-        if (data?.session) {
+        if (isValid) {
           setIsValidToken(true);
         } else {
           setError('This password reset link is invalid or has expired. Please request a new one.');
@@ -60,30 +60,24 @@ export default function ResetPassword() {
     };
     
     verifyToken();
-  }, [code, router]);  const handleResetPassword = async (e: React.FormEvent) => {
+  }, [code, router]);
+
+  const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // View-level validation
-    if (password !== confirmPassword) {
-      setError('Passwords do not match');
-      return;
-    }
-    
+    // Basic form validation only (not business logic)
     if (!code || !isValidToken) {
       setError('Invalid password reset link. Please request a new one.');
       return;
     }
     
-    // Update UI state
+    // Update view state
     setLoading(true);
     setError(null);
     
     try {
-      // Import the controller at the top of the file
-      const { updatePasswordController } = await import('@/controllers/authController');
-      
-      // Call the controller (which handles business logic)
-      const { error } = await updatePasswordController(password);
+      // Call controller with both passwords - let controller handle validation 
+      const { error } = await updatePasswordController(password, confirmPassword);
       
       if (error) {
         throw error;
