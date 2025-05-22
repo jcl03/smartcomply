@@ -5,7 +5,6 @@
  * Following MVC, this controller handles business logic separate from the view.
  */
 
-import { cookies } from 'next/headers';
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 
@@ -14,22 +13,37 @@ import { redirect } from 'next/navigation';
  * @returns User session data if authenticated, or redirects to login
  */
 export async function getDashboardData() {
-  const cookieStore = cookies();
-  const supabase = createClient(cookieStore);
+  const supabase = await createClient();
   
   // Get session (authentication check)
-  const { data: { session } } = await supabase.auth.getSession();
+  const { data } = await supabase.auth.getSession();
   
-  // If no session, user is not authenticated
-  if (!session) {
+  // Authenticate the user data by contacting the Supabase Auth server
+  const { data: userData } = await supabase.auth.getUser();
+  
+  // If no authenticated user, redirect to login
+  if (!userData.user) {
     redirect('/login');
   }
   
-  // You could fetch additional user data here
-  // const { data: userData } = await supabase.from('user_profiles').select('*').eq('id', session.user.id).single();
+  // Get profile data from the profiles table
+  const { data: profileData, error: profileError } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('user_id', userData.user.id)
+    .single();
+  
+  // Parse user data and prepare display name
+  const displayName = userData.user.user_metadata?.display_name || '';
+  const fullName = profileData?.full_name || displayName;
+  const role = profileData?.role || 'user';
   
   return {
-    user: session.user,
-    // Other dashboard data could be added here
+    user: {
+      ...userData.user,
+      displayName: fullName || userData.user.email,
+      role: role,
+      profile: profileData || null
+    }
   };
 }

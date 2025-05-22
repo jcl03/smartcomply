@@ -31,11 +31,11 @@ export default function Home() {
             router.push(`/reset-password?code=${code}`);
           } else {
             // Handle failure
-            router.push('/login');
+            router.push('/auth/login');
           }
         } catch (error) {
           console.error('Error processing auth code:', error);
-          router.push('/login');
+          router.push('/auth/login');
         }
       };
       

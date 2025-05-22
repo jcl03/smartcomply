@@ -97,6 +97,27 @@ export default function ResetPassword() {
     }
   };
 
+  useEffect(() => {
+    if (code) {
+      // Show success for 2 seconds, then redirect
+      const timer = setTimeout(() => {
+        router.push('/auth/login');
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [code, router]);
+
+  if (code) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen">
+        <div className="bg-white p-8 rounded shadow text-center">
+          <h1 className="text-2xl font-bold mb-4">Password Reset Successful</h1>
+          <p className="mb-2">Your password has been reset. You will be redirected to the login page.</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex min-h-screen flex-col items-center justify-center p-4">
       <div className="w-full max-w-md p-8 space-y-8 bg-white rounded-lg shadow-md">        <div>

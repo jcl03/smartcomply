@@ -15,14 +15,23 @@ import {
   resetPassword, 
   getSession, 
   updateUserPassword, 
-  processAuthCode 
+  processAuthCode,
+  updateUserMetadata,
+  updateProfile,
+  inviteUserModel
 } from '@/models/authModel';
 
 /**
  * Handle user signup
  */
-export async function handleSignupController(email: string, password: string) {
-  // Validation logic belongs in the controller
+export async function handleSignupController(
+  email: string, 
+  password: string, 
+  displayName: string = '', 
+  role: string = 'user',
+  fullName: string = '',
+  confirmPassword: string = ''
+) {  // Validation logic belongs in the controller
   if (!email || !email.includes('@')) {
     return { error: { message: 'Please provide a valid email address.' } };
   }
@@ -31,8 +40,22 @@ export async function handleSignupController(email: string, password: string) {
     return { error: { message: 'Password must be at least 6 characters.' } };
   }
   
+  if (confirmPassword && password !== confirmPassword) {
+    return { error: { message: 'Passwords do not match.' } };
+  }
+  
+  if (!displayName.trim()) {
+    return { error: { message: 'Display name is required.' } };
+  }
+  
+  // Validate role (optional security measure)
+  const validRoles = ['user', 'manager', 'admin', 'external_auditor']; // Updated roles
+  if (!validRoles.includes(role)) {
+    role = 'user'; // Default to user role if invalid role provided
+  }
+  
   // Business logic and model interaction
-  return await signupWithEmail(email, password);
+  return await signupWithEmail(email, password, displayName, role, fullName);
 }
 
 /**
@@ -129,5 +152,54 @@ export async function processAuthCodeController() {
       data: null 
     };
   }
+}
+
+/**
+ * Update user display name and profile
+ */
+export async function updateUserProfileController(userId: string, displayName: string, fullName?: string) {
+  // Validation
+  if (!displayName || !displayName.trim()) {
+    return { error: { message: 'Display name is required.' } };
+  }
+  
+  // Full name defaults to display name if not provided
+  const actualFullName = fullName || displayName;
+  
+  // Update both the auth metadata and profile table
+  const [metadataResult, profileResult] = await Promise.all([
+    // Update auth metadata
+    updateUserMetadata({ display_name: displayName }),
+    
+    // Update profile table
+    updateProfile(userId, { full_name: actualFullName })
+  ]);
+  
+  // Return error from either operation
+  if (metadataResult.error) {
+    return { error: metadataResult.error };
+  }
+  
+  if (profileResult.error) {
+    return { error: profileResult.error };
+  }
+  
+  return { data: { user: metadataResult.data.user, profile: profileResult.data }, error: null };
+}
+
+/**
+ * Handle user invitation
+ */
+export async function handleInviteUserController(email: string, role: string) {
+  // Validation
+  if (!email || !email.includes('@')) {
+    return { error: { message: 'Please provide a valid email address.' } };
+  }
+  const validRoles = ['user', 'manager', 'admin', 'external_auditor'];
+  if (!validRoles.includes(role)) {
+    return { error: { message: 'Invalid role.' } };
+  }
+  // Orchestrate business logic
+  return await inviteUserModel(email, role);
 }
 

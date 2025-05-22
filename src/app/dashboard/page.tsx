@@ -18,7 +18,21 @@ export default async function DashboardPage() {
     <div className="max-w-2xl mx-auto p-4">
       <h1 className="text-2xl mb-4">Dashboard</h1>
       <LogoutButtonWrapper />
-      <p>Welcome to your dashboard, {dashboardData.user.email}!</p>
+      
+      <div className="bg-white shadow rounded-lg p-6 mb-5">
+        <h2 className="text-xl font-semibold mb-2">User Profile</h2>
+        <p className="text-lg">Welcome, {dashboardData.user.displayName}!</p>
+        <p className="text-gray-600">Role: {dashboardData.user.role}</p>
+        <p className="text-gray-600">Email: {dashboardData.user.email}</p>
+      </div>
+      
+      <div className="mt-4 flex flex-col space-y-2">
+        <a href="/settings" className="text-blue-600 hover:underline">Edit Profile Settings</a>
+        
+        {dashboardData.user.role === 'admin' && (
+          <a href="/admin" className="text-blue-600 hover:underline">Admin Panel</a>
+        )}
+      </div>
     </div>
   );
 }
