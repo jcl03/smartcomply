@@ -4,14 +4,7 @@ import { createClient } from '@/lib/supabase/server';
 import UserList from '../components/UserList';
 import Link from 'next/link';
 
-export default async function UserManagementPage() {
-  const supabase = await createClient();
-
-  // Ensure user is authenticated (securely)
-  const { data: { session } } = await supabase.auth.getSession();
-  if (!session) {
-    redirect('/auth/login');
-  }
+export default async function UserManagementPage() {  const supabase = await createClient();
 
   // Securely get the authenticated user
   const { data: userData, error: userError } = await supabase.auth.getUser();

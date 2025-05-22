@@ -1,7 +1,7 @@
 'use client';
 
 import Image from "next/image";
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { processAuthCodeController } from '@/controllers/authController';
 
@@ -15,33 +15,43 @@ import { processAuthCodeController } from '@/controllers/authController';
 export default function Home() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  
+  const code = searchParams.get("code");
+  const [message, setMessage] = useState("");
+  const [isProcessing, setIsProcessing] = useState(false);
+
   // Check if there's a password reset code in the URL
   useEffect(() => {
-    const code = searchParams.get('code');
-    
-    if (code) {
-      const handleAuthCode = async () => {
-        try {
-          // Use the controller to process the auth code (MVC pattern)
-          const { success } = await processAuthCodeController();
-          
-          if (success) {
-            // Now redirect to the reset password page with the code parameter
-            router.push(`/reset-password?code=${code}`);
-          } else {
-            // Handle failure
-            router.push('/auth/login');
-          }
-        } catch (error) {
-          console.error('Error processing auth code:', error);
-          router.push('/auth/login');
+    async function processCode() {
+      if (code && !isProcessing) {
+        setIsProcessing(true);
+        
+        // Use the controller to process the code
+        const { success, error } = await processAuthCodeController(code);
+        
+        if (!success || error) {
+          setMessage("Invalid or expired invite link.");
+        } else {
+          setMessage("Your invite is confirmed! You can now log in.");
+          setTimeout(() => router.push("/auth/login"), 2000);
         }
-      };
-      
-      handleAuthCode();
+        
+        setIsProcessing(false);
+      }
     }
-  }, [searchParams, router]);
+    processCode();
+  }, [code, router, isProcessing]);
+
+  if (code) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen">
+        <div className="bg-white p-8 rounded shadow text-center">
+          <h1 className="text-2xl font-bold mb-4">Processing Invite...</h1>
+          <p>{message || "Please wait while we confirm your invite..."}</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
       <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">

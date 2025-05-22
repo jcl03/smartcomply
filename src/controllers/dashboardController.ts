@@ -12,18 +12,14 @@ import { redirect } from 'next/navigation';
  * Verifies user is authenticated and gets user data
  * @returns User session data if authenticated, or redirects to login
  */
-export async function getDashboardData() {
-  const supabase = await createClient();
-  
-  // Get session (authentication check)
-  const { data } = await supabase.auth.getSession();
+export async function getDashboardData() {  const supabase = await createClient();
   
   // Authenticate the user data by contacting the Supabase Auth server
   const { data: userData } = await supabase.auth.getUser();
   
   // If no authenticated user, redirect to login
   if (!userData.user) {
-    redirect('/login');
+    redirect('/auth/login');
   }
   
   // Get profile data from the profiles table

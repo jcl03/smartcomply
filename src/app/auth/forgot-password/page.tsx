@@ -59,7 +59,7 @@ export default function ForgotPasswordPage() {
       {message && <p className="mt-2 text-green-600">{message}</p>}
       {error && <p className="mt-2 text-red-600">{error}</p>}
       <p className="mt-4">
-        <Link href="/login" className="text-blue-600 underline">
+        <Link href="/auth/login" className="text-blue-600 underline">
           Back to Login
         </Link>
       </p>

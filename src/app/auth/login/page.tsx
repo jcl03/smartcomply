@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { handleLoginController, verifyResetTokenController } from '@/controllers/authController';
+import { createClient } from '@/lib/supabase/supabaseClient';
+import { handleLoginController } from '@/controllers/authController';
 
 /**
  * Login Page (View Component)
@@ -24,16 +25,16 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
-  // Check session on component mount
+  // Only redirect if user is actually authenticated
   useEffect(() => {
-    const checkSession = async () => {
-      const { isValid } = await verifyResetTokenController();
-      if (isValid) {
+    const checkUser = async () => {
+      const supabase = createClient();
+      const { data: userData } = await supabase.auth.getUser();
+      if (userData?.user) {
         router.replace('/dashboard');
       }
     };
-    
-    checkSession();
+    checkUser();
   }, [router]);
 
   // Handle form submission - delegates to controller
@@ -91,3 +92,6 @@ export default function LoginPage() {
     </div>
   );
 }
+
+// No changes needed in this file as long as all controller/model imports use '@/lib/supabase/supabaseClient' for client-side logic.
+// If you see this error, check '@/controllers/authController.ts' and '@/models/authModel.ts' to ensure they use the browser client for login/session logic.

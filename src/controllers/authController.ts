@@ -14,12 +14,16 @@ import {
   logout, 
   resetPassword, 
   getSession, 
+  getAuthenticatedUser,
   updateUserPassword, 
   processAuthCode,
+} from '@/models/authModel';
+
+import {
   updateUserMetadata,
   updateProfile,
-  inviteUserModel
-} from '@/models/authModel';
+  inviteUser
+} from '@/models/userManagementModel';
 
 /**
  * Handle user signup
@@ -72,7 +76,14 @@ export async function handleLoginController(email: string, password: string) {
   }
   
   // Process login
-  return await loginWithEmail(email, password);
+  const { data, error } = await loginWithEmail(email, password);
+  if (error) {
+    return { error };
+  }
+  if (!data || !data.session) {
+    return { error: { message: 'Login failed. Please check your credentials or confirm your email.' } };
+  }
+  return { error: null };
 }
 
 export async function handleLogoutController() {
@@ -97,8 +108,8 @@ export async function handlePasswordResetController(email: string) {
 }
 
 export async function verifyResetTokenController() {
-  // Get session and determine if token is valid
-  const { data, error } = await getSession();
+  // Get authenticated user from server rather than session from storage
+  const { data, error } = await getAuthenticatedUser();
   
   if (error) {
     return { error, isValid: false };
@@ -106,7 +117,7 @@ export async function verifyResetTokenController() {
   
   return { 
     data, 
-    isValid: !!data?.session,
+    isValid: !!data?.user,
     error: null
   };
 }
@@ -130,11 +141,20 @@ export async function updatePasswordController(password: string, confirmPassword
 
 /**
  * Process authentication code
+ * @param code The authentication code from the URL
  */
-export async function processAuthCodeController() {
+export async function processAuthCodeController(code: string) {
   try {
+    if (!code) {
+      return { 
+        success: false, 
+        error: { message: 'No authentication code provided' },
+        data: null 
+      };
+    }
+    
     // Process auth code through model
-    const { data, error } = await processAuthCode();
+    const { data, error } = await processAuthCode(code);
     
     if (error) {
       throw error;
@@ -198,8 +218,7 @@ export async function handleInviteUserController(email: string, role: string) {
   const validRoles = ['user', 'manager', 'admin', 'external_auditor'];
   if (!validRoles.includes(role)) {
     return { error: { message: 'Invalid role.' } };
-  }
-  // Orchestrate business logic
-  return await inviteUserModel(email, role);
+  }  // Orchestrate business logic
+  return await inviteUser(email, role);
 }
 

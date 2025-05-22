@@ -88,7 +88,7 @@ export default function ResetPassword() {
       
       // Redirect to login page after successful reset
       setTimeout(() => {
-        router.push('/login');
+        router.push('/auth/login');
       }, 2000);
     } catch (err: any) {
       setError(err.message || 'An error occurred while resetting your password.');

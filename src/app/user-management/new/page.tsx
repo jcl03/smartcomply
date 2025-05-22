@@ -3,20 +3,19 @@ import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import AddUserForm from '../../components/AddUserForm';
 
-export default async function AddUserPage() {
-  const supabase = await createClient();
+export default async function AddUserPage() {  const supabase = await createClient();
 
-  // Ensure user is authenticated
-  const { data: { session } } = await supabase.auth.getSession();
-  if (!session) {
+  // Securely get the authenticated user
+  const { data: userData, error: userError } = await supabase.auth.getUser();
+  if (userError || !userData?.user) {
     redirect('/auth/login');
   }
 
-  // Check admin role
+  // Check admin role using the secure user id
   const { data: currentProfile } = await supabase
     .from('profiles')
     .select('role')
-    .eq('user_id', session.user.id)
+    .eq('user_id', userData.user.id)
     .single();
   if (currentProfile?.role !== 'admin') {
     redirect('/');

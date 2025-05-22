@@ -1,40 +1,52 @@
 "use client";
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/supabaseClient';
 
-export default async function UserList() {
-  const supabase = createClient();
-  // Fetch all user profiles from the view
-  const { data: usersData, error, ...rest } = await supabase
-    .from('user_profiles')
-    .select('id, role, full_name, email, created_at, last_sign_in_at');
+export default function UserList() {
+  const [usersData, setUsersData] = useState<any[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  if (error) {
-    console.error('Error fetching users:', error, rest);
-    return <p className="text-red-500">Failed to load users.</p>;
-  }
-  if (!usersData) {
-    console.error('No usersData returned from Supabase');
-    return <p className="text-red-500">No user data found.</p>;
-  }
+  useEffect(() => {
+    async function fetchUsers() {
+      const supabase = createClient();
+      // Fetch all user profiles from the view
+      const { data, error } = await supabase
+        .from('user_profiles')
+        .select('id, role, full_name, email, created_at, last_sign_in_at');
 
+      if (error) {
+        console.error('Error fetching users:', error);
+        setError('Failed to load users.');
+      } else {
+        setUsersData(data);
+      }
+      setLoading(false);
+    }
+
+    fetchUsers();
+  }, []);
   return (
     <div className="bg-white shadow-md rounded my-6">
-      <table className="min-w-max w-full table-auto">
-        <thead>
-          <tr className="bg-gray-200 text-gray-600 uppercase text-sm leading-normal">
-            <th className="py-3 px-6 text-left">Full Name</th>
-            <th className="py-3 px-6 text-left">Email</th>
-            <th className="py-3 px-6 text-center">Role</th>
-            <th className="py-3 px-6 text-center">Created At</th>
-            <th className="py-3 px-6 text-center">Last Sign In</th>
-            <th className="py-3 px-6 text-center">Actions</th>
-          </tr>
-        </thead>
-        <tbody className="text-gray-600 text-sm font-light">
-          {usersData.map((item: any) => (
+      {loading && <p>Loading users...</p>}
+      {error && <p className="text-red-500">{error}</p>}
+      
+      {!loading && !error && usersData && (
+        <table className="min-w-max w-full table-auto">
+          <thead>
+            <tr className="bg-gray-200 text-gray-600 uppercase text-sm leading-normal">
+              <th className="py-3 px-6 text-left">Full Name</th>
+              <th className="py-3 px-6 text-left">Email</th>
+              <th className="py-3 px-6 text-center">Role</th>
+              <th className="py-3 px-6 text-center">Created At</th>
+              <th className="py-3 px-6 text-center">Last Sign In</th>
+              <th className="py-3 px-6 text-center">Actions</th>
+            </tr>
+          </thead>
+          <tbody className="text-gray-600 text-sm font-light">
+            {usersData.map((item: any) => (
             <tr key={item.id} className="border-b border-gray-200 hover:bg-gray-100">
               <td className="py-3 px-6 text-left whitespace-nowrap">{item.full_name}</td>
               <td className="py-3 px-6 text-left">{item.email}</td>
@@ -69,12 +81,16 @@ export default async function UserList() {
                   >
                     Delete
                   </button>
-                </div>
-              </td>
+                </div>              </td>
             </tr>
           ))}
-        </tbody>
-      </table>
+          </tbody>
+        </table>
+      )}
+      
+      {!loading && !error && (!usersData || usersData.length === 0) && (
+        <p className="p-4 text-center">No users found.</p>
+      )}
     </div>
   );
 }

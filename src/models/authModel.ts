@@ -2,7 +2,7 @@
  * Auth Model Layer
  * 
  * Traditional MVC Model:
- * - Responsible purely for data operations
+ * - Responsible purely for authentication operations
  * - Contains no business logic
  * - Does not handle validation (moved to controller)
  * - Interacts directly with data source (Supabase in this case)
@@ -79,7 +79,18 @@ export async function resetPassword(email: string, redirectUrl: string) {
 }
 
 /**
+ * Get the current authenticated user data
+ * This authenticates with Supabase Auth server instead of using local storage
+ */
+export async function getAuthenticatedUser() {
+  const supabase = createClient();
+  return await supabase.auth.getUser();
+}
+
+/**
  * Get the current session data
+ * @deprecated Use getAuthenticatedUser() instead which is more secure
+ * as it verifies the user with the auth server
  */
 export async function getSession() {
   const supabase = createClient();
@@ -96,103 +107,13 @@ export async function updateUserPassword(password: string) {
 
 /**
  * Process authentication code from Supabase
+ * @param code The authentication code from the URL
  */
-export async function processAuthCode() {
-  const supabase = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
+export async function processAuthCode(code: string) {
+  if (!code) {
+    return { data: null, error: new Error('No authentication code provided') };
+  }
   
-  return await supabase.auth.getSession();
-}
-
-/**
- * Get the current user's profile data including data from profiles table
- */
-export async function getUserProfile() {
   const supabase = createClient();
-  
-  // Get auth user data
-  const { data: userData, error: userError } = await supabase.auth.getUser();
-  
-  if (userError || !userData.user) {
-    return { data: null, error: userError || new Error('User not found') };
-  }
-  
-  // Get profile data from profiles table
-  const { data: profileData, error: profileError } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('user_id', userData.user.id)
-    .single();
-  
-  return { 
-    data: {
-      user: userData.user,
-      profile: profileData
-    }, 
-    error: userError || profileError 
-  };
-}
-
-/**
- * Update profile record in the profiles table
- */
-export async function updateProfile(userId: string, profileData: any) {
-  const supabase = createClient();
-  
-  return await supabase
-    .from('profiles')
-    .update(profileData)
-    .eq('user_id', userId);
-}
-
-/**
- * Update user metadata including display name
- */
-export async function updateUserMetadata(metadata: any) {
-  const supabase = createClient();
-  return await supabase.auth.updateUser({ 
-    data: metadata
-  });
-}
-
-/**
- * Invite a new user (admin create, profile insert, send magic link)
- */
-export async function inviteUserModel(email: string, role: string) {
-  // Import adminSupabase only inside the function (server-only)
-  const { adminSupabase } = await import('@/lib/supabase/adminClient');
-  const { createClient: createAnonClient } = await import('@/lib/supabase/supabaseClient');
-
-  // 1. Create user in auth.users via service role key
-  const { data, error: createError } = await adminSupabase.auth.admin.createUser({
-    email,
-    email_confirm: false,
-    user_metadata: { role },
-  });
-  const userId = data?.user?.id;
-  if (createError || !userId) {
-    return { error: createError || new Error('User creation failed') };
-  }
-
-  // 2. Create profile in public.profiles
-  const { error: profileError } = await adminSupabase
-    .from('profiles')
-    .insert({ user_id: userId, role, full_name: '' });
-  if (profileError) {
-    return { error: profileError };
-  }
-
-  // 3. Send magic link for account activation
-  const anon = createAnonClient();
-  const { error: inviteError } = await anon.auth.signInWithOtp({
-    email,
-    options: { emailRedirectTo: process.env.NEXT_PUBLIC_BASE_URL + '/auth/activate' },
-  });
-  if (inviteError) {
-    return { error: inviteError };
-  }
-
-  return { data: { userId } };
+  return await supabase.auth.exchangeCodeForSession(code);
 }

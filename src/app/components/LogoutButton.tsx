@@ -34,7 +34,7 @@ export default function LogoutButton() {
     if (error) {
       setError(error.message);
     } else {
-      router.push('/login');
+      router.push('/auth/login');
     }
   };
 
