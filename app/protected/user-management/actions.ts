@@ -4,6 +4,7 @@ import { createClient } from "@/utils/supabase/server";
 import { isUserAdmin } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
+import { createAdminClient } from "@/utils/supabase/admin";
 
 export async function updateUserRole(formData: FormData) {
   // Check if the current user is an admin
@@ -36,4 +37,123 @@ export async function updateUserRole(formData: FormData) {
   revalidatePath("/protected/user-management");
   
   return { success: true };
+}
+
+export async function inviteUser(formData: FormData) {
+  // Check if the current user is an admin
+  const isAdmin = await isUserAdmin();
+  if (!isAdmin) {
+    redirect("/protected");
+  }
+  
+  const email = formData.get("email") as string;
+  const role = formData.get("role") as string;
+  
+  if (!email || !role) {
+    return { error: "Email and role are required" };
+  }
+  
+  const supabase = await createClient();
+  const adminClient = createAdminClient();
+  
+  try {
+    // 1. Create user with admin client
+    const { data: userData, error: createError } = await adminClient.auth.admin.createUser({
+      email,
+      email_confirm: false,
+      user_metadata: { role },
+    });
+    
+    if (createError || !userData?.user?.id) {
+      console.error("Error creating user:", createError);
+      return { error: createError?.message || "Failed to create user" };
+    }
+    
+    // 2. Create profile in profiles table
+    const { error: profileError } = await supabase
+      .from('profiles')
+      .insert({ 
+        user_id: userData.user.id, 
+        role,
+        full_name: '',
+      });
+      
+    if (profileError) {
+      console.error("Error creating profile:", profileError);
+      return { error: "Created user but failed to create profile" };
+    }
+      // 3. Send invitation email with magic link using admin client
+    const { error: inviteError } = await adminClient.auth.admin.inviteUserByEmail(email, {
+      redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback?next=/invite/${userData.user.id}`,
+      data: { role }
+    });
+    
+    if (inviteError) {
+      console.error("Error sending invite:", inviteError);
+      return { error: "Created user but failed to send invitation" };
+    }
+    
+    // Revalidate the user management page
+    revalidatePath("/protected/user-management");
+    
+    return { success: true };
+  } catch (err) {
+    console.error("Unexpected error inviting user:", err);
+    return { error: "An unexpected error occurred" };
+  }
+}
+
+export async function resendActivation(formData: FormData | { email: string }) {
+  // Check if the current user is an admin
+  const isAdmin = await isUserAdmin();
+  if (!isAdmin) {
+    redirect("/protected");
+  }
+  
+  // Handle both FormData and direct object format
+  let email: string;
+  if (formData instanceof FormData) {
+    email = formData.get("email") as string;
+  } else {
+    email = formData.email;
+  }
+  
+  if (!email) {
+    return { error: "Email is required" };
+  }
+  
+  const adminClient = createAdminClient();
+  const supabase = await createClient();
+  
+  try {
+    // First get the user ID for this email
+    const { data: userData, error: userError } = await supabase
+      .from('view_user_profiles')
+      .select('id')
+      .eq('email', email)
+      .single();
+      
+    if (userError || !userData) {
+      console.error("Error finding user:", userError);
+      return { error: "Could not find user with this email" };
+    }
+    
+    // Send invitation email with magic link using admin client, directing to the invite page
+    const { error: inviteError } = await adminClient.auth.admin.inviteUserByEmail(email, {
+      redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback?next=/invite/${userData.id}`,
+    });
+    
+    if (inviteError) {
+      console.error("Error resending activation:", inviteError);
+      return { error: inviteError?.message || "Failed to resend activation" };
+    }
+    
+    // Revalidate the user management page
+    revalidatePath("/protected/user-management");
+    
+    return { success: true };
+  } catch (err) {
+    console.error("Unexpected error resending activation:", err);
+    return { error: "An unexpected error occurred" };
+  }
 }

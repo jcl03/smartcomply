@@ -3,6 +3,7 @@ import { createClient } from "@/utils/supabase/server";
 import { Shield, Users } from "lucide-react";
 import { redirect } from "next/navigation";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import ResendActivationButton from "./ResendActivationButton";
 
 export default async function UserManagementPage() {
   const supabase = await createClient();
@@ -31,9 +32,17 @@ export default async function UserManagementPage() {
 
   return (
     <div className="flex-1 w-full flex flex-col gap-8">
-      <div className="flex items-center gap-3">
-        <Shield className="h-6 w-6 text-primary" />
-        <h1 className="text-2xl font-bold">User Management</h1>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <Shield className="h-6 w-6 text-primary" />
+          <h1 className="text-2xl font-bold">User Management</h1>
+        </div>
+        <a 
+          href="/protected/user-management/add"
+          className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+        >
+          Add User
+        </a>
       </div>
       
       <Card>
@@ -73,7 +82,8 @@ export default async function UserManagementPage() {
                       {profile.last_sign_in_at 
                         ? new Date(profile.last_sign_in_at).toLocaleDateString()
                         : 'Never'}
-                    </td>                    <td className="p-3">
+                    </td>
+                    <td className="p-3">
                       <div className="flex gap-2">
                         <a 
                           href={`/protected/user-management/${profile.id}/edit`}
@@ -81,6 +91,9 @@ export default async function UserManagementPage() {
                         >
                           Edit
                         </a>
+                        {!profile.last_sign_in_at && (
+                          <ResendActivationButton email={profile.email} />
+                        )}
                       </div>
                     </td>
                   </tr>

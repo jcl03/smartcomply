@@ -6,3 +6,8 @@ export type UserProfile = {
   created_at: string;
   last_sign_in_at: string | null;
 };
+
+export type ActionResult = {
+  success?: boolean;
+  error?: string;
+};
