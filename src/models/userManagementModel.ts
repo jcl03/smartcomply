@@ -100,3 +100,19 @@ export async function inviteUser(email: string, role: string) {
 
   return { data: { userId } };
 }
+
+/**
+ * Resend activation link to the user's email
+ */
+export async function resendActivationLink(email: string): Promise<{ data: null } | { error: any }> {
+  const { adminSupabase } = await import('@/lib/supabase/adminClient');
+
+  const { error } = await adminSupabase.auth.admin.inviteUserByEmail(email, {
+    redirectTo: process.env.NEXT_PUBLIC_BASE_URL + '/auth/activate',
+  });
+  if (error) {
+    console.error('Error resending activation link:', error);
+    return { error };
+  }
+  return { data: null };
+}

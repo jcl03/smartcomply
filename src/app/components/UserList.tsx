@@ -14,7 +14,7 @@ export default function UserList() {
       const supabase = createClient();
       // Fetch all user profiles from the view
       const { data, error } = await supabase
-        .from('user_profiles')
+        .from('view_user_profiles')
         .select('id, role, full_name, email, created_at, last_sign_in_at');
 
       if (error) {
@@ -61,6 +61,27 @@ export default function UserList() {
                   >
                     Edit
                   </Link>
+                  {!item.last_sign_in_at && (
+                    <button
+                      className="text-green-500 hover:text-green-700"
+                      onClick={async () => {
+                        if (confirm('Resend activation link to this user?')) {
+                          const res = await fetch('/api/user-management/resend-activation', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ email: item.email }),
+                          });
+                          if (res.ok) {
+                            alert('Activation link sent');
+                          } else {
+                            alert('Failed to resend activation');
+                          }
+                        }
+                      }}
+                    >
+                      Resend Activation
+                    </button>
+                  )}
                   <button
                     className="text-red-500 hover:text-red-700"
                     onClick={async () => {
