@@ -17,11 +17,9 @@ export async function GET(request: Request) {
 
   // If the next parameter starts with /invite/, we're handling an invitation link
   if (next && next.startsWith('/invite/')) {
-    // Extract the token from the next parameter
-    const token = next.replace('/invite/', '');
-    
-    // Redirect to the invite page with the token
-    return NextResponse.redirect(`${origin}/invite/${token}`);
+    // For invitation links, redirect to a special invite callback page that handles
+    // the implicit flow tokens in the URL fragment
+    return NextResponse.redirect(`${origin}/invite/callback?next=${encodeURIComponent(next)}`);
   }
 
   // For other redirects, use the next parameter if available

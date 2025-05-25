@@ -1,18 +1,23 @@
+import React from 'react';
+import { Metadata } from 'next';
+
+// Set metadata for all invite pages
+export const metadata: Metadata = {
+  title: 'SmartComply | Account Invitation',
+  description: 'Complete your SmartComply account registration',
+};
+
 export default function InviteLayout({
   children,
 }: {
-  children: React.ReactNode
+  children: React.ReactNode;
 }) {
   return (
-    <div className="flex-1 w-full flex flex-col gap-20 items-center">
-      <div className="w-full max-w-5xl flex justify-center p-3 px-5">
-        <h1 className="font-bold text-2xl">SmartComply</h1>
-      </div>
-      <div className="animate-in flex-1 flex flex-col gap-10 opacity-0 max-w-4xl px-3">
-        <main className="flex-1 flex flex-col gap-6 items-center">
-          {children}
-        </main>
+    <div className="flex min-h-screen flex-col items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+      <div className="w-full max-w-md space-y-8">
+        {/* Logo or branding could go here */}
+        {children}
       </div>
     </div>
-  )
+  );
 }

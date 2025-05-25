@@ -21,8 +21,7 @@ export default function InvitePage({ params }: { params: Promise<{ token: string
   // Get token from URL - using React.use() to unwrap the params promise
   const resolvedParams = use(params);
   const token = resolvedParams.token;
-  
-  useEffect(() => {
+    useEffect(() => {
     // When the component loads, get the current user session
     const getCurrentUser = async () => {
       try {
@@ -31,8 +30,14 @@ export default function InvitePage({ params }: { params: Promise<{ token: string
         // Get the current user's session
         const { data, error } = await supabase.auth.getSession();
         
-        if (error || !data.session) {
-          setError("You need to be logged in to complete your registration. Please check your email for an invitation link.");
+        if (error) {
+          console.error("Session error:", error);
+          setError("Authentication error. Please try clicking the invitation link again.");
+          return;
+        }
+        
+        if (!data.session) {
+          setError("You need to be logged in to complete your registration. Please check your email and click the invitation link.");
           return;
         }
         
@@ -40,7 +45,14 @@ export default function InvitePage({ params }: { params: Promise<{ token: string
         const { data: userData, error: userError } = await supabase.auth.getUser();
         
         if (userError || !userData.user) {
+          console.error("User error:", userError);
           setError("Could not retrieve your user information. Please contact your administrator.");
+          return;
+        }
+        
+        // Verify that the user ID from the URL matches the logged-in user
+        if (userData.user.id !== token) {
+          setError("This invitation link is not for your account. Please use the correct invitation link sent to your email.");
           return;
         }
         
@@ -87,12 +99,11 @@ export default function InvitePage({ params }: { params: Promise<{ token: string
       if (passwordError) {
         throw passwordError;
       }
-      
-      // Update the user's profile with full name
+        // Update the user's profile with full name
       const { error: profileError } = await supabase
         .from('profiles')
         .update({ full_name: fullName })
-        .eq('email', email);
+        .eq('user_id', token); // Use user_id instead of email for better reliability
       
       if (profileError) {
         throw profileError;
@@ -113,8 +124,7 @@ export default function InvitePage({ params }: { params: Promise<{ token: string
       setLoading(false);
     }
   };
-  
-  if (error) {
+    if (error) {
     return (
       <div className="flex-1 flex flex-col w-full px-8 sm:max-w-md justify-center gap-2">
         <Card>
@@ -122,9 +132,20 @@ export default function InvitePage({ params }: { params: Promise<{ token: string
             <CardTitle className="text-red-600">Error</CardTitle>
           </CardHeader>
           <CardContent>
-            <p>{error}</p>
+            <p className="mb-4">{error}</p>
+            <div className="text-sm text-muted-foreground">
+              <p>If you're having trouble:</p>
+              <ul className="list-disc list-inside mt-2 space-y-1">
+                <li>Make sure you clicked the invitation link from your email</li>
+                <li>Check that the link hasn't expired</li>
+                <li>Try clicking the invitation link again</li>
+              </ul>
+            </div>
           </CardContent>
-          <CardFooter>
+          <CardFooter className="flex gap-2">
+            <Button variant="outline" onClick={() => window.location.reload()}>
+              Try Again
+            </Button>
             <Button variant="outline" onClick={() => router.push('/sign-in')}>
               Go to Sign In
             </Button>
