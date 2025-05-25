@@ -66,13 +66,16 @@ export default async function UserManagementPage() {
                 </tr>
               </thead>
               <tbody>
-                {allProfiles.map((profile) => (
-                  <tr key={profile.id} className="border-t hover:bg-muted/50 transition-colors">
+                {allProfiles.map((profile) => (                  <tr key={profile.id} className="border-t hover:bg-muted/50 transition-colors">
                     <td className="p-3">{profile.full_name}</td>
                     <td className="p-3">{profile.email}</td>
                     <td className="p-3">
                       <span className={`px-2 py-1 text-xs rounded-full ${
-                        profile.role === 'admin' ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'
+                        profile.role === 'admin' 
+                          ? 'bg-primary/10 text-primary' 
+                          : profile.role === 'manager'
+                          ? 'bg-blue-100 text-blue-700'
+                          : 'bg-muted text-muted-foreground'
                       }`}>
                         {profile.role}
                       </span>

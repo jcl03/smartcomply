@@ -1,12 +1,12 @@
 import { createClient } from "@/utils/supabase/server";
 import { redirect } from "next/navigation";
-import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, UserCog, Mail } from "lucide-react";
+import { ArrowLeft, UserCog, Mail, AlertCircle } from "lucide-react";
 import Link from "next/link";
 import { isUserAdmin } from "@/lib/auth";
-import UpdateRoleForm from "./UpdateRoleForm";
 import UpdateEmailForm from "./UpdateEmailForm";
+import UpdateRoleForm from "./UpdateRoleForm";
 
 export default async function EditUserPage({ params }: { params: Promise<{ id: string }> }) {
   // Check if the current user is an admin
@@ -15,9 +15,26 @@ export default async function EditUserPage({ params }: { params: Promise<{ id: s
     redirect("/protected");
   }
   
-  const { id: userId } = await params;
+  const { id } = await params;
+  const userId = id;
   const supabase = await createClient();
-    // Get user profile
+    // Get current user to check if they're editing their own account
+  const { data: { user } } = await supabase.auth.getUser();
+  let isCurrentUser = false;
+  
+  if (user) {
+    // Get current user's profile ID
+    const { data: currentUserProfile } = await supabase
+      .from('view_user_profiles')
+      .select('id')
+      .eq('email', user.email)      .single();
+      
+    // Check if the user is editing their own account (ensure string comparison)
+    if (currentUserProfile && String(currentUserProfile.id) === String(userId)) {
+      isCurrentUser = true;    }
+  }
+  
+  // Get user profile
   const { data: profile, error } = await supabase
     .from('view_user_profiles')
     .select('*')
@@ -78,7 +95,17 @@ export default async function EditUserPage({ params }: { params: Promise<{ id: s
           <CardTitle>Update Role</CardTitle>
         </CardHeader>
         <CardContent>
-          <UpdateRoleForm userId={profile.id} currentRole={profile.role} />
+          {isCurrentUser ? (
+            <div className="p-3 bg-amber-50 border border-amber-200 text-amber-800 rounded-md flex items-start gap-2">
+              <AlertCircle className="h-5 w-5 mt-0.5 flex-shrink-0" />
+              <div>
+                <p className="font-medium">You cannot change your own role</p>
+                <p className="text-sm mt-1">For security reasons, administrators cannot modify their own role.</p>
+              </div>
+            </div>
+          ) : (
+            <UpdateRoleForm userId={profile.id} currentRole={profile.role} />
+          )}
         </CardContent>
       </Card>
       

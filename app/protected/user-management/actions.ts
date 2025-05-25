@@ -22,6 +22,26 @@ export async function updateUserRole(formData: FormData) {
   
   const supabase = await createClient();
   
+  // Get current user to check if they're trying to change their own role
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    return { error: "Unable to verify current user" };
+  }
+    // Get current user's profile to compare IDs
+  const { data: currentUserProfile, error: profileError } = await supabase
+    .from('view_user_profiles')
+    .select('id')
+    .eq('email', user.email)    .single();
+    
+  if (profileError || !currentUserProfile) {
+    console.error("Error getting current user profile:", profileError);
+    return { error: "Unable to verify current user" };
+  }
+    // Prevent admins from changing their own role (ensure string comparison)
+  if (String(currentUserProfile.id) === String(userId)) {
+    return { error: "You cannot change your own role" };
+  }
+  
   // Update the user's role in the profiles table
   const { error } = await supabase
     .from('profiles')
