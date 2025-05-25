@@ -3,6 +3,8 @@
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { handleUpdateRole } from "./action";
+import { useToast } from "@/hooks/use-toast";
+import { useState } from "react";
 
 export default function UpdateRoleForm({
   userId,
@@ -11,8 +13,38 @@ export default function UpdateRoleForm({
   userId: string;
   currentRole: string;
 }) {
+  const { toast } = useToast();
+  const [isLoading, setIsLoading] = useState(false);
+
+  async function handleSubmit(formData: FormData) {
+    setIsLoading(true);
+    try {
+      const result = await handleUpdateRole(formData);
+      if (result?.error) {
+        toast({
+          title: "Error",
+          description: result.error,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Success",
+          description: "User role updated successfully",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update user role",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
   return (
-    <form action={handleUpdateRole}>
+    <form action={handleSubmit}>
       <input type="hidden" name="userId" value={userId} />
       <div className="space-y-4">
         <div>
@@ -24,11 +56,14 @@ export default function UpdateRoleForm({
           >
             <option value="user">User</option>
             <option value="manager">Manager</option>
+            <option value="external_auditor">External Auditor</option>
             <option value="admin">Admin</option>
           </select>
         </div>
 
-        <Button type="submit">Update Role</Button>
+        <Button type="submit" disabled={isLoading}>
+          {isLoading ? "Updating..." : "Update Role"}
+        </Button>
       </div>
     </form>
   );
