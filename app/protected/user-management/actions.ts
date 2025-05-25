@@ -157,3 +157,71 @@ export async function resendActivation(formData: FormData | { email: string }) {
     return { error: "An unexpected error occurred" };
   }
 }
+
+export async function updateUserEmail(formData: FormData) {
+  // Check if the current user is an admin
+  const isAdmin = await isUserAdmin();
+  if (!isAdmin) {
+    redirect("/protected");
+  }
+  
+  const userId = formData.get("userId") as string;
+  const newEmail = formData.get("newEmail") as string;
+  
+  if (!userId || !newEmail) {
+    return { error: "User ID and new email are required" };
+  }
+  
+  const supabase = await createClient();
+  const adminClient = createAdminClient();
+  
+  try {
+    // Get the user's current email from the profile view
+    const { data: profileData, error: profileError } = await supabase
+      .from('view_user_profiles')
+      .select('email')
+      .eq('id', userId)
+      .single();
+      
+    if (profileError || !profileData) {
+      console.error("Error finding user:", profileError);
+      return { error: "Could not find user with this ID" };
+    }
+    
+    // Find the user by email to get their auth ID
+    const { data, error: listError } = await adminClient.auth.admin.listUsers();
+    
+    if (listError) {
+      console.error("Error listing users:", listError);
+      return { error: "Failed to find user auth record" };
+    }
+    
+    // Find the user with the matching email
+    const user = data.users.find(u => u.email === profileData.email);
+    
+    if (!user) {
+      console.error("User not found in auth records");
+      return { error: "User not found in auth records" };
+    }
+    
+    // Update the user's email
+    const { error: updateError } = await adminClient.auth.admin.updateUserById(
+      user.id,
+      { email: newEmail }
+    );
+    
+    if (updateError) {
+      console.error("Error updating user email:", updateError);
+      return { error: updateError?.message || "Failed to update user email" };
+    }
+    
+    // Revalidate the user management page
+    revalidatePath("/protected/user-management");
+    revalidatePath(`/protected/user-management/${userId}/edit`);
+    
+    return { success: true };
+  } catch (err) {
+    console.error("Unexpected error updating user email:", err);
+    return { error: "An unexpected error occurred" };
+  }
+}

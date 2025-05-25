@@ -7,116 +7,27 @@ import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/componen
 import { updateUserRole } from "../../actions";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, UserCog } from "lucide-react";
+import { ArrowLeft, UserCog, Mail } from "lucide-react";
 import Link from "next/link";
-import { useToast } from "@/hooks/use-toast";
-import { useFormStatus } from "react-dom";
+import { isUserAdmin } from "@/lib/auth";
 
-// Submit button with loading state
-function SubmitButton() {
-  const { pending } = useFormStatus();
-  
-  return (
-    <Button type="submit" disabled={pending}>
-      {pending ? "Updating..." : "Update Role"}
-    </Button>
-  );
-}
-
-export default function EditUserPage({ 
-  params 
-}: { 
-  params: Promise<{ id: string }> 
-}) {
-  // Use React.use() to unwrap the params Promise
-  const { id: userId } = React.use(params);
-  
-  const [profile, setProfile] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const router = useRouter();
-  const { toast } = useToast();  useEffect(() => {
-    async function loadUserProfile() {
-      try {
-        const supabase = createClient();
-        
-        // Check if current user is admin
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) {
-          router.push("/sign-in");
-          return;
-        }
-
-        const { data: currentUserProfile } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('user_id', user.id)
-          .single();
-
-        if (currentUserProfile?.role !== 'admin') {
-          router.push("/protected");
-          return;
-        }        // Get user profile
-        const { data: profileData, error: profileError } = await supabase
-          .from('view_user_profiles')
-          .select('*')
-          .eq('id', userId)
-          .single();
-          
-        if (profileError || !profileData) {
-          setError("User not found");
-          return;
-        }
-
-        setProfile(profileData);
-      } catch (err) {
-        console.error("Error loading profile:", err);
-        setError("Failed to load user profile");
-      } finally {
-        setLoading(false);
-      }
-    }    loadUserProfile();
-  }, [userId, router]);
-
-  async function handleUpdateRole(formData: FormData) {
-    try {
-      const result = await updateUserRole(formData);
-      
-      if (result?.error) {
-        toast({
-          title: "Error",
-          description: result.error,
-          variant: "destructive",
-        });
-      } else {
-        toast({
-          title: "Success",
-          description: "User role updated successfully!",
-        });
-        // Optionally redirect back to user management
-        setTimeout(() => {
-          router.push("/protected/user-management");
-        }, 1500);
-      }
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error?.message || "An unexpected error occurred",
-        variant: "destructive",
-      });
-    }
+export default async function EditUserPage({ params }: { params: { id: string } }) {
+  // Check if the current user is an admin
+  const isAdmin = await isUserAdmin();
+  if (!isAdmin) {
+    redirect("/protected");
   }
-
-  if (loading) {
-    return (
-      <div className="flex-1 w-full flex flex-col gap-8">
-        <div className="flex justify-center items-center min-h-[200px]">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-        </div>
-      </div>
-    );
-  }
-
+  
+  const userId = params.id;
+  const supabase = await createClient();
+  
+  // Get user profile
+  const { data: profile, error } = await supabase
+    .from('view_user_profiles')
+    .select('*')
+    .eq('id', userId)
+    .single();
+    
   if (error || !profile) {
     return (
       <div className="flex-1 w-full flex flex-col gap-8">
@@ -184,8 +95,9 @@ export default function EditUserPage({
       <Card>
         <CardHeader>
           <CardTitle>Update Role</CardTitle>
-        </CardHeader>        <CardContent>
-          <form action={handleUpdateRole}>
+        </CardHeader>
+        <CardContent>
+          <form action={updateUserRole}>
             <input type="hidden" name="userId" value={profile.id} />
             <div className="space-y-4">
               <div>
@@ -205,7 +117,16 @@ export default function EditUserPage({
               <SubmitButton />
             </div>
           </form>
-        </CardContent>
+        </CardContent>      </Card>
+      
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <Mail className="h-5 w-5 text-primary" />
+            <CardTitle>Update Email</CardTitle>
+          </div>
+        </CardHeader>
+        <UpdateEmailForm userId={profile.id} currentEmail={profile.email} />
       </Card>
     </div>
   );
