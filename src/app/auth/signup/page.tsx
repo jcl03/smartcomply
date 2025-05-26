@@ -1,7 +1,9 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { handleSignupController } from '@/controllers/authController';
+import './css/signup.css';
 
 /**
  * Signup Page (View Component)
@@ -50,102 +52,140 @@ export default function SignupPage() {
   };
 
   return (
-    <div className="max-w-md mx-auto p-4">
-      <h1 className="text-2xl mb-4">Sign Up</h1>
-      <form onSubmit={handleSignup} className="flex flex-col gap-3">
-        <div className="flex flex-col">
-          <label htmlFor="displayName" className="text-sm text-gray-600 mb-1">Display Name (what others see)</label>
-          <input
-            id="displayName"
-            type="text"
-            placeholder="Display Name"
-            value={displayName}
-            onChange={e => setDisplayName(e.target.value)}
-            required
-            className="border px-2 py-1 rounded"
-          />
+    <div className="signup-container">
+      <div className="signup-card">
+        <div className="signup-header">
+          <h1 className="signup-title">Create Account</h1>
+          <p className="signup-subtitle">Join SmartComply to manage compliance easily</p>
         </div>
         
-        <div className="flex flex-col">
-          <label htmlFor="fullName" className="text-sm text-gray-600 mb-1">Full Name (your real name)</label>
-          <input
-            id="fullName"
-            type="text"
-            placeholder="Full Name"
-            value={fullName}
-            onChange={e => setFullName(e.target.value)}
-            required
-            className="border px-2 py-1 rounded"
-          />
+        <div className="signup-form">
+          {message && <div className="alert alert-success">{message}</div>}
+          {error && <div className="alert alert-error">{error}</div>}
+          
+          <form onSubmit={handleSignup}>
+            <div className="form-row">
+              <div className="form-group">
+                <label htmlFor="displayName" className="form-label">Display Name</label>
+                <input
+                  id="displayName"
+                  type="text"
+                  placeholder="How others will see you"
+                  value={displayName}
+                  onChange={e => setDisplayName(e.target.value)}
+                  required
+                  className="form-input"
+                  disabled={loading}
+                />
+                <span className="form-hint">This will be visible to other users</span>
+              </div>
+              
+              <div className="form-group">
+                <label htmlFor="fullName" className="form-label">Full Name</label>
+                <input
+                  id="fullName"
+                  type="text"
+                  placeholder="Your legal name"
+                  value={fullName}
+                  onChange={e => setFullName(e.target.value)}
+                  required
+                  className="form-input"
+                  disabled={loading}
+                />
+                <span className="form-hint">Your real name (private)</span>
+              </div>
+            </div>
+            
+            <div className="form-group">
+              <label htmlFor="email" className="form-label">Email Address</label>
+              <input
+                id="email"
+                type="email"
+                placeholder="you@example.com"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                required
+                className="form-input"
+                disabled={loading}
+              />
+            </div>
+            
+            <div className="form-row">
+              <div className="form-group">
+                <label htmlFor="password" className="form-label">Password</label>
+                <input
+                  id="password"
+                  type="password"
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  required
+                  className="form-input"
+                  disabled={loading}
+                />
+                {password && (
+                  <div className="password-strength">
+                    <div className={`password-strength-bar ${
+                      password.length < 8 ? 'strength-weak' : 
+                      password.length < 12 ? 'strength-medium' : 
+                      'strength-strong'
+                    }`}></div>
+                  </div>
+                )}
+              </div>
+              
+              <div className="form-group">
+                <label htmlFor="confirmPassword" className="form-label">Confirm Password</label>
+                <input
+                  id="confirmPassword"
+                  type="password"
+                  placeholder="••••••••"
+                  value={confirmPassword}
+                  onChange={e => setConfirmPassword(e.target.value)}
+                  required
+                  className="form-input"
+                  disabled={loading}
+                />
+                {password && confirmPassword && (
+                  <span className="form-hint" style={{color: password === confirmPassword ? '#15803d' : '#b91c1c'}}>
+                    {password === confirmPassword ? 'Passwords match' : 'Passwords do not match'}
+                  </span>
+                )}
+              </div>
+            </div>
+            
+            <div className="form-group">
+              <label htmlFor="role" className="form-label">Role</label>
+              <select 
+                id="role"
+                value={role}
+                onChange={e => setRole(e.target.value)}
+                className="form-select"
+                disabled={loading}
+              >
+                <option value="user">User</option>
+                <option value="manager">Manager</option>
+                <option value="admin">Admin</option>
+                <option value="external_auditor">External Auditor</option>
+              </select>
+              <span className="form-hint">Select the role that best describes your position</span>
+            </div>
+            
+            <button
+              type="submit"
+              disabled={loading}
+              className={`signup-button ${loading ? 'signup-button-loading' : ''}`}
+            >
+              <span>{loading ? 'Creating your account...' : 'Create Account'}</span>
+            </button>
+          </form>
         </div>
         
-        <div className="flex flex-col">
-          <label htmlFor="email" className="text-sm text-gray-600 mb-1">Email</label>
-          <input
-            id="email"
-            type="email"
-            placeholder="Email"
-            value={email}
-            onChange={e => setEmail(e.target.value)}
-            required
-            className="border px-2 py-1 rounded"
-          />
+        <div className="signup-footer">
+          <Link href="/auth/login" className="signup-footer-link">
+            Already have an account? Sign in
+          </Link>
         </div>
-        
-        <div className="flex flex-col">
-          <label htmlFor="password" className="text-sm text-gray-600 mb-1">Password</label>
-          <input
-            id="password"
-            type="password"
-            placeholder="Password"
-            value={password}
-            onChange={e => setPassword(e.target.value)}
-            required
-            className="border px-2 py-1 rounded"
-          />
-        </div>
-        
-        <div className="flex flex-col">
-          <label htmlFor="confirmPassword" className="text-sm text-gray-600 mb-1">Confirm Password</label>
-          <input
-            id="confirmPassword"
-            type="password"
-            placeholder="Confirm Password"
-            value={confirmPassword}
-            onChange={e => setConfirmPassword(e.target.value)}
-            required
-            className="border px-2 py-1 rounded"
-          />
-        </div>
-          <div className="flex flex-col border px-2 py-1 rounded">
-          <label htmlFor="role" className="block text-sm text-gray-600 mb-1">Role</label>
-          <select 
-            id="role"
-            value={role}
-            onChange={e => setRole(e.target.value)}
-            className="w-full"
-          >
-            <option value="user">User</option>
-            <option value="manager">Manager</option>
-            <option value="admin">Admin</option>
-            <option value="external_auditor">External Auditor</option>
-          </select>
-        </div>
-        
-        <button
-          type="submit"
-          disabled={loading}
-          className="bg-blue-600 text-white py-2 mt-2 rounded disabled:opacity-50"
-        >
-          {loading ? 'Signing up…' : 'Sign Up'}
-        </button>
-      </form>
-      
-      {message && <p className="mt-2 text-green-600">{message}</p>}
-      {error && <p className="mt-2 text-red-600">{error}</p>}
-      
-      <div className="mt-4 text-center">
-        <a href="/auth/login" className="text-blue-600 hover:underline">Already have an account? Log in</a>
       </div>
     </div>
   );
