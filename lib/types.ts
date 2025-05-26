@@ -5,6 +5,7 @@ export type UserProfile = {
   email: string;
   created_at: string;
   last_sign_in_at: string | null;
+  isRevoked?: boolean;
 };
 
 export type ActionResult = {

@@ -10,13 +10,20 @@ export const signInAction = async (formData: FormData) => {
   const password = formData.get("password") as string;
   const supabase = await createClient();
 
-  const { error } = await supabase.auth.signInWithPassword({
+  const { data, error } = await supabase.auth.signInWithPassword({
     email,
     password,
   });
 
   if (error) {
     return encodedRedirect("error", "/sign-in", error.message);
+  }
+
+  // Check if user access has been revoked
+  if (data?.user?.user_metadata?.revoked === true) {
+    // Sign out the user immediately
+    await supabase.auth.signOut();
+    return encodedRedirect("error", "/sign-in", "Your access has been revoked. Please contact an administrator.");
   }
 
   return redirect("/protected");

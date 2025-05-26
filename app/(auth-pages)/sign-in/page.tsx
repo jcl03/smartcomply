@@ -11,7 +11,8 @@ export default async function Login(props: { searchParams: Promise<Message> }) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   
-  if (user) {
+  // Only redirect authenticated users to protected if their access is not revoked
+  if (user && !user.user_metadata?.revoked) {
     redirect("/protected");
   }
 

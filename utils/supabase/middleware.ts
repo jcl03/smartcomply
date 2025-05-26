@@ -38,15 +38,45 @@ export const updateSession = async (request: NextRequest) => {
           },
         },
       },
-    );
-
-    // This will refresh session if expired - required for Server Components
+    );    // This will refresh session if expired - required for Server Components
     // https://supabase.com/docs/guides/auth/server-side/nextjs
     const user = await supabase.auth.getUser();
 
     // protected routes
     if (request.nextUrl.pathname.startsWith("/protected") && user.error) {
       return NextResponse.redirect(new URL("/sign-in", request.url));
+    }    // Check if authenticated user's access has been revoked
+    if (request.nextUrl.pathname.startsWith("/protected") && !user.error && user.data.user) {
+      // Check if user access is revoked based on metadata
+      const isRevoked = user.data.user.user_metadata?.revoked === true;
+      
+      if (isRevoked) {
+        // Create a new response with redirect
+        let response = NextResponse.redirect(new URL("/sign-in?error=Your access has been revoked. Please contact an administrator.", request.url));
+        
+        // Create a new Supabase client to clear the session properly
+        const clearSupabase = createServerClient(
+          process.env.NEXT_PUBLIC_SUPABASE_URL!,
+          process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+          {
+            cookies: {
+              getAll() {
+                return request.cookies.getAll();
+              },
+              setAll(cookiesToSet) {
+                cookiesToSet.forEach(({ name, value, options }) => {
+                  response.cookies.set(name, value, options);
+                });
+              },
+            },
+          },
+        );
+        
+        // Clear the session
+        await clearSupabase.auth.signOut();
+        
+        return response;
+      }
     }
     
     // For admin paths, check if user is an admin

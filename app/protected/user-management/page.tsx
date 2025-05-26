@@ -1,6 +1,6 @@
-import { getAllUserProfiles } from "@/lib/api";
+import { getAllUserProfilesWithRevocationStatus } from "@/lib/api";
 import { createClient } from "@/utils/supabase/server";
-import { Shield, Users } from "lucide-react";
+import { Shield, Users, Ban } from "lucide-react";
 import { redirect } from "next/navigation";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import ResendActivationButton from "./ResendActivationButton";
@@ -25,10 +25,8 @@ export default async function UserManagementPage() {
   // If not admin or error occurs, redirect to protected page
   if (error || !profile || profile.role !== 'admin') {
     return redirect("/protected");
-  }
-  
-  // Fetch all user profiles for admin
-  const allProfiles = await getAllUserProfiles();
+  }    // Fetch all user profiles for admin
+  const allProfiles = await getAllUserProfilesWithRevocationStatus();
 
   return (
     <div className="flex-1 w-full flex flex-col gap-8">
@@ -44,8 +42,7 @@ export default async function UserManagementPage() {
           Add User
         </a>
       </div>
-      
-      <Card>
+        <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-xl flex items-center gap-2">
             <Users className="h-5 w-5" />
@@ -60,14 +57,23 @@ export default async function UserManagementPage() {
                   <th className="text-left p-3 font-medium">Name</th>
                   <th className="text-left p-3 font-medium">Email</th>
                   <th className="text-left p-3 font-medium">Role</th>
+                  <th className="text-left p-3 font-medium">Status</th>
                   <th className="text-left p-3 font-medium">Joined</th>
                   <th className="text-left p-3 font-medium">Last Sign In</th>
                   <th className="text-left p-3 font-medium">Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {allProfiles.map((profile) => (                  <tr key={profile.id} className="border-t hover:bg-muted/50 transition-colors">
-                    <td className="p-3">{profile.full_name}</td>
+                {allProfiles.map((profile) => (
+                  <tr key={profile.id} className={`border-t hover:bg-muted/50 transition-colors ${profile.isRevoked ? 'bg-red-50' : ''}`}>
+                    <td className="p-3">
+                      <div className="flex items-center gap-2">
+                        {profile.full_name}
+                        {profile.isRevoked && (
+                          <Ban className="h-4 w-4 text-red-600" />
+                        )}
+                      </div>
+                    </td>
                     <td className="p-3">{profile.email}</td>
                     <td className="p-3">
                       <span className={`px-2 py-1 text-xs rounded-full ${
@@ -77,7 +83,15 @@ export default async function UserManagementPage() {
                           ? 'bg-blue-100 text-blue-700'
                           : 'bg-muted text-muted-foreground'
                       }`}>
-                        {profile.role}
+                        {profile.role}                      </span>
+                    </td>
+                    <td className="p-3">
+                      <span className={`px-2 py-1 text-xs rounded-full ${
+                        profile.isRevoked 
+                          ? 'bg-red-100 text-red-700' 
+                          : 'bg-green-100 text-green-700'
+                      }`}>
+                        {profile.isRevoked ? 'Revoked' : 'Active'}
                       </span>
                     </td>
                     <td className="p-3">{new Date(profile.created_at).toLocaleDateString()}</td>
