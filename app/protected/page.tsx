@@ -1,7 +1,7 @@
 import FetchDataSteps from "@/components/tutorial/fetch-data-steps";
 import { getUserProfile } from "@/lib/api";
 import { createClient } from "@/utils/supabase/server";
-import { InfoIcon, UserIcon, Users } from "lucide-react";
+import { InfoIcon, UserIcon, Users, Shield } from "lucide-react";
 import { redirect } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { formatDistanceToNow } from "date-fns";
@@ -31,15 +31,21 @@ export default async function ProtectedPage() {
           Dashboard
         </div>
       </div>
-      
-      {isAdmin && (
-        <div className="w-full">
+        {isAdmin && (
+        <div className="w-full space-y-4">
           <a 
             href="/protected/user-management"
             className="flex items-center gap-2 p-3 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
           >
             <Users size="16" />
             Go to User Management
+          </a>
+          <a 
+            href="/protected/compliance"
+            className="flex items-center gap-2 p-3 rounded-md bg-secondary text-secondary-foreground hover:bg-secondary/90 transition-colors"
+          >
+            <Shield size="16" />
+            Manage Compliance Frameworks
           </a>
         </div>
       )}
