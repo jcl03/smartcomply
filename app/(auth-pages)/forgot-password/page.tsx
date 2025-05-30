@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import Link from "next/link";
 import { SmtpMessage } from "../smtp-message";
+import "./forgot-password.css";
 
 export default async function ForgotPassword(props: {
   searchParams: Promise<Message>;

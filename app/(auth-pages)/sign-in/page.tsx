@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
+import "./sign-in.css";
 
 export default async function Login(props: { searchParams: Promise<Message> }) {
   const supabase = await createClient();
@@ -18,34 +19,62 @@ export default async function Login(props: { searchParams: Promise<Message> }) {
 
   const searchParams = await props.searchParams;
   return (
-    <form className="flex-1 flex flex-col min-w-64">
-      <h1 className="text-2xl font-medium">Sign in</h1>
-      <p className="text-sm text-foreground/80">
-        This is an invite-only application
-      </p>
-      <div className="flex flex-col gap-2 [&>input]:mb-3 mt-8">
-        <Label htmlFor="email">Email</Label>
-        <Input name="email" placeholder="you@example.com" required />
-        <div className="flex justify-between items-center">
-          <Label htmlFor="password">Password</Label>
-          <Link
-            className="text-xs text-foreground underline"
-            href="/forgot-password"
-          >
-            Forgot Password?
-          </Link>
-        </div>
-        <Input
-          type="password"
-          name="password"
-          placeholder="Your password"
-          required
-        />
-        <SubmitButton pendingText="Signing In..." formAction={signInAction}>
-          Sign in
-        </SubmitButton>
-        <FormMessage message={searchParams} />
+    <div className="auth-card">
+      <div className="auth-card-header">
+        <h1>Welcome Back</h1>
+        <p>
+          This is an invite-only application
+        </p>
       </div>
-    </form>
+      
+      <div className="auth-card-body">
+        <form className="auth-form">
+          <div className="form-group">
+            <Label htmlFor="email">Email</Label>
+            <Input 
+              className="auth-input" 
+              name="email" 
+              id="email"
+              placeholder="you@example.com" 
+              required 
+            />
+          </div>
+          
+          <div className="form-group">
+            <div className="form-row">
+              <Label htmlFor="password">Password</Label>
+              <Link
+                className="forgot-password-link"
+                href="/forgot-password"
+              >
+                Forgot Password?
+              </Link>
+            </div>
+            <Input
+              className="auth-input"
+              type="password"
+              name="password"
+              id="password"
+              placeholder="Your password"
+              required
+            />
+          </div>
+          
+          <SubmitButton 
+            className="auth-button" 
+            pendingText="Signing In..." 
+            formAction={signInAction}
+          >
+            Sign in
+          </SubmitButton>
+          
+          {searchParams && (
+            <div className={`form-message-container ${searchParams.type === "error" ? "error" : "success"}`}>
+              <FormMessage message={searchParams} />
+            </div>
+          )}
+        </form>
+      </div>
+    </div>
   );
 }
