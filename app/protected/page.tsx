@@ -1,10 +1,23 @@
-import FetchDataSteps from "@/components/tutorial/fetch-data-steps";
 import { getUserProfile } from "@/lib/api";
 import { createClient } from "@/utils/supabase/server";
-import { InfoIcon, UserIcon, Users, Shield } from "lucide-react";
+import { 
+  FileText,
+  CheckCircle,
+  Clock,
+  TrendingUp,
+  BarChart3,
+  Calendar,
+  Activity,
+  ArrowUpRight,
+  Target,
+  Shield,
+  Users,
+  AlertTriangle
+} from "lucide-react";
 import { redirect } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { formatDistanceToNow } from "date-fns";
+import DashboardLayout from "@/components/dashboard/dashboard-layout";
 
 export default async function ProtectedPage() {
   const supabase = await createClient();
@@ -21,79 +34,256 @@ export default async function ProtectedPage() {
   const userProfile = await getUserProfile();
   
   // Check if user is admin
-  const isAdmin = userProfile?.role === 'admin';
+  const isAdmin = userProfile?.role === 'admin';  return (
+    <DashboardLayout userProfile={userProfile}>
+      {/* Dashboard Overview */}
+      <div className="space-y-6">
+        {/* Welcome Section */}
+        <div className="bg-white/80 backdrop-blur-sm border border-sky-200 rounded-xl p-6 shadow-md">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold text-sky-900">
+                Welcome back, {userProfile?.full_name || 'User'}!
+              </h1>
+              <p className="text-sky-600 mt-1">Here's what's happening with your compliance today.</p>
+            </div>
+            <div className="bg-sky-100 p-3 rounded-full">
+              <Activity className="h-6 w-6 text-sky-600" />
+            </div>
+          </div>
+        </div>
 
-  return (
-    <div className="flex-1 w-full flex flex-col gap-12">
-      <div className="w-full">
-        <div className="bg-accent text-sm p-3 px-5 rounded-md text-foreground flex gap-3 items-center">
-          <InfoIcon size="16" strokeWidth={2} />
-          Dashboard
-        </div>
-      </div>
-        {isAdmin && (
-        <div className="w-full space-y-4">
-          <a 
-            href="/protected/user-management"
-            className="flex items-center gap-2 p-3 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
-          >
-            <Users size="16" />
-            Go to User Management
-          </a>
-          <a 
-            href="/protected/compliance"
-            className="flex items-center gap-2 p-3 rounded-md bg-secondary text-secondary-foreground hover:bg-secondary/90 transition-colors"
-          >
-            <Shield size="16" />
-            Manage Compliance Frameworks
-          </a>
-        </div>
-      )}
-      
-      {userProfile ? (
-        <div className="flex flex-col gap-6">
-          <h2 className="font-bold text-2xl">Your Profile</h2>
-          <Card className="p-6 border rounded-lg shadow-sm">
-            <div className="flex items-center gap-4 mb-4">
-              <div className="bg-primary/10 p-3 rounded-full">
-                <UserIcon className="h-6 w-6 text-primary" />
-              </div>
+        {/* Key Metrics */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <Card className="bg-white/80 backdrop-blur-sm border-sky-200 p-6 rounded-xl shadow-md hover:shadow-lg transition-all duration-300 group">
+            <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-xl font-semibold">{userProfile.full_name}</h3>
-                <p className="text-muted-foreground">{userProfile.email}</p>
+                <p className="text-sm font-medium text-sky-700">Active Projects</p>
+                <p className="text-3xl font-bold text-sky-900 mt-2">12</p>
+                <p className="text-xs text-green-600 mt-1 flex items-center gap-1">
+                  <ArrowUpRight className="h-3 w-3" />
+                  +2 from last month
+                </p>
+              </div>
+              <div className="bg-sky-100 p-3 rounded-full group-hover:bg-sky-200 transition-colors">
+                <FileText className="h-6 w-6 text-sky-600" />
               </div>
             </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-              <div className="space-y-1">
-                <p className="text-sm text-muted-foreground">Role</p>
-                <p className="font-medium">{userProfile.role}</p>
-              </div>
-              <div className="space-y-1">
-                <p className="text-sm text-muted-foreground">Member since</p>
-                <p className="font-medium">
-                  {new Date(userProfile.created_at).toLocaleDateString()}
+          </Card>
+          
+          <Card className="bg-white/80 backdrop-blur-sm border-sky-200 p-6 rounded-xl shadow-md hover:shadow-lg transition-all duration-300 group">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-sky-700">Completed Tasks</p>
+                <p className="text-3xl font-bold text-sky-900 mt-2">284</p>
+                <p className="text-xs text-green-600 mt-1 flex items-center gap-1">
+                  <ArrowUpRight className="h-3 w-3" />
+                  +15% this week
                 </p>
               </div>
-              <div className="space-y-1">
-                <p className="text-sm text-muted-foreground">Last sign in</p>
-                <p className="font-medium">
-                  {userProfile.last_sign_in_at 
-                    ? formatDistanceToNow(new Date(userProfile.last_sign_in_at), { addSuffix: true })
-                    : 'Never'}
+              <div className="bg-emerald-100 p-3 rounded-full group-hover:bg-emerald-200 transition-colors">
+                <CheckCircle className="h-6 w-6 text-emerald-600" />
+              </div>
+            </div>
+          </Card>
+          
+          <Card className="bg-white/80 backdrop-blur-sm border-sky-200 p-6 rounded-xl shadow-md hover:shadow-lg transition-all duration-300 group">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-sky-700">Pending Reviews</p>
+                <p className="text-3xl font-bold text-sky-900 mt-2">7</p>
+                <p className="text-xs text-amber-600 mt-1 flex items-center gap-1">
+                  <AlertTriangle className="h-3 w-3" />
+                  2 due today
                 </p>
+              </div>
+              <div className="bg-amber-100 p-3 rounded-full group-hover:bg-amber-200 transition-colors">
+                <Clock className="h-6 w-6 text-amber-600" />
+              </div>
+            </div>
+          </Card>
+          
+          <Card className="bg-white/80 backdrop-blur-sm border-sky-200 p-6 rounded-xl shadow-md hover:shadow-lg transition-all duration-300 group">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-sky-700">Compliance Score</p>
+                <p className="text-3xl font-bold text-sky-900 mt-2">94%</p>
+                <p className="text-xs text-green-600 mt-1 flex items-center gap-1">
+                  <Target className="h-3 w-3" />
+                  Above target
+                </p>
+              </div>
+              <div className="bg-green-100 p-3 rounded-full group-hover:bg-green-200 transition-colors">
+                <TrendingUp className="h-6 w-6 text-green-600" />
               </div>
             </div>
           </Card>
         </div>
-      ) : (
-        <div className="flex flex-col gap-2 items-start">
-          <h2 className="font-bold text-2xl mb-4">Your user details</h2>
-          <pre className="text-xs font-mono p-3 rounded border max-h-32 overflow-auto">
-            {JSON.stringify(user, null, 2)}
-          </pre>
+
+        {/* Main Dashboard Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Recent Activity */}
+          <div className="lg:col-span-2">
+            <Card className="bg-white/80 backdrop-blur-sm border-sky-200 rounded-xl shadow-md p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-xl font-semibold text-sky-900 flex items-center gap-2">
+                  <BarChart3 className="h-5 w-5" />
+                  Recent Activity
+                </h3>
+                <button className="text-sm text-sky-600 hover:text-sky-800 font-medium">
+                  View All
+                </button>
+              </div>
+              <div className="space-y-4">
+                {[
+                  { 
+                    action: "Completed SOC 2 compliance review", 
+                    time: "2 hours ago", 
+                    type: "success",
+                    details: "Type II audit completed successfully"
+                  },
+                  { 
+                    action: "Updated data retention policy", 
+                    time: "4 hours ago", 
+                    type: "info",
+                    details: "Policy v2.1 published to team"
+                  },
+                  { 
+                    action: "New team member onboarded", 
+                    time: "1 day ago", 
+                    type: "info",
+                    details: "Security training initiated"
+                  },
+                  { 
+                    action: "Risk assessment overdue", 
+                    time: "2 days ago", 
+                    type: "warning",
+                    details: "Quarterly review requires attention"
+                  },
+                  { 
+                    action: "ISO 27001 certification renewed", 
+                    time: "3 days ago", 
+                    type: "success",
+                    details: "Valid until December 2025"
+                  }
+                ].map((activity, index) => (
+                  <div key={index} className="flex items-start gap-4 p-4 rounded-lg bg-sky-50/30 border border-sky-100 hover:bg-sky-50/50 transition-colors">
+                    <div className={`w-3 h-3 rounded-full mt-2 flex-shrink-0 ${
+                      activity.type === 'success' ? 'bg-green-500' :
+                      activity.type === 'warning' ? 'bg-amber-500' : 'bg-sky-500'
+                    }`}></div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-sky-900">{activity.action}</p>
+                      <p className="text-xs text-sky-600 mt-1">{activity.details}</p>
+                      <p className="text-xs text-sky-500 mt-1">{activity.time}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          </div>
+
+          {/* Quick Actions & Info */}
+          <div className="space-y-6">
+            {/* Quick Actions */}
+            <Card className="bg-white/80 backdrop-blur-sm border-sky-200 rounded-xl shadow-md p-6">
+              <h3 className="text-lg font-semibold text-sky-900 mb-4 flex items-center gap-2">
+                <Calendar className="h-5 w-5" />
+                Quick Actions
+              </h3>
+              <div className="space-y-3">
+                <button className="w-full text-left p-4 rounded-lg bg-gradient-to-r from-sky-500 to-blue-600 text-white hover:from-sky-600 hover:to-blue-700 transition-all duration-300 transform hover:scale-105">
+                  <div className="flex items-center gap-3">
+                    <Shield className="h-5 w-5" />
+                    <div>
+                      <p className="font-medium">Start Risk Assessment</p>
+                      <p className="text-sm opacity-90">Begin quarterly review</p>
+                    </div>
+                  </div>
+                </button>
+                <button className="w-full text-left p-4 rounded-lg bg-sky-50/50 border border-sky-100 hover:bg-sky-100/50 transition-colors">
+                  <div className="flex items-center gap-3">
+                    <FileText className="h-5 w-5 text-sky-600" />
+                    <div>
+                      <p className="font-medium text-sky-900">Generate Report</p>
+                      <p className="text-sm text-sky-600">Create compliance summary</p>
+                    </div>
+                  </div>
+                </button>
+                <button className="w-full text-left p-4 rounded-lg bg-sky-50/50 border border-sky-100 hover:bg-sky-100/50 transition-colors">
+                  <div className="flex items-center gap-3">
+                    <Users className="h-5 w-5 text-sky-600" />
+                    <div>
+                      <p className="font-medium text-sky-900">Schedule Training</p>
+                      <p className="text-sm text-sky-600">Book team session</p>
+                    </div>
+                  </div>
+                </button>
+              </div>
+            </Card>
+
+            {/* Compliance Overview */}
+            <Card className="bg-white/80 backdrop-blur-sm border-sky-200 rounded-xl shadow-md p-6">
+              <h3 className="text-lg font-semibold text-sky-900 mb-4">Compliance Status</h3>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-sky-700">SOC 2 Type II</span>
+                  <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full">
+                    Compliant
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-sky-700">ISO 27001</span>
+                  <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full">
+                    Certified
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-sky-700">GDPR</span>
+                  <span className="bg-amber-100 text-amber-800 text-xs px-2 py-1 rounded-full">
+                    Review Due
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-sky-700">HIPAA</span>
+                  <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full">
+                    Compliant
+                  </span>
+                </div>
+              </div>
+            </Card>
+
+            {/* User Profile Summary */}
+            {userProfile && (
+              <Card className="bg-white/80 backdrop-blur-sm border-sky-200 rounded-xl shadow-md p-6">
+                <h3 className="text-lg font-semibold text-sky-900 mb-4">Profile Summary</h3>
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-sky-700">Role</span>
+                    <span className="bg-sky-100 text-sky-800 text-xs px-2 py-1 rounded-full">
+                      {userProfile.role}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-sky-700">Member since</span>
+                    <span className="text-sm text-sky-900">
+                      {new Date(userProfile.created_at).toLocaleDateString()}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-sky-700">Last active</span>
+                    <span className="text-sm text-sky-900">
+                      {userProfile.last_sign_in_at 
+                        ? formatDistanceToNow(new Date(userProfile.last_sign_in_at), { addSuffix: true })
+                        : 'Never'}
+                    </span>
+                  </div>
+                </div>
+              </Card>
+            )}
+          </div>
         </div>
-      )}
-    </div>
+      </div>
+    </DashboardLayout>
   );
 }
