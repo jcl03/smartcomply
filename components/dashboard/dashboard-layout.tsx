@@ -27,7 +27,7 @@ interface DashboardLayoutProps {
     email: string;
     role: string;
     created_at: string;
-    last_sign_in_at?: string;
+    last_sign_in_at?: string | null;
   } | null;
 }
 
@@ -53,12 +53,14 @@ export default function DashboardLayout({ children, userProfile }: DashboardLayo
   const filteredNavigation = navigation.filter(item => 
     !item.adminOnly || (item.adminOnly && isAdmin)
   );
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-sky-50 via-blue-50 to-indigo-50">
-      {/* Header */}
-      <header className="bg-white/90 backdrop-blur-md border-b border-sky-200 shadow-sm sticky top-0 z-50">
-        <div className="flex items-center justify-between h-16 px-4 lg:px-6">
+    <div className="min-h-screen bg-gradient-to-br from-sky-50 via-blue-50 to-indigo-50 relative overflow-hidden">
+      {/* Background Pattern */}
+      <div className="absolute inset-0 bg-white/20"></div>
+      <div className="relative z-10">
+        {/* Header */}
+        <header className="bg-white/90 backdrop-blur-md border-b border-sky-200 shadow-sm sticky top-0 z-50">
+          <div className="flex items-center justify-between h-16 px-4 lg:px-6">
           {/* Mobile menu button */}
           <button
             type="button"
@@ -197,14 +199,13 @@ export default function DashboardLayout({ children, userProfile }: DashboardLayo
             className="fixed inset-0 bg-black/20 backdrop-blur-sm z-30 lg:hidden"
             onClick={() => setSidebarOpen(false)}
           />
-        )}
-
-        {/* Main Content */}
+        )}        {/* Main Content */}
         <main className="flex-1 lg:ml-0">
           <div className="p-6">
             {children}
           </div>
         </main>
+      </div>
       </div>
     </div>
   );
