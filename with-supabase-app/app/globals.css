@@ -23,14 +23,13 @@
     --border: 0 0% 89.8%;
     --input: 0 0% 89.8%;
     --ring: 0 0% 3.9%;
-    --radius: 0.5rem;
     --chart-1: 12 76% 61%;
     --chart-2: 173 58% 39%;
     --chart-3: 197 37% 24%;
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
+    --radius: 0.5rem;
   }
-
   .dark {
     --background: 0 0% 3.9%;
     --foreground: 0 0% 98%;
@@ -65,59 +64,5 @@
   }
   body {
     @apply bg-background text-foreground;
-  }
-}
-
-@layer components {
-  .auth-gradient {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  }
-  
-  .form-input {
-    @apply transition-all duration-200 ease-in-out;
-  }
-  
-  .form-input:focus {
-    @apply scale-[1.02] shadow-lg;
-  }
-  
-  .login-card {
-    @apply transform transition-all duration-300 ease-in-out;
-    backdrop-filter: blur(10px);
-  }
-  
-  .login-card:hover {
-    @apply scale-[1.01] shadow-2xl;
-  }
-}
-
-@layer utilities {
-  .animate-float {
-    animation: float 6s ease-in-out infinite;
-  }
-  
-  .animate-pulse-slow {
-    animation: pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-  }
-}
-
-@keyframes float {
-  0%, 100% {
-    transform: translateY(0px);
-  }
-  50% {
-    transform: translateY(-20px);
-  }
-}
-
-@keyframes gradient {
-  0% {
-    background-position: 0% 50%;
-  }
-  50% {
-    background-position: 100% 50%;
-  }
-  100% {
-    background-position: 0% 50%;
   }
 }
