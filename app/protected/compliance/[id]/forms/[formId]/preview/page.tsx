@@ -6,6 +6,12 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import Link from "next/link";
 
+interface FormFieldOption {
+  value: string;
+  points?: number;
+  isFailOption?: boolean;
+}
+
 export default async function PreviewFormPage({ 
   params 
 }: { 
@@ -32,12 +38,12 @@ export default async function PreviewFormPage({
   if (!profile || profile.role !== 'admin') {
     return redirect("/protected");
   }
-
-  // Fetch compliance framework
+  // Fetch compliance framework (only active ones)
   const { data: framework, error: frameworkError } = await supabase
     .from('compliance')
     .select('*')
     .eq('id', id)
+    .eq('status', 'active')
     .single();
 
   if (frameworkError || !framework) {
@@ -58,13 +64,38 @@ export default async function PreviewFormPage({
 
   const formSchema = form.form_schema || {};
   const fields = formSchema.fields || [];
-
   const renderField = (field: any, index: number) => {
-    return (
-      <div key={field.id || index} className="space-y-2">
-        <Label>
-          {field.label} {field.required && <span className="text-red-500">*</span>}
-        </Label>
+    // Helper function to determine if field should use enhanced options
+    const shouldUseEnhancedOptions = (field: any) => {
+      return (field.weightage && field.weightage > 0) || field.autoFail === true;
+    };
+
+    // Get options array - use enhanced options if available and conditions are met
+    const getOptions = (field: any) => {
+      if (shouldUseEnhancedOptions(field) && field.enhancedOptions) {
+        return field.enhancedOptions;
+      }
+      return field.options?.map((option: string) => ({ value: option })) || [];
+    };
+
+    const options = getOptions(field);
+    
+    return (<div key={field.id || index} className="space-y-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          <Label>
+            {field.label} {field.required && <span className="text-red-500">*</span>}
+          </Label>
+          {field.weightage && (
+            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+              Weight: {field.weightage}
+            </span>
+          )}
+          {field.autoFail && (
+            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
+              Auto-fail
+            </span>
+          )}
+        </div>
         
         {field.type === "text" && (
           <Input placeholder={field.placeholder} />
@@ -77,34 +108,80 @@ export default async function PreviewFormPage({
             rows={3}
           />
         )}
-        
-        {field.type === "select" && (
+          {field.type === "select" && (
           <select className="w-full p-2 border rounded-md">
             <option value="">Select an option...</option>
-            {field.options?.map((option: string, optIndex: number) => (
-              <option key={optIndex} value={option}>{option}</option>
+            {options.map((option: FormFieldOption | { value: string }, optIndex: number) => (
+              <option key={optIndex} value={option.value}>
+                {option.value}
+                {'points' in option && option.points !== undefined && ` (${option.points} pts)`}
+                {'isFailOption' in option && option.isFailOption && ' [FAIL]'}
+              </option>
             ))}
           </select>
         )}
-        
-        {field.type === "checkbox" && (
-          <div className="flex items-center gap-2">
-            <input type="checkbox" id={`field_${index}`} />
-            <label htmlFor={`field_${index}`}>{field.label}</label>
-          </div>
+          {field.type === "checkbox" && (
+          <>
+            {/* Single checkbox (no options) */}
+            {(!field.options && !field.enhancedOptions) && (
+              <div className="flex items-center gap-2">
+                <input type="checkbox" id={`field_${index}`} />
+                <label htmlFor={`field_${index}`}>{field.label}</label>
+              </div>
+            )}
+            
+            {/* Multiple checkbox options */}
+            {(field.options || field.enhancedOptions) && (
+              <div className="space-y-2">
+                {options.map((option: FormFieldOption | { value: string }, optIndex: number) => (
+                  <div key={optIndex} className="flex items-center gap-2 flex-wrap">
+                    <input 
+                      type="checkbox" 
+                      id={`${field.id || `field_${index}`}_${optIndex}`}
+                      value={option.value}
+                    />
+                    <label htmlFor={`${field.id || `field_${index}`}_${optIndex}`} className="flex-1">
+                      {option.value}
+                    </label>
+                    {'points' in option && option.points !== undefined && (
+                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                        {option.points} pts
+                      </span>
+                    )}
+                    {'isFailOption' in option && option.isFailOption && (
+                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                        Auto-fail
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
         )}
-        
-        {field.type === "radio" && (
+          {field.type === "radio" && (
           <div className="space-y-2">
-            {field.options?.map((option: string, optIndex: number) => (
-              <div key={optIndex} className="flex items-center gap-2">
+            {options.map((option: FormFieldOption | { value: string }, optIndex: number) => (
+              <div key={optIndex} className="flex items-center gap-2 flex-wrap">
                 <input 
                   type="radio" 
                   name={field.id || `field_${index}`} 
                   id={`${field.id || `field_${index}`}_${optIndex}`}
-                  value={option}
+                  value={option.value}
                 />
-                <label htmlFor={`${field.id || `field_${index}`}_${optIndex}`}>{option}</label>
+                <label htmlFor={`${field.id || `field_${index}`}_${optIndex}`} className="flex-1">
+                  {option.value}
+                </label>
+                {'points' in option && option.points !== undefined && (
+                  <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                    {option.points} pts
+                  </span>
+                )}
+                {'isFailOption' in option && option.isFailOption && (
+                  <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                    Auto-fail
+                  </span>
+                )}
               </div>
             ))}
           </div>

@@ -45,7 +45,7 @@ export async function addComplianceFramework(formData: FormData): Promise<Action
 
   const { error } = await supabase
     .from('compliance')
-    .insert([{ name }]);
+    .insert([{ name, status: 'active' }]);
 
   if (error) {
     console.error("Error creating compliance framework:", error);
@@ -235,6 +235,74 @@ export async function updateForm(formData: FormData): Promise<ActionResult> {
   if (error) {
     console.error("Error updating form:", error);
     return { error: "Failed to update form" };
+  }
+
+  return { success: true };
+}
+
+export async function archiveComplianceFramework(id: number): Promise<ActionResult> {
+  const supabase = await createClient();
+  
+  // Get current user
+  const { data: { user } } = await supabase.auth.getUser();
+  
+  if (!user) {
+    return { error: "Unauthorized" };
+  }
+  
+  // Check if user is admin
+  const { data: profile } = await supabase
+    .from('view_user_profiles')
+    .select('role')
+    .eq('email', user.email)
+    .single();
+    
+  if (!profile || profile.role !== 'admin') {
+    return { error: "Insufficient permissions" };
+  }
+
+  const { error } = await supabase
+    .from('compliance')
+    .update({ status: 'archive' })
+    .eq('id', id);
+
+  if (error) {
+    console.error("Error archiving compliance framework:", error);
+    return { error: "Failed to archive compliance framework" };
+  }
+
+  return { success: true };
+}
+
+export async function reactivateComplianceFramework(id: number): Promise<ActionResult> {
+  const supabase = await createClient();
+  
+  // Get current user
+  const { data: { user } } = await supabase.auth.getUser();
+  
+  if (!user) {
+    return { error: "Unauthorized" };
+  }
+  
+  // Check if user is admin
+  const { data: profile } = await supabase
+    .from('view_user_profiles')
+    .select('role')
+    .eq('email', user.email)
+    .single();
+    
+  if (!profile || profile.role !== 'admin') {
+    return { error: "Insufficient permissions" };
+  }
+
+  const { error } = await supabase
+    .from('compliance')
+    .update({ status: 'active' })
+    .eq('id', id);
+
+  if (error) {
+    console.error("Error reactivating compliance framework:", error);
+    return { error: "Failed to reactivate compliance framework" };
   }
 
   return { success: true };

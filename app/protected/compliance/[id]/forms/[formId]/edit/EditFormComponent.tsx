@@ -33,13 +33,22 @@ function SubmitButton() {
   );
 }
 
+type FormFieldOption = {
+  value: string;
+  points?: number;
+  isFailOption?: boolean;
+};
+
 type FormField = {
   id: string;
   type: string;
   label: string;
   required: boolean;
   placeholder?: string;
-  options?: string[];
+  options?: string[]; // Keep for backward compatibility
+  enhancedOptions?: FormFieldOption[]; // New enhanced options
+  weightage?: number;
+  autoFail?: boolean;
 };
 
 export default function EditFormComponent({ form, complianceId }: { form: Form; complianceId: string }) {
@@ -59,14 +68,15 @@ export default function EditFormComponent({ form, complianceId }: { form: Form; 
       setFields(form.form_schema.fields || []);
     }
   }, [form]);
-  
-  const addField = () => {
+    const addField = () => {
     const newField: FormField = {
       id: `field_${Date.now()}`,
       type: "text",
       label: "",
       required: false,
-      placeholder: ""
+      placeholder: "",
+      weightage: undefined,
+      autoFail: false
     };
     setFields([...fields, newField]);
   };
@@ -95,11 +105,46 @@ export default function EditFormComponent({ form, complianceId }: { form: Form; 
     updatedFields[fieldIndex].options![optionIndex] = value;
     setFields(updatedFields);
   };
-  
-  const removeOption = (fieldIndex: number, optionIndex: number) => {
+    const removeOption = (fieldIndex: number, optionIndex: number) => {
     const updatedFields = [...fields];
     updatedFields[fieldIndex].options!.splice(optionIndex, 1);
     setFields(updatedFields);
+  };
+
+  // Enhanced options functions
+  const addEnhancedOption = (fieldIndex: number) => {
+    const updatedFields = [...fields];
+    if (!updatedFields[fieldIndex].enhancedOptions) {
+      updatedFields[fieldIndex].enhancedOptions = [];
+    }
+    updatedFields[fieldIndex].enhancedOptions!.push({
+      value: "",
+      points: 0,
+      isFailOption: false
+    });
+    setFields(updatedFields);
+  };
+
+  const updateEnhancedOption = (fieldIndex: number, optionIndex: number, updates: Partial<FormFieldOption>) => {
+    const updatedFields = [...fields];
+    if (updatedFields[fieldIndex].enhancedOptions) {
+      updatedFields[fieldIndex].enhancedOptions![optionIndex] = {
+        ...updatedFields[fieldIndex].enhancedOptions![optionIndex],
+        ...updates
+      };
+      setFields(updatedFields);
+    }
+  };
+
+  const removeEnhancedOption = (fieldIndex: number, optionIndex: number) => {
+    const updatedFields = [...fields];
+    updatedFields[fieldIndex].enhancedOptions!.splice(optionIndex, 1);
+    setFields(updatedFields);
+  };
+
+  // Check if field should use enhanced options
+  const shouldUseEnhancedOptions = (field: FormField) => {
+    return (field.weightage !== undefined && field.weightage > 0) || field.autoFail;
   };
   
   async function clientAction(formData: FormData) {
@@ -146,12 +191,23 @@ export default function EditFormComponent({ form, complianceId }: { form: Form; 
           <div className="space-y-4">
             {formTitle && <h3 className="text-lg font-semibold">{formTitle}</h3>}
             {formDescription && <p className="text-muted-foreground">{formDescription}</p>}
-            
-            {fields.map((field, index) => (
+              {fields.map((field, index) => (
               <div key={field.id} className="space-y-2">
-                <Label>
-                  {field.label} {field.required && <span className="text-red-500">*</span>}
-                </Label>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <Label>
+                    {field.label} {field.required && <span className="text-red-500">*</span>}
+                  </Label>
+                  {field.weightage && (
+                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                      Weight: {field.weightage}
+                    </span>
+                  )}
+                  {field.autoFail && (
+                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                      Auto-fail
+                    </span>
+                  )}
+                </div>
                 
                 {field.type === "text" && (
                   <Input placeholder={field.placeholder} disabled />
@@ -165,13 +221,22 @@ export default function EditFormComponent({ form, complianceId }: { form: Form; 
                     rows={3}
                   />
                 )}
-                
-                {field.type === "select" && (
+                  {field.type === "select" && (
                   <select className="w-full p-2 border rounded-md" disabled>
                     <option>Select an option...</option>
-                    {field.options?.map((option, optIndex) => (
-                      <option key={optIndex} value={option}>{option}</option>
-                    ))}
+                    {shouldUseEnhancedOptions(field) ? (
+                      field.enhancedOptions?.map((option, optIndex) => (
+                        <option key={optIndex} value={option.value}>
+                          {option.value}
+                          {field.weightage && option.points !== undefined ? ` (${option.points} pts)` : ''}
+                          {field.autoFail && option.isFailOption ? ' ❌' : ''}
+                        </option>
+                      ))
+                    ) : (
+                      field.options?.map((option, optIndex) => (
+                        <option key={optIndex} value={option}>{option}</option>
+                      ))
+                    )}
                   </select>
                 )}
                 
@@ -184,12 +249,33 @@ export default function EditFormComponent({ form, complianceId }: { form: Form; 
                 
                 {field.type === "radio" && (
                   <div className="space-y-2">
-                    {field.options?.map((option, optIndex) => (
-                      <div key={optIndex} className="flex items-center gap-2">
-                        <input type="radio" name={field.id} disabled />
-                        <span>{option}</span>
-                      </div>
-                    ))}
+                    {shouldUseEnhancedOptions(field) ? (
+                      field.enhancedOptions?.map((option, optIndex) => (
+                        <div key={optIndex} className="flex items-center gap-2">
+                          <input type="radio" name={field.id} disabled />
+                          <span className="flex items-center gap-2">
+                            {option.value}
+                            {field.weightage && option.points !== undefined && (
+                              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                                {option.points} pts
+                              </span>
+                            )}
+                            {field.autoFail && option.isFailOption && (
+                              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800">
+                                Auto-fail
+                              </span>
+                            )}
+                          </span>
+                        </div>
+                      ))
+                    ) : (
+                      field.options?.map((option, optIndex) => (
+                        <div key={optIndex} className="flex items-center gap-2">
+                          <input type="radio" name={field.id} disabled />
+                          <span>{option}</span>
+                        </div>
+                      ))
+                    )}
                   </div>
                 )}
 
@@ -313,8 +399,7 @@ export default function EditFormComponent({ form, complianceId }: { form: Form; 
                     />
                   </div>
                 </div>
-                
-                <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Placeholder Text</Label>
                     <Input 
@@ -334,13 +419,48 @@ export default function EditFormComponent({ form, complianceId }: { form: Form; 
                   </div>
                 </div>
                 
-                {(field.type === "select" || field.type === "radio") && (
+                {/* Scoring Options */}
+                <div className="space-y-4">
+                  <h5 className="text-sm font-medium text-muted-foreground">Scoring Options</h5>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Weightage (optional)</Label>
+                      <Input 
+                        type="number"
+                        min="0"
+                        step="0.1"
+                        value={field.weightage || ""}
+                        onChange={(e) => updateField(index, { weightage: e.target.value ? parseFloat(e.target.value) : undefined })}
+                        placeholder="e.g., 10, 5.5"
+                      />
+                      <p className="text-xs text-muted-foreground">Numerical weight for scoring</p>
+                    </div>
+                    
+                    <div className="flex items-center gap-2 pt-6">
+                      <input 
+                        type="checkbox"
+                        checked={field.autoFail || false}
+                        onChange={(e) => updateField(index, { autoFail: e.target.checked })}
+                      />
+                      <div>
+                        <Label>Auto-fail</Label>
+                        <p className="text-xs text-muted-foreground">Failing this field fails entire audit</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                  {(field.type === "select" || field.type === "radio") && (
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <Label>Options</Label>
+                      <Label>
+                        Options
+                        {shouldUseEnhancedOptions(field) && (
+                          <span className="text-xs text-blue-600 ml-2">(Enhanced)</span>
+                        )}
+                      </Label>
                       <Button 
                         type="button" 
-                        onClick={() => addOption(index)}
+                        onClick={() => shouldUseEnhancedOptions(field) ? addEnhancedOption(index) : addOption(index)}
                         variant="outline"
                         size="sm"
                       >
@@ -349,23 +469,79 @@ export default function EditFormComponent({ form, complianceId }: { form: Form; 
                       </Button>
                     </div>
                     
-                    {field.options?.map((option, optIndex) => (
-                      <div key={optIndex} className="flex gap-2">
-                        <Input 
-                          value={option}
-                          onChange={(e) => updateOption(index, optIndex, e.target.value)}
-                          placeholder={`Option ${optIndex + 1}`}
-                        />
-                        <Button 
-                          type="button" 
-                          onClick={() => removeOption(index, optIndex)}
-                          variant="outline"
-                          size="sm"
-                        >
-                          <Minus size={16} />
-                        </Button>
-                      </div>
-                    ))}
+                    {shouldUseEnhancedOptions(field) ? (
+                      // Enhanced options with scoring and pass/fail
+                      field.enhancedOptions?.map((option, optIndex) => (
+                        <div key={optIndex} className="border rounded-md p-3 space-y-2">
+                          <div className="flex gap-2">
+                            <Input 
+                              value={option.value}
+                              onChange={(e) => updateEnhancedOption(index, optIndex, { value: e.target.value })}
+                              placeholder={`Option ${optIndex + 1}`}
+                              className="flex-1"
+                            />
+                            <Button 
+                              type="button" 
+                              onClick={() => removeEnhancedOption(index, optIndex)}
+                              variant="outline"
+                              size="sm"
+                            >
+                              <Minus size={16} />
+                            </Button>
+                          </div>
+                          
+                          {field.weightage !== undefined && field.weightage > 0 && (
+                            <div className="grid grid-cols-2 gap-2">
+                              <div>
+                                <Label className="text-xs">Points</Label>
+                                <Input 
+                                  type="number"
+                                  value={option.points || ""}
+                                  onChange={(e) => updateEnhancedOption(index, optIndex, { 
+                                    points: e.target.value ? parseFloat(e.target.value) : 0 
+                                  })}
+                                  placeholder="0"
+                                  className="text-xs"
+                                />
+                              </div>
+                            </div>
+                          )}
+                          
+                          {field.autoFail && (
+                            <div className="flex items-center gap-2">
+                              <input 
+                                type="checkbox"
+                                checked={option.isFailOption || false}
+                                onChange={(e) => updateEnhancedOption(index, optIndex, { isFailOption: e.target.checked })}
+                                className="text-xs"
+                              />
+                              <Label className="text-xs text-red-600">
+                                Auto-fail option (selecting this fails the audit)
+                              </Label>
+                            </div>
+                          )}
+                        </div>
+                      ))
+                    ) : (
+                      // Simple options (backward compatibility)
+                      field.options?.map((option, optIndex) => (
+                        <div key={optIndex} className="flex gap-2">
+                          <Input 
+                            value={option}
+                            onChange={(e) => updateOption(index, optIndex, e.target.value)}
+                            placeholder={`Option ${optIndex + 1}`}
+                          />
+                          <Button 
+                            type="button" 
+                            onClick={() => removeOption(index, optIndex)}
+                            variant="outline"
+                            size="sm"
+                          >
+                            <Minus size={16} />
+                          </Button>
+                        </div>
+                      ))
+                    )}
                   </div>
                 )}
               </div>

@@ -28,12 +28,12 @@ export default async function AddFormPage({ params }: { params: Promise<{ id: st
   if (!profile || profile.role !== 'admin') {
     return redirect("/protected");
   }
-
-  // Fetch compliance framework
+  // Fetch compliance framework (only active ones)
   const { data: framework, error: frameworkError } = await supabase
     .from('compliance')
     .select('*')
     .eq('id', id)
+    .eq('status', 'active')
     .single();
 
   if (frameworkError || !framework) {

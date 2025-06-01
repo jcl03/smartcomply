@@ -28,12 +28,12 @@ export default async function EditCompliancePage({ params }: { params: Promise<{
   }
 
   const { id } = await params;
-
-  // Fetch the compliance framework
+  // Fetch the compliance framework (only active ones)
   const { data: framework, error } = await supabase
     .from('compliance')
     .select('*')
     .eq('id', parseInt(id))
+    .eq('status', 'active')
     .single();
 
   if (error || !framework) {
