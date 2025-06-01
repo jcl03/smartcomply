@@ -89,12 +89,12 @@ export async function addForm(formData: FormData): Promise<ActionResult> {
   } catch (error) {
     return { error: "Invalid JSON format in form schema" };
   }
-
   const { error } = await supabase
     .from('form')
     .insert([{ 
       compliance_id: parseInt(complianceId),
-      form_schema: formSchema 
+      form_schema: formSchema,
+      status: 'active'
     }]);
 
   if (error) {
@@ -240,6 +240,7 @@ export async function updateForm(formData: FormData): Promise<ActionResult> {
   return { success: true };
 }
 
+// Compliance framework status management actions
 export async function archiveComplianceFramework(id: number): Promise<ActionResult> {
   const supabase = await createClient();
   
@@ -303,6 +304,75 @@ export async function reactivateComplianceFramework(id: number): Promise<ActionR
   if (error) {
     console.error("Error reactivating compliance framework:", error);
     return { error: "Failed to reactivate compliance framework" };
+  }
+
+  return { success: true };
+}
+
+// Form status management actions
+export async function archiveForm(formId: number): Promise<ActionResult> {
+  const supabase = await createClient();
+  
+  // Get current user
+  const { data: { user } } = await supabase.auth.getUser();
+  
+  if (!user) {
+    return { error: "Unauthorized" };
+  }
+  
+  // Check if user is admin
+  const { data: profile } = await supabase
+    .from('view_user_profiles')
+    .select('role')
+    .eq('email', user.email)
+    .single();
+    
+  if (!profile || profile.role !== 'admin') {
+    return { error: "Insufficient permissions" };
+  }
+
+  const { error } = await supabase
+    .from('form')
+    .update({ status: 'archive' })
+    .eq('id', formId);
+
+  if (error) {
+    console.error("Error archiving form:", error);
+    return { error: "Failed to archive form" };
+  }
+
+  return { success: true };
+}
+
+export async function activateForm(formId: number): Promise<ActionResult> {
+  const supabase = await createClient();
+  
+  // Get current user
+  const { data: { user } } = await supabase.auth.getUser();
+  
+  if (!user) {
+    return { error: "Unauthorized" };
+  }
+  
+  // Check if user is admin
+  const { data: profile } = await supabase
+    .from('view_user_profiles')
+    .select('role')
+    .eq('email', user.email)
+    .single();
+    
+  if (!profile || profile.role !== 'admin') {
+    return { error: "Insufficient permissions" };
+  }
+
+  const { error } = await supabase
+    .from('form')
+    .update({ status: 'active' })
+    .eq('id', formId);
+
+  if (error) {
+    console.error("Error activating form:", error);
+    return { error: "Failed to activate form" };
   }
 
   return { success: true };

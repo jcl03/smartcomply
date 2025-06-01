@@ -49,13 +49,13 @@ export default async function PreviewFormPage({
   if (frameworkError || !framework) {
     return redirect("/protected/compliance");
   }
-
-  // Fetch the form
+  // Fetch the form (only if active)
   const { data: form, error: formError } = await supabase
     .from('form')
     .select('*')
     .eq('id', formId)
     .eq('compliance_id', id)
+    .eq('status', 'active')
     .single();
 
   if (formError || !form) {
