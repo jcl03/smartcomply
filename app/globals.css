@@ -121,3 +121,10 @@
     background-position: 0% 50%;
   }
 }
+
+
+/* Hide Vercel deployment banner */
+[data-nextjs-scroll-focus-boundary] > iframe,
+.vercel-toolbar {
+  display: none !important;
+}
