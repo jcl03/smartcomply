@@ -81,12 +81,12 @@ export default async function CompliancePage() {
         <CardContent>
           {frameworks && frameworks.length > 0 ? (
             <div className="border rounded-lg overflow-hidden">
-              <table className="w-full">
-                <thead className="bg-muted">
+              <table className="w-full">                <thead className="bg-muted">
                   <tr>
                     <th className="text-left p-3 font-medium">Name</th>
                     <th className="text-left p-3 font-medium">Status</th>
                     <th className="text-left p-3 font-medium">Forms</th>
+                    <th className="text-left p-3 font-medium">Checklists</th>
                     <th className="text-left p-3 font-medium">Actions</th>
                   </tr>
                 </thead>
@@ -100,13 +100,20 @@ export default async function CompliancePage() {
                         <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
                           Active
                         </span>
-                      </td>
-                      <td className="p-3">
+                      </td>                      <td className="p-3">
                         <Link 
                           href={`/protected/compliance/${framework.id}/forms`}
                           className="text-primary hover:underline"
                         >
                           View Forms
+                        </Link>
+                      </td>
+                      <td className="p-3">
+                        <Link 
+                          href={`/protected/compliance/${framework.id}/checklists`}
+                          className="text-primary hover:underline"
+                        >
+                          View Checklists
                         </Link>
                       </td>
                       <td className="p-3">
@@ -116,12 +123,17 @@ export default async function CompliancePage() {
                             className="px-2 py-1 text-xs bg-secondary text-secondary-foreground rounded hover:bg-secondary/80 transition-colors"
                           >
                             Edit
-                          </Link>
-                          <Link 
+                          </Link>                          <Link 
                             href={`/protected/compliance/${framework.id}/forms/add`}
                             className="px-2 py-1 text-xs bg-primary text-primary-foreground rounded hover:bg-primary/80 transition-colors"
                           >
                             Add Form
+                          </Link>
+                          <Link 
+                            href={`/protected/compliance/${framework.id}/checklists/add`}
+                            className="px-2 py-1 text-xs bg-primary text-primary-foreground rounded hover:bg-primary/80 transition-colors"
+                          >
+                            Add Checklist
                           </Link>
                           <form action={handleArchive} className="inline">
                             <input type="hidden" name="id" value={framework.id} />

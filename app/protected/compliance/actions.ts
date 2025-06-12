@@ -377,3 +377,206 @@ export async function activateForm(formId: number): Promise<ActionResult> {
 
   return { success: true };
 }
+
+// Checklist management actions
+export async function addChecklist(formData: FormData): Promise<ActionResult> {
+  const supabase = await createClient();
+  
+  // Get current user
+  const { data: { user } } = await supabase.auth.getUser();
+  
+  if (!user) {
+    return { error: "Unauthorized" };
+  }
+  
+  // Check if user is admin
+  const { data: profile } = await supabase
+    .from('view_user_profiles')
+    .select('role')
+    .eq('email', user.email)
+    .single();
+    
+  if (!profile || profile.role !== 'admin') {
+    return { error: "Insufficient permissions" };
+  }
+
+  const complianceId = formData.get("compliance_id") as string;
+  const checklistSchemaStr = formData.get("checklist_schema") as string;
+
+  if (!complianceId || !checklistSchemaStr) {
+    return { error: "Compliance ID and checklist schema are required" };
+  }
+
+  let checklistSchema;
+  try {
+    checklistSchema = JSON.parse(checklistSchemaStr);
+  } catch (error) {
+    return { error: "Invalid JSON format in checklist schema" };
+  }
+
+  const { error } = await supabase
+    .from('checklist')
+    .insert([{ 
+      compliance_id: parseInt(complianceId),
+      checklist_schema: checklistSchema,
+      status: 'active'
+    }]);
+
+  if (error) {
+    console.error("Error creating checklist:", error);
+    return { error: "Failed to create checklist" };
+  }
+
+  return { success: true };
+}
+
+export async function updateChecklist(formData: FormData): Promise<ActionResult> {
+  const supabase = await createClient();
+  
+  // Get current user
+  const { data: { user } } = await supabase.auth.getUser();
+  
+  if (!user) {
+    return { error: "Unauthorized" };
+  }
+  
+  // Check if user is admin
+  const { data: profile } = await supabase
+    .from('view_user_profiles')
+    .select('role')
+    .eq('email', user.email)
+    .single();
+    
+  if (!profile || profile.role !== 'admin') {
+    return { error: "Insufficient permissions" };
+  }
+
+  const checklistId = formData.get("checklist_id") as string;
+  const checklistSchemaStr = formData.get("checklist_schema") as string;
+
+  if (!checklistId || !checklistSchemaStr) {
+    return { error: "Checklist ID and checklist schema are required" };
+  }
+
+  let checklistSchema;
+  try {
+    checklistSchema = JSON.parse(checklistSchemaStr);
+  } catch (error) {
+    return { error: "Invalid JSON format in checklist schema" };
+  }
+
+  const { error } = await supabase
+    .from('checklist')
+    .update({ checklist_schema: checklistSchema })
+    .eq('id', parseInt(checklistId));
+
+  if (error) {
+    console.error("Error updating checklist:", error);
+    return { error: "Failed to update checklist" };
+  }
+
+  return { success: true };
+}
+
+export async function deleteChecklist(id: number): Promise<ActionResult> {
+  const supabase = await createClient();
+  
+  // Get current user
+  const { data: { user } } = await supabase.auth.getUser();
+  
+  if (!user) {
+    return { error: "Unauthorized" };
+  }
+  
+  // Check if user is admin
+  const { data: profile } = await supabase
+    .from('view_user_profiles')
+    .select('role')
+    .eq('email', user.email)
+    .single();
+    
+  if (!profile || profile.role !== 'admin') {
+    return { error: "Insufficient permissions" };
+  }
+
+  const { error } = await supabase
+    .from('checklist')
+    .delete()
+    .eq('id', id);
+
+  if (error) {
+    console.error("Error deleting checklist:", error);
+    return { error: "Failed to delete checklist" };
+  }
+
+  return { success: true };
+}
+
+// Checklist status management actions
+export async function archiveChecklist(checklistId: number): Promise<ActionResult> {
+  const supabase = await createClient();
+  
+  // Get current user
+  const { data: { user } } = await supabase.auth.getUser();
+  
+  if (!user) {
+    return { error: "Unauthorized" };
+  }
+  
+  // Check if user is admin
+  const { data: profile } = await supabase
+    .from('view_user_profiles')
+    .select('role')
+    .eq('email', user.email)
+    .single();
+    
+  if (!profile || profile.role !== 'admin') {
+    return { error: "Insufficient permissions" };
+  }
+
+  const { error } = await supabase
+    .from('checklist')
+    .update({ status: 'archive' })
+    .eq('id', checklistId);
+
+  if (error) {
+    console.error("Error archiving checklist:", error);
+    return { error: "Failed to archive checklist" };
+  }
+
+  return { success: true };
+}
+
+export async function activateChecklist(checklistId: number): Promise<ActionResult> {
+  const supabase = await createClient();
+  
+  // Get current user
+  const { data: { user } } = await supabase.auth.getUser();
+  
+  if (!user) {
+    return { error: "Unauthorized" };
+  }
+  
+  // Check if user is admin
+  const { data: profile } = await supabase
+    .from('view_user_profiles')
+    .select('role')
+    .eq('email', user.email)
+    .single();
+    
+  if (!profile || profile.role !== 'admin') {
+    return { error: "Insufficient permissions" };
+  }
+
+  const { error } = await supabase
+    .from('checklist')
+    .update({ status: 'active' })
+    .eq('id', checklistId);
+
+  if (error) {
+    console.error("Error activating checklist:", error);
+    return { error: "Failed to activate checklist" };
+  }
+
+  return { success: true };
+}
