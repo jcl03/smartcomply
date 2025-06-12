@@ -27,7 +27,11 @@ function SubmitButton() {
   const { pending } = useFormStatus();
   
   return (
-    <Button type="submit" disabled={pending}>
+    <Button 
+      type="submit" 
+      disabled={pending}
+      className="bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 text-white transition-all duration-200 shadow-md hover:shadow-lg"
+    >
       {pending ? "Updating..." : "Update Checklist"}
     </Button>
   );
@@ -120,163 +124,190 @@ export default function EditChecklistComponent({ checklist, complianceId }: { ch
 
   return (
     <>
-      <form action={handleSubmit}>
-        <CardContent className="space-y-6">
+      <form action={handleSubmit}>        <CardContent className="space-y-6 p-6">
           {errorMessage && (
-            <div className="p-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-md">
+            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
               {errorMessage}
             </div>
           )}
           
           {successMessage && (
-            <div className="p-3 text-sm text-green-600 bg-green-50 border border-green-200 rounded-md">
+            <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 px-4 py-3 rounded-lg">
               {successMessage}
             </div>
           )}
 
           {/* Checklist Metadata */}
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="title">Checklist Title</Label>
-              <Input
-                id="title"
-                value={checklistTitle}
-                onChange={(e) => setChecklistTitle(e.target.value)}
-                placeholder="Enter checklist title"
-                className="mt-1"
-              />
-            </div>
-            
-            <div>
-              <Label htmlFor="description">Description</Label>
-              <textarea
-                id="description"
-                value={checklistDescription}
-                onChange={(e) => setChecklistDescription(e.target.value)}
-                placeholder="Enter checklist description"
-                className="w-full mt-1 p-2 border rounded-md"
-                rows={3}
-              />
-            </div>
-          </div>
+          <Card className="bg-white/80 backdrop-blur-sm border-sky-200 shadow-sm">
+            <CardHeader className="bg-gradient-to-r from-sky-50 to-blue-50 border-b border-sky-100 rounded-t-xl">
+              <CardTitle className="flex items-center text-sky-900">
+                <CheckSquare className="h-5 w-5 mr-2 text-sky-600" />
+                Checklist Information
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4 pt-6">
+              <div className="space-y-2">
+                <Label htmlFor="title" className="text-sky-700 font-medium">Checklist Title *</Label>
+                <Input
+                  id="title"
+                  value={checklistTitle}
+                  onChange={(e) => setChecklistTitle(e.target.value)}
+                  placeholder="Enter checklist title"
+                  className="bg-white border-sky-200 focus:border-sky-400 focus:ring-sky-200 text-sky-900 placeholder:text-sky-400"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="description" className="text-sky-700 font-medium">Description</Label>
+                <textarea
+                  id="description"
+                  value={checklistDescription}
+                  onChange={(e) => setChecklistDescription(e.target.value)}
+                  placeholder="Enter checklist description"
+                  className="w-full p-3 bg-white border border-sky-200 rounded-lg focus:border-sky-400 focus:ring-sky-200 text-sky-900 placeholder:text-sky-400 resize-none"
+                  rows={3}
+                />
+              </div>
+            </CardContent>
+          </Card>
 
           {/* Preview Toggle */}
-          <div className="flex justify-between items-center border-t pt-4">
-            <h3 className="text-lg font-medium">Checklist Items</h3>
+          <div className="flex justify-between items-center p-4 bg-sky-50 rounded-lg border border-sky-200">
+            <h3 className="text-lg font-semibold text-sky-900">Checklist Items</h3>
             <Button
               type="button"
-              variant="outline"
               onClick={() => setShowPreview(!showPreview)}
-              className="flex items-center gap-2"
+              className="bg-sky-50 text-sky-700 hover:bg-sky-100 border border-sky-200 transition-all duration-200"
             >
-              <Eye size={16} />
+              <Eye className="h-4 w-4 mr-2" />
               {showPreview ? "Hide Preview" : "Show Preview"}
             </Button>
-          </div>
-
-          {showPreview ? (
+          </div>          {showPreview ? (
             /* Preview Mode */
-            <div className="border rounded-lg p-4 bg-gray-50">
-              <h4 className="font-medium mb-3">Preview</h4>
-              <ChecklistPreview schema={checklistSchema} />
-            </div>
+            <Card className="bg-white/80 backdrop-blur-sm border-sky-200 shadow-sm">
+              <CardHeader className="bg-gradient-to-r from-sky-50 to-blue-50 border-b border-sky-100 rounded-t-xl">
+                <CardTitle className="flex items-center text-sky-900">
+                  <Eye className="h-5 w-5 mr-2 text-sky-600" />
+                  Checklist Preview
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-6">
+                <ChecklistPreview schema={checklistSchema} />
+              </CardContent>
+            </Card>
           ) : (
             /* Edit Mode */
             <div className="space-y-4">
               {items.map((item, index) => (
-                <Card key={item.id} className="p-4">
-                  <div className="flex items-center justify-between mb-4">
-                    <h4 className="font-medium">Item #{index + 1}</h4>
-                    <Button
-                      type="button"
-                      onClick={() => removeItem(index)}
-                      variant="outline"
-                      size="sm"
-                    >
-                      <Minus size={16} />
-                    </Button>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Item Type</Label>
-                      <select
-                        value={item.type}
-                        onChange={(e) => updateItem(index, { type: e.target.value as 'document' | 'yesno' })}
-                        className="w-full p-2 border rounded-md"
+                <Card key={item.id} className="border border-sky-200 bg-sky-25/10 hover:bg-sky-50/30 transition-colors">
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between mb-4">
+                      <h4 className="font-semibold text-sky-900">Item #{index + 1}</h4>
+                      <Button
+                        type="button"
+                        onClick={() => removeItem(index)}
+                        variant="ghost"
+                        size="sm"
+                        className="text-red-500 hover:text-red-700 hover:bg-red-50"
                       >
-                        <option value="yesno">Yes/No Question</option>
-                        <option value="document">Document Upload</option>
-                      </select>
+                        <Minus className="h-4 w-4" />
+                      </Button>
                     </div>
 
-                    <div className="space-y-2">
-                      <Label>Item Name</Label>
-                      <Input
-                        value={item.name}
-                        onChange={(e) => updateItem(index, { name: e.target.value })}
-                        placeholder="Item name"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4 mt-4">
-                    <div className="space-y-2">
-                      <Label>Category (Optional)</Label>
-                      <Input
-                        value={item.category || ""}
-                        onChange={(e) => updateItem(index, { category: e.target.value })}
-                        placeholder="Category name"
-                      />
-                    </div>
-
-                    <div className="flex items-center gap-2 pt-6">
-                      <input
-                        type="checkbox"
-                        checked={item.required}
-                        onChange={(e) => updateItem(index, { required: e.target.checked })}
-                      />
-                      <Label>Required</Label>
-                    </div>
-                  </div>
-
-                  {/* Preview how this item will look */}
-                  <div className="mt-4 p-3 bg-gray-50 rounded-md">
-                    <Label className="text-xs text-muted-foreground">Preview:</Label>
-                    <div className="flex items-start gap-3 mt-2">
-                      <div className="flex-shrink-0 mt-0.5">
-                        {item.type === 'document' ? (
-                          <Upload className="w-4 h-4 text-green-600" />
-                        ) : (
-                          <CheckSquare className="w-4 h-4 text-blue-600" />
-                        )}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label className="text-sky-700 font-medium">Item Type *</Label>
+                        <select
+                          value={item.type}
+                          onChange={(e) => updateItem(index, { type: e.target.value as 'document' | 'yesno' })}
+                          className="w-full p-2 bg-white border border-sky-200 rounded-md focus:border-sky-400 focus:ring-sky-200 text-sky-900"
+                        >
+                          <option value="yesno">Yes/No Question</option>
+                          <option value="document">Document Upload</option>
+                        </select>
                       </div>
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <p className="text-sm font-medium">{item.name || 'Item name'}</p>
-                          <span className={`px-1.5 py-0.5 text-xs rounded ${
-                            item.type === 'document' ? 'bg-green-100 text-green-800' :
-                            'bg-blue-100 text-blue-800'
-                          }`}>
-                            {item.type === 'document' ? 'Upload Document' : 'Yes/No'}
-                          </span>
+
+                      <div className="space-y-2">
+                        <Label className="text-sky-700 font-medium">Item Name *</Label>
+                        <Input
+                          value={item.name}
+                          onChange={(e) => updateItem(index, { name: e.target.value })}
+                          placeholder="Enter item name"
+                          className="bg-white border-sky-200 focus:border-sky-400 focus:ring-sky-200 text-sky-900 placeholder:text-sky-400"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                      <div className="space-y-2">
+                        <Label className="text-sky-700 font-medium">Category (Optional)</Label>
+                        <Input
+                          value={item.category || ""}
+                          onChange={(e) => updateItem(index, { category: e.target.value })}
+                          placeholder="Enter category name"
+                          className="bg-white border-sky-200 focus:border-sky-400 focus:ring-sky-200 text-sky-900 placeholder:text-sky-400"
+                        />
+                      </div>
+
+                      <div className="flex items-center gap-2 pt-6">
+                        <input
+                          type="checkbox"
+                          checked={item.required}
+                          onChange={(e) => updateItem(index, { required: e.target.checked })}
+                          className="rounded border-sky-300 text-sky-600 focus:ring-sky-200 bg-white"
+                        />
+                        <Label className="text-sky-700 font-medium">Required</Label>
+                      </div>
+                    </div>
+
+                    {/* Preview how this item will look */}
+                    <div className="mt-4 p-3 bg-sky-50 rounded-lg border border-sky-100">
+                      <Label className="text-xs text-sky-600 font-medium">Preview:</Label>
+                      <div className="flex items-start gap-3 mt-2">
+                        <div className="flex-shrink-0 mt-0.5">
+                          {item.type === 'document' ? (
+                            <Upload className="w-4 h-4 text-emerald-600" />
+                          ) : (
+                            <CheckSquare className="w-4 h-4 text-sky-600" />
+                          )}
                         </div>
-                        {item.required && (
-                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 text-xs bg-red-100 text-red-800 rounded">
-                            Required
-                          </span>
-                        )}
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <p className="text-sm font-medium text-sky-900">{item.name || 'Item name'}</p>
+                            <span className={`px-2 py-1 text-xs rounded-full font-medium ${
+                              item.type === 'document' ? 'bg-emerald-100 text-emerald-800' :
+                              'bg-sky-100 text-sky-800'
+                            }`}>
+                              {item.type === 'document' ? 'Upload Document' : 'Yes/No'}
+                            </span>
+                          </div>
+                          {item.required && (
+                            <span className="inline-flex items-center gap-1 px-2 py-1 text-xs bg-red-100 text-red-800 rounded-full font-medium">
+                              Required
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </div>
+                  </CardContent>
                 </Card>
               ))}
 
               {items.length === 0 && (
-                <div className="text-center py-8 border-2 border-dashed border-muted rounded-lg">
-                  <p className="text-muted-foreground mb-4">No items added yet</p>
-                  <Button type="button" onClick={addItem}>
-                    <Plus size={16} className="mr-2" />
+                <div className="text-center py-12 px-6 border-2 border-dashed border-sky-200 rounded-lg bg-sky-50/30">
+                  <div className="bg-sky-50 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+                    <CheckSquare className="h-8 w-8 text-sky-400" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-sky-800 mb-2">No Items Added</h3>
+                  <p className="text-sky-600 mb-4">
+                    Start building your checklist by adding your first item.
+                  </p>
+                  <Button 
+                    type="button" 
+                    onClick={addItem}
+                    className="bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 text-white transition-all duration-200 shadow-md hover:shadow-lg"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
                     Add Your First Item
                   </Button>
                 </div>
@@ -284,20 +315,22 @@ export default function EditChecklistComponent({ checklist, complianceId }: { ch
 
               {items.length > 0 && (
                 <div className="flex justify-center pt-4">
-                  <Button type="button" onClick={addItem} variant="outline">
-                    <Plus size={16} className="mr-2" />
+                  <Button 
+                    type="button" 
+                    onClick={addItem}
+                    className="bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 text-white transition-all duration-200 shadow-md hover:shadow-lg"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
                     Add Item
                   </Button>
                 </div>
               )}
             </div>
           )}
-        </CardContent>
-
-        <CardFooter className="flex justify-between">
+        </CardContent>        <CardFooter className="flex justify-between pt-6 border-t border-sky-100">
           <Link 
             href={`/protected/compliance/${complianceId}/checklists`}
-            className="px-4 py-2 text-sm border rounded-md hover:bg-gray-50 transition-colors"
+            className="inline-flex items-center justify-center px-4 py-2 text-sm font-medium rounded-lg bg-sky-50 text-sky-700 hover:bg-sky-100 border border-sky-200 transition-all duration-200"
           >
             Cancel
           </Link>
