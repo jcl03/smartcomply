@@ -87,21 +87,22 @@ export default function UpdateEmailForm({
     setIsConfirming(false);
     setNewEmail("");
   }
-
   return (
     <form onSubmit={handleSubmit}>
-      <CardContent className="space-y-4">
-        <div className="space-y-2">
-          <Label htmlFor="currentEmail">Current Email</Label>
-          <Input
-            id="currentEmail"
-            value={currentEmail}
-            disabled
-          />
+      <CardContent className="space-y-6 p-6">
+        <div className="space-y-3">
+          <Label htmlFor="currentEmail" className="text-sm font-medium text-sky-700 flex items-center gap-2">
+            Current Email Address
+          </Label>
+          <div className="bg-sky-50/50 p-3 rounded-lg border border-sky-200">
+            <p className="font-medium text-sky-900">{currentEmail}</p>
+          </div>
         </div>
         
-        <div className="space-y-2">
-          <Label htmlFor="newEmail">New Email</Label>
+        <div className="space-y-3">
+          <Label htmlFor="newEmail" className="text-sm font-medium text-sky-700">
+            New Email Address
+          </Label>
           <Input 
             id="newEmail" 
             name="newEmail"
@@ -109,36 +110,58 @@ export default function UpdateEmailForm({
             placeholder="new-email@example.com"
             value={newEmail}
             onChange={(e) => setNewEmail(e.target.value)}
+            className="border-sky-200 focus:border-sky-400 focus:ring-sky-400"
             required
           />
         </div>
 
         {isConfirming && (
-          <div className="p-3 bg-amber-50 border border-amber-200 text-amber-800 rounded-md">
-            <p className="font-medium">⚠️ This action is not reversible!</p>
-            <p className="text-sm mt-1">
-              You are about to change this user&apos;s email from <span className="font-medium">{currentEmail}</span> to <span className="font-medium">{newEmail}</span>.
-            </p>
-            <p className="text-sm mt-1">
-              The user will need to use this new email address to log in going forward.
-            </p>
+          <div className="p-4 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 text-amber-800 rounded-lg">
+            <div className="flex items-start gap-3">
+              <div className="bg-amber-100 p-2 rounded-full mt-0.5">
+                <span className="text-amber-600 font-bold text-sm">⚠️</span>
+              </div>
+              <div>
+                <p className="font-semibold">This action cannot be undone!</p>
+                <p className="text-sm mt-1 text-amber-700">
+                  You are about to change this user's email from <span className="font-semibold bg-amber-100 px-1 rounded">{currentEmail}</span> to <span className="font-semibold bg-amber-100 px-1 rounded">{newEmail}</span>.
+                </p>
+                <p className="text-sm mt-2 text-amber-700">
+                  The user will need to use this new email address to log in going forward.
+                </p>
+              </div>
+            </div>
           </div>
         )}
       </CardContent>
       
-      <CardFooter className="flex justify-end gap-2">
+      <CardFooter className="flex justify-end gap-3 p-6 bg-sky-50/30 rounded-b-xl">
         {isConfirming ? (
           <>
-            <Button type="button" variant="outline" onClick={handleCancel} disabled={isLoading}>
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={handleCancel} 
+              disabled={isLoading}
+              className="border-sky-300 text-sky-700 hover:bg-sky-50"
+            >
               Cancel
             </Button>
-            <Button type="submit" disabled={isLoading}>
+            <Button 
+              type="submit" 
+              disabled={isLoading}
+              className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white"
+            >
               {isLoading ? "Updating..." : "Confirm Update"}
             </Button>
           </>
         ) : (
-          <Button type="submit" disabled={isLoading || !newEmail}>
-            Update Email
+          <Button 
+            type="submit" 
+            disabled={isLoading || !newEmail}
+            className="bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 text-white"
+          >
+            {isLoading ? "Processing..." : "Update Email"}
           </Button>
         )}
       </CardFooter>

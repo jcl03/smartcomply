@@ -94,47 +94,66 @@ export default function RevokeAccessForm({ userId, userEmail, isRevoked = false 
       setIsLoading(false);
     }
   }
-
   if (displayIsRevoked) {
     return (
       <div className="space-y-4">
-        <div className="p-3 bg-red-50 border border-red-200 text-red-800 rounded-md flex items-start gap-2">
-          <AlertTriangle className="h-5 w-5 mt-0.5 flex-shrink-0" />
+        <div className="p-4 bg-gradient-to-r from-red-50 to-pink-50 border border-red-200 text-red-800 rounded-lg flex items-start gap-3">
+          <div className="bg-red-100 p-2 rounded-full">
+            <AlertTriangle className="h-5 w-5 text-red-600" />
+          </div>
           <div>
-            <p className="font-medium">User Access Revoked</p>
-            <p className="text-sm mt-1">This user's access has been revoked and they cannot access the application.</p>
+            <p className="font-semibold">User Access Revoked</p>
+            <p className="text-sm mt-1 text-red-700">This user's access has been revoked and they cannot access the application.</p>
           </div>
         </div>
         <button
           onClick={handleRestoreAccess}
           disabled={isLoading}
-          className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg hover:from-green-600 hover:to-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 font-medium"
         >
           <ShieldCheck className="h-4 w-4" />
-          {isLoading ? "Restoring Access..." : "Restore Access"}
+          {isLoading ? (
+            <>
+              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+              Restoring Access...
+            </>
+          ) : (
+            "Restore Access"
+          )}
         </button>
       </div>
     );
   }
-
   return (
-    <div className="space-y-3">
-      <div className="p-3 bg-amber-50 border border-amber-200 text-amber-800 rounded-md flex items-start gap-2">
-        <AlertTriangle className="h-5 w-5 mt-0.5 flex-shrink-0" />
+    <div className="space-y-4">
+      <div className="p-4 bg-gradient-to-r from-amber-50 to-yellow-50 border border-amber-200 text-amber-800 rounded-lg flex items-start gap-3">
+        <div className="bg-amber-100 p-2 rounded-full">
+          <AlertTriangle className="h-5 w-5 text-amber-600" />
+        </div>
         <div>
-          <p className="font-medium">Revoke User Access</p>
-          <p className="text-sm mt-1">
+          <p className="font-semibold">Revoke User Access</p>
+          <p className="text-sm mt-1 text-amber-700">
             Revoking access for this user will immediately prevent them from accessing the application and signing in.
+          </p>
+          <p className="text-xs mt-2 text-amber-600">
+            ⚠️ This action can be reversed by restoring access later.
           </p>
         </div>
       </div>
       <button
         onClick={handleRevokeAccess}
         disabled={isLoading}
-        className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-red-500 to-pink-600 text-white rounded-lg hover:from-red-600 hover:to-pink-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 font-medium"
       >
         <Ban className="h-4 w-4" />
-        {isLoading ? "Revoking Access..." : "Revoke Access"}
+        {isLoading ? (
+          <>
+            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+            Revoking Access...
+          </>
+        ) : (
+          "Revoke Access"
+        )}
       </button>
     </div>
   );

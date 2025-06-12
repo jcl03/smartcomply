@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { resendActivation } from "./actions";
 import { useToast } from "@/hooks/use-toast";
+import { Mail } from "lucide-react";
 
 export default function ResendActivationButton({ email }: { email: string }) {
   const [isLoading, setIsLoading] = useState(false);
@@ -41,14 +42,14 @@ export default function ResendActivationButton({ email }: { email: string }) {
       setIsLoading(false);
     }
   }
-
   return (
     <button
       onClick={handleResendActivation}
       disabled={isLoading}
-      className="px-2 py-1 text-xs bg-green-100 text-green-700 rounded hover:bg-green-200 transition-colors disabled:opacity-50"
+      className="flex items-center gap-1 px-3 py-1.5 bg-emerald-100 text-emerald-700 text-xs font-medium rounded-lg hover:bg-emerald-200 transition-colors disabled:opacity-50"
     >
-      {isLoading ? "Sending..." : "Resend Activation"}
+      <Mail className="h-3 w-3" />
+      {isLoading ? "Sending..." : "Resend"}
     </button>
   );
 }
