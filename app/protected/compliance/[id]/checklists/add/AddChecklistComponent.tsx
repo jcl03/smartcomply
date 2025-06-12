@@ -91,11 +91,9 @@ export default function AddChecklistComponent({ action, complianceId }: { action
         description: checklistDescription,
         items: items,
         categories: categories
-      };
-
-      // Add schema to form data
-      formData.append("checklistSchema", JSON.stringify(checklistSchema));
-      formData.append("complianceId", complianceId);
+      };      // Add schema to form data
+      formData.append("checklist_schema", JSON.stringify(checklistSchema));
+      formData.append("compliance_id", complianceId);
 
       const result = await action(formData);
       
