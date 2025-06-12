@@ -71,57 +71,58 @@ export async function inviteUser(formData: FormData) {
   
   const email = formData.get("email") as string;
   const role = formData.get("role") as string;
-  
-  if (!email || !role) {
+    if (!email || !role) {
     return { error: "Email and role are required" };
   }
-  
-  const supabase = await createClient();
-  const adminClient = createAdminClient();
-  
   try {
-    // 1. Create user with admin client
-    const { data: userData, error: createError } = await adminClient.auth.admin.createUser({
-      email,
-      email_confirm: false,
-      user_metadata: { role },
-    });
+    const supabase = await createClient();
+    const adminClient = createAdminClient();
     
-    if (createError || !userData?.user?.id) {
-      console.error("Error creating user:", createError);
-      return { error: createError?.message || "Failed to create user" };
-    }
-    
-    // 2. Create profile in profiles table
-    const { error: profileError } = await supabase
-      .from('profiles')
-      .insert({ 
-        user_id: userData.user.id, 
-        role,
-        full_name: '',
-      });
-      
-    if (profileError) {
-      console.error("Error creating profile:", profileError);
-      return { error: "Created user but failed to create profile" };
-    }
-      // 3. Send invitation email with magic link using admin client
-    const { error: inviteError } = await adminClient.auth.admin.inviteUserByEmail(email, {
-      redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback?next=/invite/${userData.user.id}`,
+    // 1. Send invitation email (this creates the user and sends invitation in one step)
+    const { data: inviteData, error: inviteError } = await adminClient.auth.admin.inviteUserByEmail(email, {
+      redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback`,
       data: { role }
     });
     
     if (inviteError) {
       console.error("Error sending invite:", inviteError);
-      return { error: "Created user but failed to send invitation" };
+      // Provide more specific error messages
+      if (inviteError.message?.includes('Database error')) {
+        return { error: "Database error: Unable to send invitation. Please check your Supabase configuration." };
+      } else if (inviteError.message?.includes('Invalid token')) {
+        return { error: "Authentication error: Invalid service role key." };
+      } else {
+        return { error: `Failed to send invitation: ${inviteError.message || 'Unknown error'}` };
+      }
+    }
+    
+    // 2. Create profile in profiles table using the invited user's ID
+    if (inviteData?.user?.id) {
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .insert({ 
+          user_id: inviteData.user.id, 
+          role,
+          full_name: '',
+        });
+        
+      if (profileError) {
+        console.error("Error creating profile:", profileError);
+        return { error: "Invitation sent but failed to create user profile" };
+      }
     }
     
     // Revalidate the user management page
     revalidatePath("/protected/user-management");
     
-    return { success: true };
-  } catch (err) {
+    return { success: true };  } catch (err) {
     console.error("Unexpected error inviting user:", err);
+    
+    // Check if it's an admin client configuration error
+    if (err instanceof Error && err.message.includes('Missing environment variables')) {
+      return { error: "Server configuration error: Missing Supabase service role key" };
+    }
+    
     return { error: "An unexpected error occurred" };
   }
 }
