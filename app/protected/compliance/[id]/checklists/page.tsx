@@ -1,7 +1,7 @@
 import { createClient } from "@/utils/supabase/server";
 import { redirect } from "next/navigation";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { ArrowLeft, Plus, CheckSquare, Archive } from "lucide-react";
+import { ArrowLeft, Plus, CheckSquare, List, Archive, RotateCcw } from "lucide-react";
 import Link from "next/link";
 import { archiveChecklist, activateChecklist } from "../../actions";
 
@@ -27,7 +27,6 @@ export default async function ComplianceChecklistsPage({ params }: { params: Pro
   if (!profile || profile.role !== 'admin') {
     return redirect("/protected");
   }
-
   // Fetch compliance framework (only active ones)
   const { data: framework, error: frameworkError } = await supabase
     .from('compliance')
@@ -38,16 +37,13 @@ export default async function ComplianceChecklistsPage({ params }: { params: Pro
 
   if (frameworkError || !framework) {
     return redirect("/protected/compliance");
-  }
-
-  // Fetch checklists for this framework (only active ones by default)
+  }  // Fetch checklists for this framework (only active ones by default)
   const { data: checklists, error: checklistsError } = await supabase
     .from('checklist')
     .select('*')
     .eq('compliance_id', id)
     .eq('status', 'active')
     .order('id');
-
   if (checklistsError) {
     console.error("Error fetching checklists:", checklistsError);
   }
@@ -76,10 +72,8 @@ export default async function ComplianceChecklistsPage({ params }: { params: Pro
           >
             <ArrowLeft size={16} />
             Back
-          </Link>
-          <CheckSquare className="h-6 w-6 text-primary" />
-          <h1 className="text-2xl font-bold">{framework.name} - Checklists</h1>
-        </div>
+          </Link>          <CheckSquare className="h-6 w-6 text-primary" />
+          <h1 className="text-2xl font-bold">{framework.name} - Checklists</h1>        </div>
         <div className="flex gap-2">
           <Link 
             href={`/protected/compliance/${id}/checklists/archive`}
@@ -97,20 +91,17 @@ export default async function ComplianceChecklistsPage({ params }: { params: Pro
           </Link>
         </div>
       </div>
-      
-      <Card>
+        <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-xl flex items-center gap-2">
-            <CheckSquare className="h-5 w-5" />
+            <List className="h-5 w-5" />
             Compliance Checklists
           </CardTitle>
         </CardHeader>
         <CardContent>
           {checklists && checklists.length > 0 ? (
             <div className="border rounded-lg overflow-hidden">
-              <table className="w-full">
-                <thead className="bg-muted">
-                  <tr>
+              <table className="w-full">                <thead className="bg-muted">                  <tr>
                     <th className="text-left p-3 font-medium">Checklist ID</th>
                     <th className="text-left p-3 font-medium">Schema Preview</th>
                     <th className="text-left p-3 font-medium">Status</th>
@@ -122,18 +113,17 @@ export default async function ComplianceChecklistsPage({ params }: { params: Pro
                     <tr key={checklist.id} className="border-t hover:bg-muted/50 transition-colors">
                       <td className="p-3">
                         <div className="font-medium">Checklist #{checklist.id}</div>
-                      </td>
-                      <td className="p-3">
+                      </td>                      <td className="p-3">
                         <div className="max-w-xs">
                           {checklist.checklist_schema?.title ? (
                             <div className="font-medium text-sm">{checklist.checklist_schema.title}</div>
                           ) : (
                             <div className="text-muted-foreground text-sm">
-                              {checklist.checklist_schema?.items ? checklist.checklist_schema.items.length : 0} items
+                              {checklist.checklist_schema?.items?.length || 0} items
                             </div>
                           )}
                           <div className="text-xs text-muted-foreground mt-1 truncate">
-                            {JSON.stringify(checklist.checklist_schema).substring(0, 100)}...
+                            {checklist.checklist_schema?.description || 'No description'}
                           </div>
                         </div>
                       </td>
@@ -172,10 +162,9 @@ export default async function ComplianceChecklistsPage({ params }: { params: Pro
                   ))}
                 </tbody>
               </table>
-            </div>
-          ) : (
+            </div>          ) : (
             <div className="text-center py-8">
-              <CheckSquare className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+              <List className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
               <p className="text-muted-foreground mb-4">No checklists found for this framework</p>
               <Link 
                 href={`/protected/compliance/${id}/checklists/add`}

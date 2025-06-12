@@ -1,11 +1,15 @@
 import { createClient } from "@/utils/supabase/server";
 import { redirect } from "next/navigation";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { ArrowLeft, CheckSquare, RotateCcw } from "lucide-react";
+import { ArrowLeft, CheckSquare, List, RotateCcw } from "lucide-react";
 import Link from "next/link";
 import { activateChecklist } from "../../../actions";
 
-export default async function ArchivedChecklistsPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function ChecklistsArchivePage({ 
+  params 
+}: { 
+  params: Promise<{ id: string }> 
+}) {
   const supabase = await createClient();
   const { id } = await params;
   
@@ -28,11 +32,12 @@ export default async function ArchivedChecklistsPage({ params }: { params: Promi
     return redirect("/protected");
   }
 
-  // Fetch compliance framework
+  // Fetch compliance framework (only active ones)
   const { data: framework, error: frameworkError } = await supabase
     .from('compliance')
     .select('*')
     .eq('id', id)
+    .eq('status', 'active')
     .single();
 
   if (frameworkError || !framework) {
@@ -43,8 +48,7 @@ export default async function ArchivedChecklistsPage({ params }: { params: Promi
   const { data: checklists, error: checklistsError } = await supabase
     .from('checklist')
     .select('*')
-    .eq('compliance_id', id)
-    .eq('status', 'archive')
+    .eq('compliance_id', id)    .eq('status', 'archive')
     .order('id');
 
   if (checklistsError) {
@@ -60,22 +64,24 @@ export default async function ArchivedChecklistsPage({ params }: { params: Promi
 
   return (
     <div className="flex-1 w-full flex flex-col gap-8">
-      <div className="flex items-center gap-3">
-        <Link 
-          href={`/protected/compliance/${id}/checklists`}
-          className="flex items-center gap-2 px-3 py-2 rounded-md bg-secondary text-secondary-foreground hover:bg-secondary/90 transition-colors"
-        >
-          <ArrowLeft size={16} />
-          Back to Active Checklists
-        </Link>
-        <CheckSquare className="h-6 w-6 text-primary" />
-        <h1 className="text-2xl font-bold">{framework.name} - Archived Checklists</h1>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <Link 
+            href={`/protected/compliance/${id}/checklists`}
+            className="flex items-center gap-2 px-3 py-2 rounded-md bg-secondary text-secondary-foreground hover:bg-secondary/90 transition-colors"
+          >
+            <ArrowLeft size={16} />
+            Back to Active Checklists
+          </Link>
+          <CheckSquare className="h-6 w-6 text-primary" />
+          <h1 className="text-2xl font-bold">{framework.name} - Archived Checklists</h1>
+        </div>
       </div>
       
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-xl flex items-center gap-2">
-            <CheckSquare className="h-5 w-5" />
+            <List className="h-5 w-5" />
             Archived Checklists
           </CardTitle>
         </CardHeader>
@@ -103,7 +109,7 @@ export default async function ArchivedChecklistsPage({ params }: { params: Promi
                             <div className="font-medium text-sm">{checklist.checklist_schema.title}</div>
                           ) : (
                             <div className="text-muted-foreground text-sm">
-                              {checklist.checklist_schema?.items ? checklist.checklist_schema.items.length : 0} items
+                              {checklist.checklist_schema?.items?.length || 0} items
                             </div>
                           )}
                           <div className="text-xs text-muted-foreground mt-1 truncate">
@@ -131,7 +137,7 @@ export default async function ArchivedChecklistsPage({ params }: { params: Promi
                               className="px-2 py-1 text-xs bg-green-100 text-green-800 rounded hover:bg-green-200 transition-colors flex items-center gap-1"
                             >
                               <RotateCcw size={12} />
-                              Reactivate
+                              Activate
                             </button>
                           </form>
                         </div>
@@ -143,7 +149,7 @@ export default async function ArchivedChecklistsPage({ params }: { params: Promi
             </div>
           ) : (
             <div className="text-center py-8">
-              <CheckSquare className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+              <List className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
               <p className="text-muted-foreground mb-4">No archived checklists found</p>
               <Link 
                 href={`/protected/compliance/${id}/checklists`}
