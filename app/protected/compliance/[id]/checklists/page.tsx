@@ -160,8 +160,7 @@ export default async function ComplianceChecklistsPage({ params }: { params: Pro
                           <span className="px-3 py-1 text-xs font-medium rounded-full bg-emerald-100 text-emerald-700 border border-emerald-200">
                             Active
                           </span>
-                        </td>
-                        <td className="p-4">
+                        </td>                        <td className="p-4">
                           <div className="flex gap-2 flex-wrap">
                             <Link 
                               href={`/protected/compliance/${id}/checklists/${checklist.id}/edit`}

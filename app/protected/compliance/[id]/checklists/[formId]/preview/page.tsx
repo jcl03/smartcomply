@@ -11,10 +11,10 @@ import { getUserProfile } from "@/lib/api";
 export default async function PreviewChecklistPage({ 
   params 
 }: { 
-  params: Promise<{ id: string; checklistId: string }> 
+  params: Promise<{ id: string; formId: string }> 
 }) {
   const supabase = await createClient();
-  const { id, checklistId } = await params;
+  const { id, formId } = await params;
   
   // Get current user
   const { data: { user } } = await supabase.auth.getUser();
@@ -47,12 +47,11 @@ export default async function PreviewChecklistPage({
 
   if (frameworkError || !framework) {
     return redirect("/protected/compliance");
-  }
-  // Fetch the checklist (only if active)
+  }  // Fetch the checklist (only if active)
   const { data: checklist, error: checklistError } = await supabase
     .from('checklist')
     .select('*')
-    .eq('id', checklistId)
+    .eq('id', formId)
     .eq('compliance_id', id)
     .eq('status', 'active')
     .single();
@@ -83,9 +82,8 @@ export default async function PreviewChecklistPage({
                 <h1 className="text-2xl font-bold text-sky-900">Preview Checklist</h1>
                 <p className="text-sky-600">#{checklist.id} • {framework.name}</p>
               </div>
-            </div>
-            <Link 
-              href={`/protected/compliance/${id}/checklists/${checklistId}/edit`}
+            </div>            <Link 
+              href={`/protected/compliance/${id}/checklists/${formId}/edit`}
               className="inline-flex items-center justify-center rounded-lg bg-gradient-to-r from-sky-500 to-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:from-sky-600 hover:to-blue-700 transition-all duration-200 shadow-md hover:shadow-lg"
             >
               <FileText className="h-4 w-4 mr-2" />

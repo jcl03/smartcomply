@@ -10,10 +10,10 @@ import { getUserProfile } from "@/lib/api";
 export default async function EditChecklistPage({ 
   params 
 }: { 
-  params: Promise<{ id: string; checklistId: string }> 
+  params: Promise<{ id: string; formId: string }> 
 }) {
   const supabase = await createClient();
-  const { id, checklistId } = await params;
+  const { id, formId } = await params;
   
   // Get current user
   const { data: { user } } = await supabase.auth.getUser();
@@ -46,12 +46,11 @@ export default async function EditChecklistPage({
 
   if (frameworkError || !framework) {
     return redirect("/protected/compliance");
-  }
-  // Fetch the checklist (only if active)
+  }  // Fetch the checklist (only if active)
   const { data: checklist, error: checklistError } = await supabase
     .from('checklist')
     .select('*')
-    .eq('id', checklistId)
+    .eq('id', formId)
     .eq('compliance_id', id)
     .eq('status', 'active')
     .single();
