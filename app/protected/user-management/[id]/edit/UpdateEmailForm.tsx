@@ -110,7 +110,7 @@ export default function UpdateEmailForm({
             placeholder="new-email@example.com"
             value={newEmail}
             onChange={(e) => setNewEmail(e.target.value)}
-            className="border-sky-200 focus:border-sky-400 focus:ring-sky-400"
+            className="border-sky-200 focus:border-sky-400 focus:ring-sky-400 bg-white text-gray-700"
             required
           />
         </div>

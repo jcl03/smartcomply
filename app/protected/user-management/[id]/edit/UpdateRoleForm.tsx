@@ -48,24 +48,35 @@ export default function UpdateRoleForm({
       <div className="space-y-6">
         <div className="space-y-3">
           <Label htmlFor="role" className="text-sm font-medium text-sky-700">
-            Current Role: <span className="bg-sky-100 text-sky-800 px-2 py-1 rounded-full text-xs ml-2">{currentRole}</span>
+            Current Role:{" "}
+            <span className="bg-sky-100 text-sky-800 px-2 py-1 rounded-full text-xs ml-2">
+              {currentRole}
+            </span>
           </Label>
           <select
             id="role"
             name="role"
-            className="flex h-12 w-full rounded-lg border-2 border-sky-200 bg-white px-4 py-3 text-sm transition-colors hover:border-sky-300 focus:border-sky-400 focus:ring-2 focus:ring-sky-400 focus:ring-opacity-20 disabled:cursor-not-allowed disabled:opacity-50"
+            className="flex h-12 w-full rounded-lg border-2 border-sky-200 bg-white px-4 py-3 text-sm text-gray-700 transition-colors hover:border-sky-300 focus:border-sky-400 focus:ring-2 focus:ring-sky-400 focus:ring-opacity-20 disabled:cursor-not-allowed disabled:opacity-50"
             defaultValue={currentRole}
           >
-            <option value="user">👤 User - Basic access with limited permissions</option>
-            <option value="manager">👔 Manager - Enhanced access for team management</option>
-            <option value="external_auditor">🔍 External Auditor - Read-only access for compliance review</option>
-            <option value="admin">⚡ Admin - Full system access and user management</option>
+            <option value="user">
+              User - Basic access with limited permissions
+            </option>
+            <option value="manager">
+              Manager - Enhanced access for team management
+            </option>
+            <option value="external_auditor">
+              External Auditor - Read-only access for compliance review
+            </option>
+            <option value="admin">
+              Admin - Full system access and user management
+            </option>
           </select>
         </div>
 
         <div className="flex justify-end pt-4">
-          <Button 
-            type="submit" 
+          <Button
+            type="submit"
             disabled={isLoading}
             className="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white px-8 py-3 rounded-lg font-medium transition-all duration-200"
           >
