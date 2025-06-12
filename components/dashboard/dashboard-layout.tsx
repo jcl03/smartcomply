@@ -141,13 +141,11 @@ export default function DashboardLayout({ children, userProfile }: DashboardLayo
             </div>
           </div>
         </div>
-      </header>
-
-      <div className="flex">
+      </header>      <div className="flex min-h-screen">
         {/* Sidebar */}
         <aside className={`
           fixed lg:static inset-y-0 left-0 z-40 w-64 bg-white/90 backdrop-blur-md border-r border-sky-200 shadow-lg
-          transform transition-transform duration-300 ease-in-out lg:translate-x-0
+          transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:flex-shrink-0
           ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
         `}>
           <div className="flex flex-col h-full pt-6">
@@ -199,8 +197,10 @@ export default function DashboardLayout({ children, userProfile }: DashboardLayo
             className="fixed inset-0 bg-black/20 backdrop-blur-sm z-30 lg:hidden"
             onClick={() => setSidebarOpen(false)}
           />
-        )}        {/* Main Content */}
-        <main className="flex-1 lg:ml-0">
+        )}
+
+        {/* Main Content */}
+        <main className="flex-1 lg:ml-0 min-w-0">
           <div className="p-6">
             {children}
           </div>
