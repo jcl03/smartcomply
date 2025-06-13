@@ -159,9 +159,7 @@ export default async function Login(props: { searchParams: Promise<Message> }) {
               </SubmitButton>
             </div>
 
-            <FormMessage message={searchParams} />
-
-            <div className="mt-6 text-center">
+            <FormMessage message={searchParams} />            <div className="mt-6 text-center">
               <div className="relative">
                 <div className="absolute inset-0 flex items-center">
                   <div className="w-full border-t border-slate-200 dark:border-slate-700"></div>
@@ -172,6 +170,20 @@ export default async function Login(props: { searchParams: Promise<Message> }) {
                   </span>
                 </div>
               </div>
+              
+              {/* First Time Login Button */}
+              <div className="mt-4 mb-4">
+                <Link
+                  href="/first-time-login"
+                  className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-semibold rounded-lg shadow-md hover:shadow-lg transition-all duration-300 transform hover:-translate-y-0.5 text-sm tracking-wide"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                  First Time Login
+                </Link>
+              </div>
+              
               <p className="mt-4 text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-700/50 rounded-lg p-3 border border-slate-200 dark:border-slate-600">
                 <span className="font-semibold text-sky-600 dark:text-sky-400">
                   Contact your administrator

@@ -9,6 +9,7 @@ export async function GET(request: Request) {
   const code = requestUrl.searchParams.get("code");
   const origin = requestUrl.origin;
   const next = requestUrl.searchParams.get("next")?.toString();
+  const redirectTo = requestUrl.searchParams.get("redirect_to")?.toString();
 
   if (code) {
     const supabase = await createClient();
@@ -20,6 +21,11 @@ export async function GET(request: Request) {
     // For invitation links, redirect to a special invite callback page that handles
     // the implicit flow tokens in the URL fragment
     return NextResponse.redirect(`${origin}/invite/callback?next=${encodeURIComponent(next)}`);
+  }
+
+  // Handle password reset redirects
+  if (redirectTo) {
+    return NextResponse.redirect(`${origin}${redirectTo}`);
   }
 
   // For other redirects, use the next parameter if available
