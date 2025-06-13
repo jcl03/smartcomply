@@ -141,13 +141,11 @@ export default function DashboardLayout({ children, userProfile }: DashboardLayo
             </div>
           </div>
         </div>
-      </header>
-
-      <div className="flex">
+      </header>      <div className="flex min-h-screen">
         {/* Sidebar */}
         <aside className={`
           fixed lg:static inset-y-0 left-0 z-40 w-64 bg-white/90 backdrop-blur-md border-r border-sky-200 shadow-lg
-          transform transition-transform duration-300 ease-in-out lg:translate-x-0
+          transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:flex-shrink-0
           ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
         `}>
           <div className="flex flex-col h-full pt-6">
@@ -172,24 +170,9 @@ export default function DashboardLayout({ children, userProfile }: DashboardLayo
                     {item.name}
                   </Link>
                 );
-              })}
-            </nav>
+              })}            </nav>
 
-            {/* Sidebar Footer */}
-            <div className="p-4 border-t border-sky-200">
-              <Card className="bg-gradient-to-r from-sky-50 to-blue-50 border-sky-200 p-4">
-                <div className="text-center">
-                  <div className="bg-gradient-to-r from-sky-500 to-blue-600 p-2 rounded-full w-fit mx-auto mb-2">
-                    <Shield className="h-4 w-4 text-white" />
-                  </div>
-                  <p className="text-sm font-medium text-sky-900">SmartComply Pro</p>
-                  <p className="text-xs text-sky-600 mt-1">Upgrade for more features</p>
-                  <button className="mt-2 w-full bg-sky-500 text-white text-xs py-2 rounded-lg hover:bg-sky-600 transition-colors">
-                    Upgrade Now
-                  </button>
-                </div>
-              </Card>
-            </div>
+            {/* Sidebar Footer - Removed upgrade section */}
           </div>
         </aside>
 
@@ -199,8 +182,10 @@ export default function DashboardLayout({ children, userProfile }: DashboardLayo
             className="fixed inset-0 bg-black/20 backdrop-blur-sm z-30 lg:hidden"
             onClick={() => setSidebarOpen(false)}
           />
-        )}        {/* Main Content */}
-        <main className="flex-1 lg:ml-0">
+        )}
+
+        {/* Main Content */}
+        <main className="flex-1 lg:ml-0 min-w-0">
           <div className="p-6">
             {children}
           </div>

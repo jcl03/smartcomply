@@ -17,7 +17,11 @@ function SubmitButton() {
   const { pending } = useFormStatus();
   
   return (
-    <Button type="submit" disabled={pending}>
+    <Button 
+      type="submit" 
+      disabled={pending}
+      className="bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 text-white transition-all duration-200 shadow-md hover:shadow-lg"
+    >
       {pending ? "Creating..." : "Create Checklist"}
     </Button>
   );
@@ -111,21 +115,20 @@ export default function AddChecklistComponent({ action, complianceId }: { action
       setErrorMessage("An error occurred while creating the checklist.");
     }
   };
-
   if (showPreview) {
     return (
-      <div className="space-y-4">
+      <div className="space-y-6 p-6">
         <div className="flex items-center justify-between">
-          <h2 className="text-2xl font-bold">Checklist Preview</h2>
+          <h2 className="text-2xl font-bold text-sky-900">Checklist Preview</h2>
           <Button 
             onClick={() => setShowPreview(false)}
-            variant="outline"
+            className="bg-sky-50 text-sky-700 hover:bg-sky-100 border border-sky-200 transition-all duration-200"
           >
             <CheckSquare className="h-4 w-4 mr-2" />
             Back to Editor
           </Button>
         </div>
-          <ChecklistPreview 
+        <ChecklistPreview 
           schema={{
             title: checklistTitle || "Untitled Checklist",
             description: checklistDescription,
@@ -135,31 +138,29 @@ export default function AddChecklistComponent({ action, complianceId }: { action
       </div>
     );
   }
-
   return (
-    <form action={handleSubmit} className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center">
-            <CheckSquare className="h-5 w-5 mr-2" />
+    <form action={handleSubmit} className="space-y-6 p-6">
+      {/* Main Details Card */}
+      <Card className="bg-white/80 backdrop-blur-sm border-sky-200 shadow-sm">
+        <CardHeader className="bg-gradient-to-r from-sky-50 to-blue-50 border-b border-sky-100 rounded-t-xl">
+          <CardTitle className="flex items-center text-sky-900">
+            <CheckSquare className="h-5 w-5 mr-2 text-sky-600" />
             Checklist Details
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-4 pt-6">
           {errorMessage && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
+            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
               {errorMessage}
             </div>
           )}
           
           {successMessage && (
-            <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded">
+            <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 px-4 py-3 rounded-lg">
               {successMessage}
             </div>
-          )}
-
-          <div className="space-y-2">
-            <Label htmlFor="title">Checklist Title *</Label>
+          )}          <div className="space-y-2">
+            <Label htmlFor="title" className="text-sky-700 font-medium">Checklist Title *</Label>
             <Input
               id="title"
               name="title"
@@ -167,36 +168,42 @@ export default function AddChecklistComponent({ action, complianceId }: { action
               onChange={(e) => setChecklistTitle(e.target.value)}
               placeholder="Enter checklist title"
               required
+              className="bg-white border-sky-200 focus:border-sky-400 focus:ring-sky-200 text-sky-900 placeholder:text-sky-400"
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="description">Description</Label>
+            <Label htmlFor="description" className="text-sky-700 font-medium">Description</Label>
             <Input
               id="description"
               name="description"
               value={checklistDescription}
               onChange={(e) => setChecklistDescription(e.target.value)}
               placeholder="Enter checklist description"
+              className="bg-white border-sky-200 focus:border-sky-400 focus:ring-sky-200 text-sky-900 placeholder:text-sky-400"
             />
           </div>
         </CardContent>
       </Card>
 
       {/* Categories Management */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Categories (Optional)</CardTitle>
+      <Card className="bg-white/80 backdrop-blur-sm border-sky-200 shadow-sm">
+        <CardHeader className="bg-gradient-to-r from-sky-50 to-blue-50 border-b border-sky-100 rounded-t-xl">
+          <CardTitle className="text-sky-900">Categories (Optional)</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex gap-2">
+        <CardContent className="space-y-4 pt-6">          <div className="flex gap-2">
             <Input
               value={newCategory}
               onChange={(e) => setNewCategory(e.target.value)}
               placeholder="Enter category name"
               onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addCategory())}
+              className="bg-white border-sky-200 focus:border-sky-400 focus:ring-sky-200 text-sky-900 placeholder:text-sky-400"
             />
-            <Button type="button" onClick={addCategory} variant="outline">
+            <Button 
+              type="button" 
+              onClick={addCategory} 
+              className="bg-sky-50 text-sky-700 hover:bg-sky-100 border border-sky-200 transition-all duration-200"
+            >
               <Plus className="h-4 w-4" />
             </Button>
           </div>
@@ -204,14 +211,14 @@ export default function AddChecklistComponent({ action, complianceId }: { action
           {categories.length > 0 && (
             <div className="flex flex-wrap gap-2">
               {categories.map((category, index) => (
-                <div key={index} className="flex items-center gap-1 bg-blue-100 text-blue-800 px-2 py-1 rounded">
-                  <span className="text-sm">{category}</span>
+                <div key={index} className="flex items-center gap-1 bg-sky-100 text-sky-800 px-3 py-1.5 rounded-lg border border-sky-200">
+                  <span className="text-sm font-medium">{category}</span>
                   <Button
                     type="button"
                     variant="ghost"
                     size="sm"
                     onClick={() => removeCategory(category)}
-                    className="h-4 w-4 p-0 hover:bg-blue-200"
+                    className="h-4 w-4 p-0 hover:bg-sky-200 text-sky-600"
                   >
                     <Minus className="h-3 w-3" />
                   </Button>
@@ -223,68 +230,77 @@ export default function AddChecklistComponent({ action, complianceId }: { action
       </Card>
 
       {/* Checklist Items */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center justify-between">
+      <Card className="bg-white/80 backdrop-blur-sm border-sky-200 shadow-sm">
+        <CardHeader className="bg-gradient-to-r from-sky-50 to-blue-50 border-b border-sky-100 rounded-t-xl">
+          <CardTitle className="flex items-center justify-between text-sky-900">
             Checklist Items
-            <Button type="button" onClick={addItem} variant="outline" size="sm">
+            <Button 
+              type="button" 
+              onClick={addItem} 
+              className="bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 text-white transition-all duration-200 shadow-sm hover:shadow-md"
+              size="sm"
+            >
               <Plus className="h-4 w-4 mr-2" />
               Add Item
             </Button>
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-4 pt-6">
           {items.length === 0 ? (
-            <p className="text-gray-500 text-center py-8">
-              No items added yet. Click "Add Item" to get started.
-            </p>
+            <div className="text-center py-12 px-6">
+              <div className="bg-sky-50 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+                <CheckSquare className="h-8 w-8 text-sky-400" />
+              </div>
+              <h3 className="text-lg font-semibold text-sky-800 mb-2">No Items Added</h3>
+              <p className="text-sky-600 mb-4">
+                No items added yet. Click "Add Item" to get started.
+              </p>
+            </div>
           ) : (
             items.map((item, index) => (
-              <Card key={item.id} className="border border-gray-200">
+              <Card key={item.id} className="border border-sky-200 bg-sky-25/10 hover:bg-sky-50/30 transition-colors">
                 <CardContent className="pt-4">
                   <div className="flex items-start justify-between mb-4">
-                    <h4 className="font-medium">Item {index + 1}</h4>
+                    <h4 className="font-semibold text-sky-900">Item {index + 1}</h4>
                     <Button
                       type="button"
                       onClick={() => removeItem(index)}
                       variant="ghost"
                       size="sm"
-                      className="text-red-500 hover:text-red-700"
+                      className="text-red-500 hover:text-red-700 hover:bg-red-50"
                     >
                       <Minus className="h-4 w-4" />
                     </Button>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Item Name *</Label>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">                    <div className="space-y-2">
+                      <Label className="text-sky-700 font-medium">Item Name *</Label>
                       <Input
                         value={item.name}
                         onChange={(e) => updateItem(index, { name: e.target.value })}
                         placeholder="Enter item name"
                         required
+                        className="bg-white border-sky-200 focus:border-sky-400 focus:ring-sky-200 text-sky-900 placeholder:text-sky-400"
                       />
                     </div>
 
                     <div className="space-y-2">
-                      <Label>Type *</Label>
+                      <Label className="text-sky-700 font-medium">Type *</Label>
                       <select
                         value={item.type}
                         onChange={(e) => updateItem(index, { type: e.target.value as 'document' | 'yesno' })}
-                        className="w-full p-2 border rounded-md"
+                        className="w-full p-2 bg-white border border-sky-200 rounded-md focus:border-sky-400 focus:ring-sky-200 text-sky-900"
                       >
                         <option value="document">Document Upload</option>
                         <option value="yesno">Yes/No Question</option>
                       </select>
-                    </div>
-
-                    {categories.length > 0 && (
+                    </div>                    {categories.length > 0 && (
                       <div className="space-y-2">
-                        <Label>Category</Label>
+                        <Label className="text-sky-700 font-medium">Category</Label>
                         <select
                           value={item.category || ""}
                           onChange={(e) => updateItem(index, { category: e.target.value || undefined })}
-                          className="w-full p-2 border rounded-md"
+                          className="w-full p-2 bg-white border border-sky-200 rounded-md focus:border-sky-400 focus:ring-sky-200 text-sky-900"
                         >
                           <option value="">No Category</option>
                           {categories.map((category) => (
@@ -294,17 +310,15 @@ export default function AddChecklistComponent({ action, complianceId }: { action
                           ))}
                         </select>
                       </div>
-                    )}
-
-                    <div className="flex items-center space-x-2">
+                    )}                    <div className="flex items-center space-x-2">
                       <input
                         type="checkbox"
                         id={`required-${index}`}
                         checked={item.required}
                         onChange={(e) => updateItem(index, { required: e.target.checked })}
-                        className="rounded"
+                        className="rounded border-sky-300 text-sky-600 focus:ring-sky-200 bg-white"
                       />
-                      <Label htmlFor={`required-${index}`}>Required</Label>
+                      <Label htmlFor={`required-${index}`} className="text-sky-700 font-medium">Required</Label>
                     </div>
                   </div>
                 </CardContent>
@@ -314,16 +328,18 @@ export default function AddChecklistComponent({ action, complianceId }: { action
         </CardContent>
       </Card>
 
-      <CardFooter className="flex justify-between">
-        <div className="flex gap-2">
+      <CardFooter className="flex justify-between pt-6">
+        <div className="flex gap-3">
           <Link href={`/protected/compliance/${complianceId}/checklists`}>
-            <Button variant="outline">Cancel</Button>
+            <Button className="bg-sky-50 text-sky-700 hover:bg-sky-100 border border-sky-200 transition-all duration-200">
+              Cancel
+            </Button>
           </Link>
           <Button
             type="button"
-            variant="outline"
             onClick={() => setShowPreview(true)}
             disabled={!checklistTitle || items.length === 0}
+            className="bg-sky-50 text-sky-700 hover:bg-sky-100 border border-sky-200 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Eye className="h-4 w-4 mr-2" />
             Preview
