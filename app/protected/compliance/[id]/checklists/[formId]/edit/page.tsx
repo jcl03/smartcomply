@@ -60,24 +60,32 @@ export default async function EditChecklistPage({
 
   return (
     <DashboardLayout userProfile={currentUserProfile}>
-      <div className="space-y-6">
-        {/* Header Section */}
+      <div className="space-y-6">        {/* Header Section */}
         <div className="bg-gradient-to-r from-sky-50 via-blue-50 to-indigo-50 rounded-xl p-6 border border-sky-200">
-          <div className="flex items-center gap-4">
-            <Link 
-              href={`/protected/compliance/${id}/checklists`}
-              className="flex items-center gap-2 px-3 py-2 rounded-lg bg-sky-50 text-sky-700 hover:bg-sky-100 border border-sky-200 transition-all duration-200"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              Back to Checklists
-            </Link>
-            <div className="bg-sky-100 p-3 rounded-full">
-              <CheckSquare className="h-6 w-6 text-sky-600" />
+          <div className="relative flex items-center justify-between">
+            <div className="flex items-center">
+              <Link 
+                href={`/protected/compliance/${id}/checklists`}
+                className="flex items-center gap-2 px-3 py-2 rounded-lg bg-sky-50 text-sky-700 hover:bg-sky-100 border border-sky-200 transition-all duration-200"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                Back to Checklists
+              </Link>
             </div>
-            <div>
-              <h1 className="text-2xl font-bold text-sky-900">Edit Checklist</h1>
-              <p className="text-sky-600">#{checklist.id} • {framework.name}</p>
+            
+            {/* Centered Title */}
+            <div className="absolute left-1/2 transform -translate-x-1/2 flex items-center gap-4">
+              <div className="bg-sky-100 p-3 rounded-full">
+                <CheckSquare className="h-6 w-6 text-sky-600" />
+              </div>
+              <div className="text-center">
+                <h1 className="text-2xl font-bold text-sky-900">Edit Checklist</h1>
+                <p className="text-sky-600">#{checklist.id} • {framework.name}</p>
+              </div>
             </div>
+            
+            {/* Right side placeholder for balance */}
+            <div className="w-[140px]"></div>
           </div>
         </div>
         
