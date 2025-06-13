@@ -170,24 +170,9 @@ export default function DashboardLayout({ children, userProfile }: DashboardLayo
                     {item.name}
                   </Link>
                 );
-              })}
-            </nav>
+              })}            </nav>
 
-            {/* Sidebar Footer */}
-            <div className="p-4 border-t border-sky-200">
-              <Card className="bg-gradient-to-r from-sky-50 to-blue-50 border-sky-200 p-4">
-                <div className="text-center">
-                  <div className="bg-gradient-to-r from-sky-500 to-blue-600 p-2 rounded-full w-fit mx-auto mb-2">
-                    <Shield className="h-4 w-4 text-white" />
-                  </div>
-                  <p className="text-sm font-medium text-sky-900">SmartComply Pro</p>
-                  <p className="text-xs text-sky-600 mt-1">Upgrade for more features</p>
-                  <button className="mt-2 w-full bg-sky-500 text-white text-xs py-2 rounded-lg hover:bg-sky-600 transition-colors">
-                    Upgrade Now
-                  </button>
-                </div>
-              </Card>
-            </div>
+            {/* Sidebar Footer - Removed upgrade section */}
           </div>
         </aside>
 
