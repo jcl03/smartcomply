@@ -247,16 +247,22 @@ export default function EditChecklistComponent({ checklist, complianceId }: { ch
                           placeholder="Enter category name"
                           className="bg-white border-sky-200 focus:border-sky-400 focus:ring-sky-200 text-sky-900 placeholder:text-sky-400"
                         />
-                      </div>
-
-                      <div className="flex items-center gap-2 pt-6">
-                        <input
-                          type="checkbox"
-                          checked={item.required}
-                          onChange={(e) => updateItem(index, { required: e.target.checked })}
-                          className="rounded border-sky-300 text-sky-600 focus:ring-sky-200 bg-white"
-                        />
-                        <Label className="text-sky-700 font-medium">Required</Label>
+                      </div>                      <div className="flex items-center gap-2 pt-6">
+                        <div 
+                          onClick={() => updateItem(index, { required: !item.required })}
+                          className={`h-4 w-4 rounded border-2 cursor-pointer transition-all duration-200 flex items-center justify-center ${
+                            item.required 
+                              ? 'bg-sky-600 border-sky-600' 
+                              : 'bg-white border-sky-300 hover:border-sky-400'
+                          }`}
+                        >
+                          {item.required && (
+                            <svg className="h-3 w-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                            </svg>
+                          )}
+                        </div>
+                        <Label className="text-sky-700 font-medium cursor-pointer" onClick={() => updateItem(index, { required: !item.required })}>Required</Label>
                       </div>
                     </div>
 

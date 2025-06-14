@@ -239,10 +239,11 @@ export default function EditFormComponent({ form, complianceId }: { form: Form; 
                     )}
                   </select>
                 )}
-                
-                {field.type === "checkbox" && (
+                  {field.type === "checkbox" && (
                   <div className="flex items-center gap-2">
-                    <input type="checkbox" disabled />
+                    <div className="h-4 w-4 rounded border-2 bg-white border-sky-300 flex items-center justify-center opacity-60">
+                      {/* Disabled checkbox appearance */}
+                    </div>
                     <span>{field.label}</span>
                   </div>
                 )}
@@ -408,14 +409,22 @@ export default function EditFormComponent({ form, complianceId }: { form: Form; 
                       placeholder="Placeholder text"
                     />
                   </div>
-                  
-                  <div className="flex items-center gap-2 pt-6">
-                    <input 
-                      type="checkbox"
-                      checked={field.required}
-                      onChange={(e) => updateField(index, { required: e.target.checked })}
-                    />
-                    <Label>Required Field</Label>
+                    <div className="flex items-center gap-2 pt-6">
+                    <div 
+                      onClick={() => updateField(index, { required: !field.required })}
+                      className={`h-4 w-4 rounded border-2 cursor-pointer transition-all duration-200 flex items-center justify-center ${
+                        field.required 
+                          ? 'bg-sky-600 border-sky-600' 
+                          : 'bg-white border-sky-300 hover:border-sky-400'
+                      }`}
+                    >
+                      {field.required && (
+                        <svg className="h-3 w-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                        </svg>
+                      )}
+                    </div>
+                    <Label className="cursor-pointer" onClick={() => updateField(index, { required: !field.required })}>Required Field</Label>
                   </div>
                 </div>
                 
@@ -435,15 +444,23 @@ export default function EditFormComponent({ form, complianceId }: { form: Form; 
                       />
                       <p className="text-xs text-muted-foreground">Numerical weight for scoring</p>
                     </div>
-                    
-                    <div className="flex items-center gap-2 pt-6">
-                      <input 
-                        type="checkbox"
-                        checked={field.autoFail || false}
-                        onChange={(e) => updateField(index, { autoFail: e.target.checked })}
-                      />
-                      <div>
-                        <Label>Auto-fail</Label>
+                      <div className="flex items-center gap-2 pt-6">
+                      <div 
+                        onClick={() => updateField(index, { autoFail: !field.autoFail })}
+                        className={`h-4 w-4 rounded border-2 cursor-pointer transition-all duration-200 flex items-center justify-center ${
+                          field.autoFail 
+                            ? 'bg-sky-600 border-sky-600' 
+                            : 'bg-white border-sky-300 hover:border-sky-400'
+                        }`}
+                      >
+                        {field.autoFail && (
+                          <svg className="h-3 w-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                          </svg>
+                        )}
+                      </div>
+                      <div className="cursor-pointer" onClick={() => updateField(index, { autoFail: !field.autoFail })}>
+                        <Label className="cursor-pointer">Auto-fail</Label>
                         <p className="text-xs text-muted-foreground">Failing this field fails entire audit</p>
                       </div>
                     </div>
@@ -506,16 +523,23 @@ export default function EditFormComponent({ form, complianceId }: { form: Form; 
                               </div>
                             </div>
                           )}
-                          
-                          {field.autoFail && (
+                            {field.autoFail && (
                             <div className="flex items-center gap-2">
-                              <input 
-                                type="checkbox"
-                                checked={option.isFailOption || false}
-                                onChange={(e) => updateEnhancedOption(index, optIndex, { isFailOption: e.target.checked })}
-                                className="text-xs"
-                              />
-                              <Label className="text-xs text-red-600">
+                              <div
+                                onClick={() => updateEnhancedOption(index, optIndex, { isFailOption: !option.isFailOption })}
+                                className={`h-4 w-4 rounded border-2 cursor-pointer transition-all duration-200 flex items-center justify-center ${
+                                  option.isFailOption 
+                                    ? 'bg-sky-600 border-sky-600' 
+                                    : 'bg-white border-sky-300 hover:border-sky-400'
+                                }`}
+                              >
+                                {option.isFailOption && (
+                                  <svg className="h-3 w-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                  </svg>
+                                )}
+                              </div>
+                              <Label className="text-xs text-red-600 cursor-pointer" onClick={() => updateEnhancedOption(index, optIndex, { isFailOption: !option.isFailOption })}>
                                 Auto-fail option (selecting this fails the audit)
                               </Label>
                             </div>

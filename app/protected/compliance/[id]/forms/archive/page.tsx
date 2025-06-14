@@ -1,9 +1,11 @@
 import { createClient } from "@/utils/supabase/server";
 import { redirect } from "next/navigation";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { ArrowLeft, FileText, FormInput, RotateCcw } from "lucide-react";
+import { ArrowLeft, FileText, Archive, RotateCcw } from "lucide-react";
 import Link from "next/link";
 import { activateForm } from "../../../actions";
+import DashboardLayout from "@/components/dashboard/dashboard-layout";
+import { getUserProfile } from "@/lib/api";
 
 export default async function FormsArchivePage({ 
   params 
@@ -15,10 +17,12 @@ export default async function FormsArchivePage({
   
   // Get current user
   const { data: { user } } = await supabase.auth.getUser();
-  
-  if (!user) {
+    if (!user) {
     return redirect("/sign-in");
   }
+  
+  // Get current user profile for dashboard layout
+  const currentUserProfile = await getUserProfile();
   
   // Check if user is admin
   const { data: profile } = await supabase
@@ -62,72 +66,89 @@ export default async function FormsArchivePage({
     await activateForm(formId);
     redirect(`/protected/compliance/${id}/forms/archive`);
   }
-
   return (
-    <div className="flex-1 w-full flex flex-col gap-8">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Link 
-            href={`/protected/compliance/${id}/forms`}
-            className="flex items-center gap-2 px-3 py-2 rounded-md bg-secondary text-secondary-foreground hover:bg-secondary/90 transition-colors"
-          >
-            <ArrowLeft size={16} />
-            Back to Active Forms
-          </Link>
-          <FileText className="h-6 w-6 text-primary" />
-          <h1 className="text-2xl font-bold">{framework.name} - Archived Forms</h1>
+    <DashboardLayout userProfile={currentUserProfile}>
+      <div className="space-y-8">
+        {/* Header Section */}
+        <div className="bg-gradient-to-r from-sky-50 via-blue-50 to-indigo-50 rounded-xl p-6 border border-sky-200 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="bg-sky-100 p-3 rounded-full shadow-sm">
+                <Archive className="h-6 w-6 text-sky-600" />
+              </div>
+              <div>
+                <h1 className="text-3xl font-bold text-sky-900">{framework.name} - Archived Forms</h1>
+                <p className="text-sky-600 mt-1">Manage and restore archived compliance forms</p>
+              </div>
+            </div>
+            <div className="flex gap-3">
+              <Link 
+                href={`/protected/compliance/${id}/forms`}
+                className="inline-flex items-center justify-center rounded-lg bg-white/80 backdrop-blur-sm px-4 py-2.5 text-sm font-medium text-sky-700 hover:bg-sky-50 transition-all duration-200 border border-sky-200 shadow-sm hover:shadow-md"
+              >
+                <ArrowLeft size={16} className="mr-2" />
+                Back to Active Forms
+              </Link>
+            </div>
+          </div>
         </div>
-      </div>
-      
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-xl flex items-center gap-2">
-            <FormInput className="h-5 w-5" />
-            Archived Forms
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {forms && forms.length > 0 ? (
-            <div className="border rounded-lg overflow-hidden">
+
+        {/* Archived Forms Card */}
+        <Card className="bg-white/80 backdrop-blur-sm border-sky-200 shadow-md hover:shadow-lg transition-all duration-300">
+          <CardHeader className="bg-gradient-to-r from-sky-500 to-blue-600 text-white rounded-t-xl">
+            <div className="flex items-center gap-3">
+              <div className="bg-white/20 p-2 rounded-lg">
+                <Archive className="h-5 w-5" />
+              </div>
+              <CardTitle className="text-lg">Archived Forms</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent className="p-0">          {forms && forms.length > 0 ? (
+            <div className="overflow-hidden">
               <table className="w-full">
-                <thead className="bg-muted">
+                <thead className="bg-sky-50 border-b border-sky-100">
                   <tr>
-                    <th className="text-left p-3 font-medium">Form ID</th>
-                    <th className="text-left p-3 font-medium">Schema Preview</th>
-                    <th className="text-left p-3 font-medium">Status</th>
-                    <th className="text-left p-3 font-medium">Actions</th>
+                    <th className="text-left p-4 font-semibold text-sky-700">Form ID</th>
+                    <th className="text-left p-4 font-semibold text-sky-700">Schema Preview</th>
+                    <th className="text-left p-4 font-semibold text-sky-700">Status</th>
+                    <th className="text-left p-4 font-semibold text-sky-700">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {forms.map((form) => (
-                    <tr key={form.id} className="border-t hover:bg-muted/50 transition-colors">
-                      <td className="p-3">
-                        <div className="font-medium">Form #{form.id}</div>
+                  {forms.map((form, index) => (
+                    <tr key={form.id} className={`border-b border-sky-100 hover:bg-sky-50/30 transition-colors ${index % 2 === 0 ? 'bg-sky-25/10' : ''}`}>
+                      <td className="p-4">
+                        <div className="flex items-center gap-3">
+                          <div className="bg-sky-100 p-2 rounded-full">
+                            <FileText className="h-4 w-4 text-sky-600" />
+                          </div>
+                          <div className="font-semibold text-sky-900">Form #{form.id}</div>
+                        </div>
                       </td>
-                      <td className="p-3">
+                      <td className="p-4">
                         <div className="max-w-xs">
                           {form.form_schema?.title ? (
-                            <div className="font-medium text-sm">{form.form_schema.title}</div>
+                            <div className="font-semibold text-sm text-sky-900">{form.form_schema.title}</div>
                           ) : (
-                            <div className="text-muted-foreground text-sm">
+                            <div className="text-sky-600 text-sm font-medium">
                               {Object.keys(form.form_schema || {}).length} fields
                             </div>
                           )}
-                          <div className="text-xs text-muted-foreground mt-1 truncate">
+                          <div className="text-xs text-sky-500 mt-1 truncate">
                             {JSON.stringify(form.form_schema).substring(0, 100)}...
                           </div>
                         </div>
                       </td>
-                      <td className="p-3">
-                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                      <td className="p-4">
+                        <span className="px-3 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-700 border border-gray-200">
                           Archived
                         </span>
                       </td>
-                      <td className="p-3">
-                        <div className="flex gap-2">
+                      <td className="p-4">
+                        <div className="flex gap-2 flex-wrap">
                           <Link 
                             href={`/protected/compliance/${id}/forms/${form.id}/preview`}
-                            className="px-2 py-1 text-xs bg-primary text-primary-foreground rounded hover:bg-primary/80 transition-colors"
+                            className="px-3 py-1.5 text-xs font-medium bg-sky-50 text-sky-700 rounded-lg hover:bg-sky-100 transition-all duration-200 border border-sky-200"
                           >
                             Preview
                           </Link>
@@ -135,7 +156,7 @@ export default async function FormsArchivePage({
                             <input type="hidden" name="id" value={form.id} />
                             <button
                               type="submit"
-                              className="px-2 py-1 text-xs bg-green-100 text-green-800 rounded hover:bg-green-200 transition-colors flex items-center gap-1"
+                              className="px-3 py-1.5 text-xs font-medium bg-emerald-50 text-emerald-700 rounded-lg hover:bg-emerald-100 transition-all duration-200 border border-emerald-200 flex items-center gap-1"
                             >
                               <RotateCcw size={12} />
                               Activate
@@ -149,20 +170,27 @@ export default async function FormsArchivePage({
               </table>
             </div>
           ) : (
-            <div className="text-center py-8">
-              <FormInput className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
-              <p className="text-muted-foreground mb-4">No archived forms found</p>
-              <Link 
-                href={`/protected/compliance/${id}/forms`}
-                className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
-              >
-                <ArrowLeft size={16} className="mr-2" />
-                Back to Active Forms
-              </Link>
+            <div className="text-center py-12 px-6">
+              <div className="flex flex-col items-center gap-4">
+                <div className="bg-sky-100 p-4 rounded-full">
+                  <Archive className="h-8 w-8 text-sky-600" />
+                </div>
+                <div>
+                  <p className="text-sky-700 font-semibold text-lg mb-2">No archived forms found</p>
+                  <p className="text-sky-600 text-sm mb-6">All forms for this compliance framework are currently active</p>
+                </div>
+                <Link 
+                  href={`/protected/compliance/${id}/forms`}
+                  className="inline-flex items-center justify-center rounded-lg bg-gradient-to-r from-sky-500 to-blue-600 px-6 py-3 text-sm font-medium text-white hover:from-sky-600 hover:to-blue-700 transition-all duration-200 shadow-md hover:shadow-lg"
+                >
+                  <ArrowLeft size={16} className="mr-2" />
+                  Back to Active Forms
+                </Link>
+              </div>
             </div>
-          )}
-        </CardContent>
-      </Card>
-    </div>
+          )}        </CardContent>
+        </Card>
+      </div>
+    </DashboardLayout>
   );
 }
