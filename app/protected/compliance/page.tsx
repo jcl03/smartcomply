@@ -148,13 +148,12 @@ export default async function CompliancePage() {
                               className="px-3 py-1.5 text-xs font-medium bg-sky-50 text-sky-700 rounded-lg hover:bg-sky-100 transition-all duration-200 border border-sky-200"
                             >
                               Edit
-                            </Link>
-                            <Link
-                              href={`/protected/compliance/${framework.id}/forms/add`}
+                            </Link>                            <Link
+                              href={`/protected/compliance/${framework.id}/forms`}
                               className="px-3 py-1.5 text-xs font-medium bg-gradient-to-r from-sky-500 to-sky-600 text-white rounded-lg hover:from-sky-600 hover:to-sky-700 transition-all duration-200 shadow-sm"
                             >
-                              Add Form
-                            </Link>                            <Link
+                              View Forms
+                            </Link><Link
                               href={`/protected/compliance/${framework.id}/checklists`}
                               className="px-3 py-1.5 text-xs font-medium bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all duration-200 shadow-sm"
                             >
