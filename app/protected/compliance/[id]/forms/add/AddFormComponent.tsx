@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import Link from "next/link";
 import { useFormStatus } from "react-dom";
-import { Plus, Minus, Eye } from "lucide-react";
+import { Plus, Minus, Eye, Sparkles, AlertCircle, CheckCircle, FileText } from "lucide-react";
 import type { ActionResult } from "@/lib/types";
 
 // Submit button with loading state
@@ -16,8 +16,22 @@ function SubmitButton() {
   const { pending } = useFormStatus();
   
   return (
-    <Button type="submit" disabled={pending}>
-      {pending ? "Creating..." : "Create Form"}
+    <Button 
+      type="submit" 
+      disabled={pending}
+      className="bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 text-white transition-all duration-200 shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed px-8 py-3 font-semibold rounded-lg"
+    >
+      {pending ? (
+        <>
+          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+          Creating Form...
+        </>
+      ) : (
+        <>
+          <Sparkles className="h-4 w-4 mr-2" />
+          Create Form
+        </>
+      )}
     </Button>
   );
 }
@@ -159,27 +173,31 @@ export default function AddFormComponent({ action, complianceId }: { action: Ser
       console.error(error);
     }
   }
-  
-  const renderPreview = () => {
+    const renderPreview = () => {
     if (!showPreview) return null;
     
     return (
-      <Card className="mt-6">
-        <CardHeader>
-          <CardTitle>Form Preview</CardTitle>
+      <Card className="mt-6 border-sky-200 bg-white/80 backdrop-blur-sm shadow-md">
+        <CardHeader className="bg-gradient-to-r from-sky-500 to-blue-600 text-white rounded-t-xl">
+          <div className="flex items-center gap-3">
+            <div className="bg-white/20 p-2 rounded-lg">
+              <Eye className="h-5 w-5" />
+            </div>
+            <CardTitle className="text-lg">Form Preview</CardTitle>
+          </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-6">
           <div className="space-y-4">
-            {formTitle && <h3 className="text-lg font-semibold">{formTitle}</h3>}
-            {formDescription && <p className="text-muted-foreground">{formDescription}</p>}
+            {formTitle && <h3 className="text-lg font-semibold text-sky-900">{formTitle}</h3>}
+            {formDescription && <p className="text-sky-700">{formDescription}</p>}
             
-            {fields.map((field, index) => (              <div key={field.id} className="space-y-2">
+            {fields.map((field, index) => (              <div key={field.id} className="space-y-2 p-4 bg-sky-50/30 rounded-lg border border-sky-100">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <Label>
+                  <Label className="text-sky-800 font-medium">
                     {field.label} {field.required && <span className="text-red-500">*</span>}
                   </Label>
                   {field.weightage && (
-                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-sky-100 text-sky-800">
                       Weight: {field.weightage}
                     </span>
                   )}
@@ -191,19 +209,18 @@ export default function AddFormComponent({ action, complianceId }: { action: Ser
                 </div>
                 
                 {field.type === "text" && (
-                  <Input placeholder={field.placeholder} disabled />
+                  <Input placeholder={field.placeholder} disabled className="border-sky-200" />
                 )}
                 
                 {field.type === "textarea" && (
                   <textarea 
-                    className="w-full p-2 border rounded-md" 
+                    className="w-full p-3 border border-sky-200 rounded-lg" 
                     placeholder={field.placeholder}
                     disabled
                     rows={3}
                   />
-                )}
-                  {field.type === "select" && (
-                  <select className="w-full p-2 border rounded-md" disabled>
+                )}                  {field.type === "select" && (
+                  <select className="w-full p-3 border border-sky-200 rounded-lg" disabled>
                     <option>Select an option...</option>
                     {shouldUseEnhancedOptions(field) ? (
                       field.enhancedOptions?.map((option, optIndex) => (
@@ -223,8 +240,8 @@ export default function AddFormComponent({ action, complianceId }: { action: Ser
                 
                 {field.type === "checkbox" && (
                   <div className="flex items-center gap-2">
-                    <input type="checkbox" disabled />
-                    <span>{field.label}</span>
+                    <input type="checkbox" disabled className="w-4 h-4 text-sky-600 border-sky-300 rounded" />
+                    <span className="text-sky-800">{field.label}</span>
                   </div>
                 )}
                 
@@ -233,11 +250,11 @@ export default function AddFormComponent({ action, complianceId }: { action: Ser
                     {shouldUseEnhancedOptions(field) ? (
                       field.enhancedOptions?.map((option, optIndex) => (
                         <div key={optIndex} className="flex items-center gap-2">
-                          <input type="radio" name={field.id} disabled />
+                          <input type="radio" name={field.id} disabled className="w-4 h-4 text-sky-600 border-sky-300" />
                           <span className="flex items-center gap-2">
-                            {option.value}
+                            <span className="text-sky-800">{option.value}</span>
                             {field.weightage && option.points !== undefined && (
-                              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-sky-100 text-sky-800">
                                 {option.points} pts
                               </span>
                             )}
@@ -252,8 +269,8 @@ export default function AddFormComponent({ action, complianceId }: { action: Ser
                     ) : (
                       field.options?.map((option, optIndex) => (
                         <div key={optIndex} className="flex items-center gap-2">
-                          <input type="radio" name={field.id} disabled />
-                          <span>{option}</span>
+                          <input type="radio" name={field.id} disabled className="w-4 h-4 text-sky-600 border-sky-300" />
+                          <span className="text-sky-800">{option}</span>
                         </div>
                       ))
                     )}
@@ -268,85 +285,104 @@ export default function AddFormComponent({ action, complianceId }: { action: Ser
   };
   
   return (
-    <form action={clientAction}>
-      <CardContent className="space-y-6">
+    <form action={clientAction}>      <CardContent className="space-y-6 p-6">
         {errorMessage && (
-          <div className="p-3 bg-red-50 border border-red-200 text-red-800 rounded-md">
-            {errorMessage}
+          <div className="p-4 bg-red-50 border border-red-200 text-red-800 rounded-lg shadow-sm">
+            <div className="flex items-center gap-2">
+              <AlertCircle className="h-4 w-4" />
+              <span className="font-medium">{errorMessage}</span>
+            </div>
           </div>
         )}
         {successMessage && (
-          <div className="p-3 bg-green-50 border border-green-200 text-green-800 rounded-md">
-            {successMessage}
+          <div className="p-4 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-lg shadow-sm">
+            <div className="flex items-center gap-2">
+              <CheckCircle className="h-4 w-4" />
+              <span className="font-medium">{successMessage}</span>
+            </div>
           </div>
         )}
         
         {/* Form Basic Info */}
-        <div className="space-y-4">
-          <h3 className="text-lg font-semibold">Form Information</h3>
-          
-          <div className="space-y-2">
-            <Label htmlFor="title">Form Title</Label>
+        <div className="space-y-4 bg-sky-50/30 rounded-lg p-4 border border-sky-100">          <h3 className="text-lg font-semibold text-sky-900 flex items-center gap-2">
+            <div className="bg-sky-100 p-1.5 rounded-lg">
+              <FileText className="h-4 w-4 text-sky-600" />
+            </div>
+            Form Information
+          </h3>          <div className="space-y-2">
+            <Label htmlFor="title" className="text-sky-800 font-medium">Form Title</Label>
             <Input 
               id="title" 
               value={formTitle}
               onChange={(e) => setFormTitle(e.target.value)}
               placeholder="e.g., SOX Controls Assessment" 
               required 
+              className="border-sky-200 focus:border-sky-400 focus:ring-sky-200 bg-white"
             />
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="description">Form Description</Label>
+            <Label htmlFor="description" className="text-sky-800 font-medium">Form Description</Label>
             <textarea 
               id="description"
               value={formDescription}
               onChange={(e) => setFormDescription(e.target.value)}
               placeholder="Brief description of what this form is for"
-              className="w-full p-2 border rounded-md"
+              className="w-full p-3 border border-sky-200 rounded-lg focus:border-sky-400 focus:ring-1 focus:ring-sky-200 transition-colors bg-white"
               rows={3}
             />
           </div>
         </div>
         
         {/* Form Fields */}
-        <div className="space-y-4">
+        <div className="space-y-4 bg-sky-50/30 rounded-lg p-4 border border-sky-100">
           <div className="flex items-center justify-between">
-            <h3 className="text-lg font-semibold">Form Fields</h3>
-            <div className="flex gap-2">
-              <Button type="button" onClick={() => setShowPreview(!showPreview)} variant="outline">
-                <Eye size={16} className="mr-2" />
+            <h3 className="text-lg font-semibold text-sky-900 flex items-center gap-2">
+              <div className="bg-sky-100 p-1.5 rounded-lg">
+                <Plus className="h-4 w-4 text-sky-600" />
+              </div>
+              Form Fields
+            </h3>
+            <div className="flex gap-2">              <Button 
+                type="button" 
+                onClick={() => setShowPreview(!showPreview)} 
+                variant="outline"
+                className="border-sky-200 text-sky-700 hover:bg-sky-50 hover:border-sky-300 hover:text-sky-800 bg-white font-medium"
+              >
+                <Eye size={16} className="mr-2 text-sky-600" />
                 {showPreview ? "Hide" : "Show"} Preview
               </Button>
-              <Button type="button" onClick={addField} variant="outline">
+              <Button 
+                type="button" 
+                onClick={addField} 
+                className="bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 text-white shadow-md hover:shadow-lg"
+              >
                 <Plus size={16} className="mr-2" />
                 Add Field
               </Button>
             </div>
-          </div>
-          
+          </div>          
           {fields.map((field, index) => (
-            <Card key={field.id} className="p-4">
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <h4 className="font-medium">Field {index + 1}</h4>
-                  <Button 
+            <Card key={field.id} className="border-sky-200 bg-white/80 backdrop-blur-sm shadow-md hover:shadow-lg transition-all duration-300">
+              <div className="p-4 space-y-4">
+                <div className="flex items-center justify-between bg-sky-50/50 rounded-lg p-3 border border-sky-100">
+                  <h4 className="font-semibold text-sky-900">Field {index + 1}</h4>                  <Button 
                     type="button" 
                     onClick={() => removeField(index)}
                     variant="outline"
                     size="sm"
+                    className="border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300 hover:text-red-700 bg-white font-medium"
                   >
-                    <Minus size={16} />
+                    <Minus size={16} className="text-red-500" />
                   </Button>
                 </div>
                 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label>Field Type</Label>
-                    <select 
+                    <Label className="text-sky-800 font-medium">Field Type</Label>                    <select 
                       value={field.type}
                       onChange={(e) => updateField(index, { type: e.target.value })}
-                      className="w-full p-2 border rounded-md"
+                      className="w-full p-3 border border-sky-200 rounded-lg focus:border-sky-400 focus:ring-1 focus:ring-sky-200 transition-colors bg-white"
                     >
                       <option value="text">Text Input</option>
                       <option value="textarea">Text Area</option>
@@ -360,21 +396,20 @@ export default function AddFormComponent({ action, complianceId }: { action: Ser
                   </div>
                   
                   <div className="space-y-2">
-                    <Label>Field Label</Label>
-                    <Input 
+                    <Label className="text-sky-800 font-medium">Field Label</Label>                    <Input 
                       value={field.label}
                       onChange={(e) => updateField(index, { label: e.target.value })}
                       placeholder="Field label"
+                      className="border-sky-200 focus:border-sky-400 focus:ring-sky-200 bg-white"
                     />
                   </div>
-                </div>
-                  <div className="grid grid-cols-2 gap-4">
+                </div>                  <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label>Placeholder Text</Label>
-                    <Input 
+                    <Label className="text-sky-800 font-medium">Placeholder Text</Label>                    <Input 
                       value={field.placeholder || ""}
                       onChange={(e) => updateField(index, { placeholder: e.target.value })}
                       placeholder="Placeholder text"
+                      className="border-sky-200 focus:border-sky-400 focus:ring-sky-200 bg-white"
                     />
                   </div>
                   
@@ -383,26 +418,32 @@ export default function AddFormComponent({ action, complianceId }: { action: Ser
                       type="checkbox"
                       checked={field.required}
                       onChange={(e) => updateField(index, { required: e.target.checked })}
+                      className="w-4 h-4 text-sky-600 border-sky-300 rounded focus:ring-sky-200"
                     />
-                    <Label>Required Field</Label>
+                    <Label className="text-sky-800 font-medium">Required Field</Label>
                   </div>
                 </div>
                 
                 {/* Scoring Options */}
-                <div className="space-y-4">
-                  <h5 className="text-sm font-medium text-muted-foreground">Scoring Options</h5>
+                <div className="space-y-4 bg-sky-50/30 rounded-lg p-3 border border-sky-100">
+                  <h5 className="text-sm font-semibold text-sky-700 flex items-center gap-2">
+                    <div className="bg-sky-100 p-1 rounded">
+                      <Sparkles className="h-3 w-3 text-sky-600" />
+                    </div>
+                    Scoring Options
+                  </h5>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label>Weightage (optional)</Label>
-                      <Input 
+                      <Label className="text-sky-800 font-medium">Weightage (optional)</Label>                      <Input 
                         type="number"
                         min="0"
                         step="0.1"
                         value={field.weightage || ""}
                         onChange={(e) => updateField(index, { weightage: e.target.value ? parseFloat(e.target.value) : undefined })}
                         placeholder="e.g., 10, 5.5"
+                        className="border-sky-200 focus:border-sky-400 focus:ring-sky-200 bg-white"
                       />
-                      <p className="text-xs text-muted-foreground">Numerical weight for scoring</p>
+                      <p className="text-xs text-sky-600">Numerical weight for scoring</p>
                     </div>
                     
                     <div className="flex items-center gap-2 pt-6">
@@ -410,30 +451,30 @@ export default function AddFormComponent({ action, complianceId }: { action: Ser
                         type="checkbox"
                         checked={field.autoFail || false}
                         onChange={(e) => updateField(index, { autoFail: e.target.checked })}
+                        className="w-4 h-4 text-red-600 border-red-300 rounded focus:ring-red-200"
                       />
                       <div>
-                        <Label>Auto-fail</Label>
-                        <p className="text-xs text-muted-foreground">Failing this field fails entire audit</p>
+                        <Label className="text-sky-800 font-medium">Auto-fail</Label>
+                        <p className="text-xs text-red-600">Failing this field fails entire audit</p>
                       </div>
                     </div>
                   </div>
-                </div>
-                  {(field.type === "select" || field.type === "radio") && (
-                  <div className="space-y-2">
+                </div>                  {(field.type === "select" || field.type === "radio") && (
+                  <div className="space-y-3 bg-sky-50/20 rounded-lg p-3 border border-sky-100">
                     <div className="flex items-center justify-between">
-                      <Label>
+                      <Label className="text-sky-800 font-medium">
                         Options
                         {shouldUseEnhancedOptions(field) && (
-                          <span className="text-xs text-blue-600 ml-2">(Enhanced)</span>
+                          <span className="text-xs text-sky-600 ml-2 bg-sky-100 px-2 py-1 rounded-full">(Enhanced)</span>
                         )}
-                      </Label>
-                      <Button 
+                      </Label>                      <Button 
                         type="button" 
                         onClick={() => shouldUseEnhancedOptions(field) ? addEnhancedOption(index) : addOption(index)}
                         variant="outline"
                         size="sm"
+                        className="border-sky-200 text-sky-700 hover:bg-sky-50 hover:border-sky-300 hover:text-sky-800 bg-white font-medium"
                       >
-                        <Plus size={16} className="mr-1" />
+                        <Plus size={16} className="mr-1 text-sky-600" />
                         Add Option
                       </Button>
                     </div>
@@ -441,36 +482,34 @@ export default function AddFormComponent({ action, complianceId }: { action: Ser
                     {shouldUseEnhancedOptions(field) ? (
                       // Enhanced options with scoring and pass/fail
                       field.enhancedOptions?.map((option, optIndex) => (
-                        <div key={optIndex} className="border rounded-md p-3 space-y-2">
-                          <div className="flex gap-2">
-                            <Input 
+                        <div key={optIndex} className="border border-sky-200 rounded-lg p-3 space-y-2 bg-white/80">
+                          <div className="flex gap-2">                            <Input 
                               value={option.value}
                               onChange={(e) => updateEnhancedOption(index, optIndex, { value: e.target.value })}
                               placeholder={`Option ${optIndex + 1}`}
-                              className="flex-1"
-                            />
-                            <Button 
+                              className="flex-1 border-sky-200 focus:border-sky-400 focus:ring-sky-200 bg-white"
+                            />                            <Button 
                               type="button" 
                               onClick={() => removeEnhancedOption(index, optIndex)}
                               variant="outline"
                               size="sm"
+                              className="border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300 hover:text-red-700 bg-white font-medium"
                             >
-                              <Minus size={16} />
+                              <Minus size={16} className="text-red-500" />
                             </Button>
                           </div>
                           
                           {field.weightage !== undefined && field.weightage > 0 && (
                             <div className="grid grid-cols-2 gap-2">
                               <div>
-                                <Label className="text-xs">Points</Label>
-                                <Input 
+                                <Label className="text-xs text-sky-700 font-medium">Points</Label>                                <Input 
                                   type="number"
                                   value={option.points || ""}
                                   onChange={(e) => updateEnhancedOption(index, optIndex, { 
                                     points: e.target.value ? parseFloat(e.target.value) : 0 
                                   })}
                                   placeholder="0"
-                                  className="text-xs"
+                                  className="text-xs border-sky-200 focus:border-sky-400 focus:ring-sky-200 bg-white"
                                 />
                               </div>
                             </div>
@@ -482,9 +521,9 @@ export default function AddFormComponent({ action, complianceId }: { action: Ser
                                 type="checkbox"
                                 checked={option.isFailOption || false}
                                 onChange={(e) => updateEnhancedOption(index, optIndex, { isFailOption: e.target.checked })}
-                                className="text-xs"
+                                className="w-4 h-4 text-red-600 border-red-300 rounded focus:ring-red-200"
                               />
-                              <Label className="text-xs text-red-600">
+                              <Label className="text-xs text-red-600 font-medium">
                                 Auto-fail option (selecting this fails the audit)
                               </Label>
                             </div>
@@ -494,47 +533,54 @@ export default function AddFormComponent({ action, complianceId }: { action: Ser
                     ) : (
                       // Simple options (backward compatibility)
                       field.options?.map((option, optIndex) => (
-                        <div key={optIndex} className="flex gap-2">
-                          <Input 
+                        <div key={optIndex} className="flex gap-2">                          <Input 
                             value={option}
                             onChange={(e) => updateOption(index, optIndex, e.target.value)}
                             placeholder={`Option ${optIndex + 1}`}
-                          />
-                          <Button 
+                            className="border-sky-200 focus:border-sky-400 focus:ring-sky-200 bg-white"
+                          />                          <Button 
                             type="button" 
                             onClick={() => removeOption(index, optIndex)}
                             variant="outline"
                             size="sm"
+                            className="border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300 hover:text-red-700 bg-white font-medium"
                           >
-                            <Minus size={16} />
+                            <Minus size={16} className="text-red-500" />
                           </Button>
                         </div>
                       ))
                     )}
                   </div>
-                )}
-              </div>
+                )}              </div>
             </Card>
           ))}
           
           {fields.length === 0 && (
-            <div className="text-center py-8 border-2 border-dashed border-muted rounded-lg">
-              <p className="text-muted-foreground mb-4">No fields added yet</p>
-              <Button type="button" onClick={addField}>
-                <Plus size={16} className="mr-2" />
-                Add Your First Field
-              </Button>
+            <div className="text-center py-8 border-2 border-dashed border-sky-200 rounded-lg bg-sky-50/30">              <div className="flex flex-col items-center gap-3">
+                <div className="bg-sky-100 p-3 rounded-full">
+                  <FileText className="h-6 w-6 text-sky-600" />
+                </div>
+                <p className="text-sky-700 font-medium mb-2">No fields added yet</p>
+                <p className="text-sky-600 text-sm mb-4">Start building your form by adding your first field</p>
+                <Button 
+                  type="button" 
+                  onClick={addField}
+                  className="bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 text-white shadow-md hover:shadow-lg"
+                >
+                  <Plus size={16} className="mr-2" />
+                  Add Your First Field
+                </Button>
+              </div>
             </div>
           )}
         </div>
         
         {renderPreview()}
-      </CardContent>
-      
-      <CardFooter className="flex justify-between">
+      </CardContent>      
+      <CardFooter className="flex justify-between bg-sky-50/50 rounded-b-xl p-6 border-t border-sky-100">
         <Link 
           href={`/protected/compliance/${complianceId}/forms`} 
-          className="text-sm text-muted-foreground hover:underline"
+          className="text-sm text-sky-600 hover:text-sky-700 font-medium hover:underline transition-colors"
         >
           Cancel
         </Link>
