@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
+import { ChecklistFillForm } from "@/components/checklist/checklist-form";
 // We'll copy the client component code directly here instead of importing
 // since Next.js has issues with importing from dynamic route folders
 
@@ -7,11 +8,9 @@ import { createClient } from "@/utils/supabase/server";
 export default async function FillChecklistPage({ 
   params 
 }: { 
-  params: { id: string; checklistId: string } 
+  params: Promise<{ id: string; checklistId: string }> 
 }) {
-  const supabase = await createClient();
-  const complianceId = params.id;
-  const checklistId = params.checklistId;
+  const supabase = await createClient();  const { id: complianceId, checklistId } = await params;
   
   // Check authentication
   const { data: { user } } = await supabase.auth.getUser();
