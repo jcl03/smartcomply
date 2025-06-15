@@ -128,8 +128,7 @@ export default async function ComplianceChecklistsPage({ params }: { params: Pro
                       <th className="text-left p-4 font-semibold text-sky-700">Status</th>
                       <th className="text-left p-4 font-semibold text-sky-700">Actions</th>
                     </tr>
-                  </thead>
-                  <tbody>
+                  </thead>                  <tbody>
                     {checklists.map((checklist, index) => (
                       <tr key={checklist.id} className={`border-b border-sky-100 hover:bg-sky-50/30 transition-colors ${index % 2 === 0 ? 'bg-sky-25/10' : ''}`}>
                         <td className="p-4">
