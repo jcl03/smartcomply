@@ -43,58 +43,59 @@ export default async function CompliancePage() {
   if (error) {
     console.error("Error fetching compliance frameworks:", error);
   }
-
   async function handleArchive(formData: FormData) {
     "use server";
     const id = parseInt(formData.get("id") as string);
     await archiveComplianceFramework(id);
     redirect("/protected/compliance");
   }
+
   return (
     <DashboardLayout userProfile={currentUserProfile}>
-      <div className="space-y-8">
-        {/* Header Section */}
-        <div className="bg-gradient-to-r from-sky-50 via-blue-50 to-indigo-50 rounded-xl p-6 border border-sky-200 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="bg-sky-100 p-3 rounded-full">
-                <Shield className="h-6 w-6 text-sky-600" />
+      <div className="min-h-screen bg-gray-50">
+        <div className="space-y-8 p-6">
+          {/* Light Theme Header Section */}
+          <div className="bg-white rounded-xl p-8 border border-gray-200 shadow-lg">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-6">
+                <div className="bg-blue-50 p-4 rounded-xl border border-blue-100">
+                  <Shield className="h-8 w-8 text-blue-600" />
+                </div>
+                <div>
+                  <h1 className="text-3xl font-bold text-gray-900 mb-2">Compliance Frameworks</h1>
+                  <p className="text-gray-600 text-lg">Manage your organization's compliance requirements</p>
+                </div>
               </div>
-              <div>
-                <h1 className="text-2xl font-bold text-sky-900">Compliance Frameworks</h1>
-                <p className="text-sky-600 mt-1">Manage your organization's compliance requirements</p>
+              <div className="flex gap-3">
+                <Link
+                  href="/protected/compliance/archive"
+                  className="inline-flex items-center justify-center rounded-lg bg-gray-100 hover:bg-gray-200 px-6 py-3 text-sm font-semibold text-gray-700 transition-all duration-200 border border-gray-300 shadow-sm"
+                >
+                  <Archive size={16} className="mr-2" />
+                  View Archive
+                </Link>
+                <Link
+                  href="/protected/compliance/add"
+                  className="inline-flex items-center justify-center rounded-lg bg-blue-600 hover:bg-blue-700 px-6 py-3 text-sm font-semibold text-white transition-all duration-200 shadow-lg hover:shadow-xl"
+                >
+                  <Plus size={16} className="mr-2" />
+                  Add Framework
+                </Link>
               </div>
-            </div>
-            <div className="flex gap-3">
-              <Link
-                href="/protected/compliance/archive"
-                className="inline-flex items-center justify-center rounded-lg bg-sky-50 px-4 py-2.5 text-sm font-medium text-sky-700 hover:bg-sky-100 transition-all duration-200 border border-sky-200 shadow-sm"
-              >
-                <Archive size={16} className="mr-2" />
-                View Archive
-              </Link>
-              <Link
-                href="/protected/compliance/add"
-                className="inline-flex items-center justify-center rounded-lg bg-gradient-to-r from-sky-500 to-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:from-sky-600 hover:to-blue-700 transition-all duration-200 shadow-md hover:shadow-lg"
-              >
-                <Plus size={16} className="mr-2" />
-                Add Framework
-              </Link>
             </div>
           </div>
-        </div>
 
-        {/* Active Frameworks Card */}
-        <Card className="bg-white/80 backdrop-blur-sm border-sky-200 shadow-md hover:shadow-lg transition-all duration-300">
-          <CardHeader className="bg-gradient-to-r from-sky-500 to-blue-600 text-white rounded-t-xl">
-            <div className="flex items-center gap-3">
-              <div className="bg-white/20 p-2 rounded-lg">
-                <FileText className="h-5 w-5" />
+          {/* Light Theme Active Frameworks Card */}
+          <Card className="bg-white border border-gray-200 shadow-lg hover:shadow-xl transition-all duration-300 rounded-xl overflow-hidden">
+            <CardHeader className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white p-6">
+              <div className="flex items-center gap-3">
+                <div className="bg-white/20 p-3 rounded-lg">
+                  <FileText className="h-6 w-6" />
+                </div>
+                <CardTitle className="text-xl font-bold text-white">Active Frameworks</CardTitle>
               </div>
-              <CardTitle className="text-lg">Active Frameworks</CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent className="p-0">
+            </CardHeader>
+            <CardContent className="p-0">
             {frameworks && frameworks.length > 0 ? (
               <div className="overflow-hidden">
                 <table className="w-full">
@@ -192,9 +193,9 @@ export default async function CompliancePage() {
                   Create Your First Framework
                 </Link>
               </div>
-            )}
-          </CardContent>
+            )}          </CardContent>
         </Card>
+        </div>
       </div>
     </DashboardLayout>
   );

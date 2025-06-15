@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import Link from "next/link";
 import { useFormStatus } from "react-dom";
-import { Plus, Minus, Eye, CheckSquare } from "lucide-react";
+import { Plus, Minus, Eye, CheckSquare, Sparkles, AlertCircle, CheckCircle, Shield, ArrowLeft } from "lucide-react";
 import type { ActionResult } from "@/lib/types";
 import { ChecklistPreview } from "@/components/checklist/checklist-preview";
 
@@ -17,13 +17,26 @@ function SubmitButton() {
   const { pending } = useFormStatus();
   
   return (
-    <Button 
-      type="submit" 
-      disabled={pending}
-      className="bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 text-white transition-all duration-200 shadow-md hover:shadow-lg"
-    >
-      {pending ? "Creating..." : "Create Checklist"}
-    </Button>
+    <div className="relative group">
+      <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl blur-lg opacity-75 group-hover:opacity-100 transition duration-300"></div>
+      <Button 
+        type="submit" 
+        disabled={pending}
+        className="relative bg-gradient-to-r from-blue-600 via-indigo-700 to-purple-800 hover:from-blue-700 hover:via-indigo-800 hover:to-purple-900 text-white transition-all duration-300 shadow-2xl hover:shadow-3xl disabled:opacity-50 disabled:cursor-not-allowed px-8 py-4 font-bold rounded-xl text-lg border border-white/20 backdrop-blur-sm hover:scale-105 transform"
+      >
+        {pending ? (
+          <>
+            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-3"></div>
+            Creating Checklist...
+          </>
+        ) : (
+          <>
+            <Sparkles className="h-5 w-5 mr-3" />
+            Create Checklist
+          </>
+        )}
+      </Button>
+    </div>
   );
 }
 
@@ -137,54 +150,128 @@ export default function AddChecklistComponent({ action, complianceId }: { action
         />
       </div>
     );
-  }
-  return (
-    <form action={handleSubmit} className="space-y-6 p-6">
-      {/* Main Details Card */}
-      <Card className="bg-white/80 backdrop-blur-sm border-sky-200 shadow-sm">
-        <CardHeader className="bg-gradient-to-r from-sky-50 to-blue-50 border-b border-sky-100 rounded-t-xl">
-          <CardTitle className="flex items-center text-sky-900">
-            <CheckSquare className="h-5 w-5 mr-2 text-sky-600" />
-            Checklist Details
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4 pt-6">
-          {errorMessage && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
-              {errorMessage}
+  }  return (
+    <form action={handleSubmit}>
+      <CardContent className="space-y-8 p-8 bg-gradient-to-br from-white via-blue-50/30 to-indigo-50/30">
+        {errorMessage && (
+          <div className="relative p-6 bg-gradient-to-r from-red-50 to-pink-50 border border-red-200/50 text-red-800 rounded-xl shadow-lg backdrop-blur-sm">
+            <div className="flex items-center gap-3">
+              <div className="bg-red-100 p-2 rounded-full">
+                <AlertCircle className="h-5 w-5 text-red-600" />
+              </div>
+              <span className="font-semibold text-lg">{errorMessage}</span>
             </div>
-          )}
-          
-          {successMessage && (
-            <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 px-4 py-3 rounded-lg">
-              {successMessage}
+          </div>
+        )}
+        {successMessage && (
+          <div className="relative p-6 bg-gradient-to-r from-emerald-50 to-green-50 border border-emerald-200/50 text-emerald-800 rounded-xl shadow-lg backdrop-blur-sm">
+            <div className="flex items-center gap-3">
+              <div className="bg-emerald-100 p-2 rounded-full">
+                <CheckCircle className="h-5 w-5 text-emerald-600" />
+              </div>
+              <span className="font-semibold text-lg">{successMessage}</span>
             </div>
-          )}          <div className="space-y-2">
-            <Label htmlFor="title" className="text-sky-700 font-medium">Checklist Title *</Label>
-            <Input
-              id="title"
-              name="title"
-              value={checklistTitle}
-              onChange={(e) => setChecklistTitle(e.target.value)}
-              placeholder="Enter checklist title"
-              required
-              className="bg-white border-sky-200 focus:border-sky-400 focus:ring-sky-200 text-sky-900 placeholder:text-sky-400"
-            />
           </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="description" className="text-sky-700 font-medium">Description</Label>
-            <Input
-              id="description"
-              name="description"
-              value={checklistDescription}
-              onChange={(e) => setChecklistDescription(e.target.value)}
-              placeholder="Enter checklist description"
-              className="bg-white border-sky-200 focus:border-sky-400 focus:ring-sky-200 text-sky-900 placeholder:text-sky-400"
-            />
+        )}
+        
+        {/* Checklist Details Section */}
+        <div className="relative">
+          <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-indigo-500/10 rounded-2xl blur-xl"></div>
+          <div className="relative space-y-6 bg-white/70 backdrop-blur-lg rounded-2xl p-8 border border-white/50 shadow-xl">
+            <div className="flex items-center gap-4 mb-6">
+              <div className="relative">
+                <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-xl blur-md opacity-75"></div>
+                <div className="relative bg-gradient-to-r from-blue-500 to-indigo-600 p-3 rounded-xl">
+                  <CheckSquare className="h-6 w-6 text-white" />
+                </div>
+              </div>
+              <div>
+                <h3 className="text-2xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
+                  Checklist Details
+                </h3>
+                <p className="text-gray-600 mt-1">Configure your compliance checklist settings and requirements</p>
+              </div>
+            </div>
+            
+            <div className="space-y-6">
+              <div className="space-y-3">
+                <Label htmlFor="title" className="text-gray-800 font-semibold text-lg">Checklist Title <span className="text-red-500">*</span></Label>
+                <div className="relative">
+                  <Input
+                    id="title"
+                    name="title"
+                    value={checklistTitle}
+                    onChange={(e) => setChecklistTitle(e.target.value)}
+                    placeholder="e.g., SOX Compliance Checklist, GDPR Data Protection Review"
+                    required
+                    className="h-14 border-gray-200 focus:border-blue-500 focus:ring-blue-200 bg-white/90 backdrop-blur-sm text-gray-900 text-lg font-medium rounded-xl shadow-lg transition-all duration-300 hover:shadow-xl focus:shadow-xl"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 to-indigo-500/5 rounded-xl pointer-events-none"></div>
+                </div>
+                <div className="flex items-start gap-2 mt-2">
+                  <div className="bg-blue-100 p-1 rounded-full mt-1">
+                    <div className="w-1 h-1 bg-blue-600 rounded-full"></div>
+                  </div>
+                  <p className="text-sm text-gray-600">Choose a descriptive name that clearly identifies the compliance checklist</p>
+                </div>
+              </div>
+              
+              <div className="space-y-3">
+                <Label htmlFor="description" className="text-gray-800 font-semibold text-lg">Description</Label>
+                <div className="relative">
+                  <textarea
+                    id="description"
+                    name="description"
+                    value={checklistDescription}
+                    onChange={(e) => setChecklistDescription(e.target.value)}
+                    placeholder="Brief description of what this checklist covers"
+                    className="w-full h-24 p-4 border border-gray-200 rounded-xl focus:border-blue-500 focus:ring-blue-200 bg-white/90 backdrop-blur-sm text-gray-900 font-medium shadow-lg transition-all duration-300 hover:shadow-xl focus:shadow-xl resize-none"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 to-indigo-500/5 rounded-xl pointer-events-none"></div>
+                </div>
+              </div>            </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+        
+        {/* What happens next? */}
+        <div className="relative">
+          <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/10 to-purple-500/10 rounded-2xl blur-xl"></div>
+          <div className="relative bg-white/70 backdrop-blur-lg rounded-2xl p-8 border border-white/50 shadow-xl">
+            <div className="flex items-start gap-4">
+              <div className="relative">
+                <div className="absolute inset-0 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-xl blur-md opacity-75"></div>
+                <div className="relative bg-gradient-to-r from-indigo-500 to-purple-600 p-3 rounded-xl">
+                  <CheckCircle className="h-6 w-6 text-white" />
+                </div>
+              </div>
+              <div className="flex-1">
+                <h3 className="text-xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent mb-4">
+                  What happens next?
+                </h3>
+                <div className="space-y-3">
+                  <div className="flex items-start gap-3">
+                    <div className="bg-blue-100 p-1 rounded-full mt-1">
+                      <div className="w-1 h-1 bg-blue-600 rounded-full"></div>
+                    </div>
+                    <p className="text-gray-700 font-medium">Your checklist will be created and ready for use</p>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <div className="bg-blue-100 p-1 rounded-full mt-1">
+                      <div className="w-1 h-1 bg-blue-600 rounded-full"></div>
+                    </div>
+                    <p className="text-gray-700 font-medium">You can add items, categories, and requirements</p>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <div className="bg-blue-100 p-1 rounded-full mt-1">
+                      <div className="w-1 h-1 bg-blue-600 rounded-full"></div>
+                    </div>
+                    <p className="text-gray-700 font-medium">Team members can track completion and progress</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
 
       {/* Categories Management */}
       <Card className="bg-white/80 backdrop-blur-sm border-sky-200 shadow-sm">
@@ -330,29 +417,31 @@ export default function AddChecklistComponent({ action, complianceId }: { action
                   </div>
                 </CardContent>
               </Card>
-            ))
-          )}
+            ))          )}
         </CardContent>
       </Card>
+      </CardContent>
 
-      <CardFooter className="flex justify-between pt-6">
-        <div className="flex gap-3">
-          <Link href={`/protected/compliance/${complianceId}/checklists`}>
-            <Button className="bg-sky-50 text-sky-700 hover:bg-sky-100 border border-sky-200 transition-all duration-200">
-              Cancel
+      <CardFooter className="relative bg-gradient-to-r from-gray-50 via-blue-50/30 to-indigo-50/30 backdrop-blur-lg border-t border-white/50 p-8">
+        <div className="flex justify-between items-center w-full">
+          <div className="flex gap-3">
+            <Link href={`/protected/compliance/${complianceId}/checklists`}>
+              <Button className="group inline-flex items-center gap-2 bg-white/70 backdrop-blur-sm text-gray-600 hover:text-gray-800 border border-gray-200 font-semibold transition-all duration-300 hover:scale-105 rounded-xl px-6 py-3">
+                <ArrowLeft size={16} className="transition-transform group-hover:-translate-x-1" />
+                Cancel
+              </Button>
+            </Link>
+            <Button
+              type="button"
+              onClick={() => setShowPreview(true)}
+              disabled={!checklistTitle || items.length === 0}
+              className="group inline-flex items-center gap-2 bg-white/70 backdrop-blur-sm text-blue-600 hover:text-blue-800 border border-blue-200 font-semibold transition-all duration-300 hover:scale-105 rounded-xl px-6 py-3 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Eye className="h-4 w-4" />
+              Preview
             </Button>
-          </Link>
-          <Button
-            type="button"
-            onClick={() => setShowPreview(true)}
-            disabled={!checklistTitle || items.length === 0}
-            className="bg-sky-50 text-sky-700 hover:bg-sky-100 border border-sky-200 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <Eye className="h-4 w-4 mr-2" />
-            Preview
-          </Button>
+          </div>          <SubmitButton />
         </div>
-        <SubmitButton />
       </CardFooter>
     </form>
   );
