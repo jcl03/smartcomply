@@ -4,11 +4,9 @@ import DashboardLayout from "@/components/dashboard/dashboard-layout";
 import { getUserProfile } from "@/lib/api";
 import { ChecklistFillForm } from "@/components/checklist/checklist-form";
 
-export default async function FillChecklistPage({ params }: { params: { id: string; checklistId: string } }) {
+export default async function FillChecklistPage({ params }: { params: Promise<{ id: string; checklistId: string }> }) {
   const supabase = await createClient();
-  const { id } = params;
-  const checklistId = params.checklistId;
-  const complianceId = id;
+  const { id: complianceId, checklistId } = await params;
 
   // Get current user
   const { data: { user } } = await supabase.auth.getUser();
@@ -28,7 +26,7 @@ export default async function FillChecklistPage({ params }: { params: { id: stri
     .single();
 
   if (checklistError || !checklist) {
-    return redirect(`/protected/compliance/${id}/checklists`);
+    return redirect(`/protected/compliance/${complianceId}/checklists`);
   }
 
   return <ChecklistFillForm complianceId={complianceId} checklistId={checklistId} />;
