@@ -21,17 +21,20 @@ export default async function CompliancePage() {
   // Get current user profile for dashboard layout
   const currentUserProfile = await getUserProfile();
   
-  // Check if user is admin
+  // Check if user has permission to view active compliance (admin, manager, user)
   const { data: profile } = await supabase
     .from('view_user_profiles')
     .select('role')
     .eq('email', user.email)
     .single();
-    
-  // If not admin, redirect to protected page
-  if (!profile || profile.role !== 'admin') {
+  
+  // If user role is not in allowed roles, redirect to protected page
+  const allowedRoles = ['admin', 'manager', 'user'];
+  if (!profile || !allowedRoles.includes(profile.role)) {
     return redirect("/protected");
   }
+  // Determine admin permissions
+  const isAdmin = profile.role === 'admin';
 
   // Fetch compliance frameworks (only active ones)
   const { data: frameworks, error } = await supabase
@@ -73,13 +76,15 @@ export default async function CompliancePage() {
                 <Archive size={16} className="mr-2" />
                 View Archive
               </Link>
-              <Link
-                href="/protected/compliance/add"
-                className="inline-flex items-center justify-center rounded-lg bg-gradient-to-r from-sky-500 to-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:from-sky-600 hover:to-blue-700 transition-all duration-200 shadow-md hover:shadow-lg"
-              >
-                <Plus size={16} className="mr-2" />
-                Add Framework
-              </Link>
+              {isAdmin && (
+                <Link
+                  href="/protected/compliance/add"
+                  className="inline-flex items-center justify-center rounded-lg bg-gradient-to-r from-sky-500 to-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:from-sky-600 hover:to-blue-700 transition-all duration-200 shadow-md hover:shadow-lg"
+                >
+                  <Plus size={16} className="mr-2" />
+                  Add Framework
+                </Link>
+              )}
             </div>
           </div>
         </div>
@@ -142,34 +147,33 @@ export default async function CompliancePage() {
                           </Link>
                         </td>
                         <td className="p-4">
-                          <div className="flex gap-2 flex-wrap">
-                            <Link
-                              href={`/protected/compliance/${framework.id}/edit`}
-                              className="px-3 py-1.5 text-xs font-medium bg-sky-50 text-sky-700 rounded-lg hover:bg-sky-100 transition-all duration-200 border border-sky-200"
-                            >
-                              Edit
-                            </Link>
-                            <Link
-                              href={`/protected/compliance/${framework.id}/forms/add`}
-                              className="px-3 py-1.5 text-xs font-medium bg-gradient-to-r from-sky-500 to-sky-600 text-white rounded-lg hover:from-sky-600 hover:to-sky-700 transition-all duration-200 shadow-sm"
-                            >
-                              Add Form
-                            </Link>                            <Link
-                              href={`/protected/compliance/${framework.id}/checklists`}
-                              className="px-3 py-1.5 text-xs font-medium bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all duration-200 shadow-sm"
-                            >
-                              View Checklists
-                            </Link>
-                            <form action={handleArchive} className="inline">
-                              <input type="hidden" name="id" value={framework.id} />
-                              <button
-                                type="submit"
-                                className="px-3 py-1.5 text-xs font-medium bg-orange-50 text-orange-700 rounded-lg hover:bg-orange-100 transition-all duration-200 border border-orange-200"
+                          {isAdmin ? (
+                            <div className="flex gap-2 flex-wrap">
+                              <Link
+                                href={`/protected/compliance/${framework.id}/edit`}
+                                className="px-3 py-1.5 text-xs font-medium bg-sky-50 text-sky-700 rounded-lg hover:bg-sky-100 transition-all duration-200 border border-sky-200"
                               >
-                                Archive
-                              </button>
-                            </form>
-                          </div>
+                                Edit
+                              </Link>
+                              <Link
+                                href={`/protected/compliance/${framework.id}/forms/add`}
+                                className="px-3 py-1.5 text-xs font-medium bg-gradient-to-r from-sky-500 to-sky-600 text-white rounded-lg hover:from-sky-600 hover:to-sky-700 transition-all duration-200 shadow-sm"
+                              >
+                                Add Form
+                              </Link>
+                              <form action={handleArchive} className="inline">
+                                <input type="hidden" name="id" value={framework.id} />
+                                <button
+                                  type="submit"
+                                  className="px-3 py-1.5 text-xs font-medium bg-orange-50 text-orange-700 rounded-lg hover:bg-orange-100 transition-all duration-200 border border-orange-200"
+                                >
+                                  Archive
+                                </button>
+                              </form>
+                            </div>
+                          ) : (
+                            <span className="text-gray-400 italic">No actions</span>
+                          )}
                         </td>
                       </tr>
                     ))}
@@ -185,13 +189,15 @@ export default async function CompliancePage() {
                 <p className="text-sky-600 mb-6 max-w-md mx-auto">
                   Get started by creating your first compliance framework to manage your organization's requirements.
                 </p>
-                <Link
-                  href="/protected/compliance/add"
-                  className="inline-flex items-center justify-center rounded-lg bg-gradient-to-r from-sky-500 to-blue-600 px-6 py-3 text-sm font-medium text-white hover:from-sky-600 hover:to-blue-700 transition-all duration-200 shadow-md hover:shadow-lg"
-                >
-                  <Plus size={16} className="mr-2" />
-                  Create Your First Framework
-                </Link>
+                {isAdmin && (
+                  <Link
+                    href="/protected/compliance/add"
+                    className="inline-flex items-center justify-center rounded-lg bg-gradient-to-r from-sky-500 to-blue-600 px-6 py-3 text-sm font-medium text-white hover:from-sky-600 hover:to-blue-700 transition-all duration-200 shadow-md hover:shadow-lg"
+                  >
+                    <Plus size={16} className="mr-2" />
+                    Create Your First Framework
+                  </Link>
+                )}
               </div>
             )}
           </CardContent>
