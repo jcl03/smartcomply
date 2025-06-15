@@ -12,12 +12,15 @@ import {
   Target,
   Shield,
   Users,
-  AlertTriangle
+  AlertTriangle,
+  CheckSquare, 
+  ListChecks
 } from "lucide-react";
 import { redirect } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { formatDistanceToNow } from "date-fns";
 import DashboardLayout from "@/components/dashboard/dashboard-layout";
+import Link from "next/link";
 
 export default async function ProtectedPage() {
   const supabase = await createClient();
@@ -32,7 +35,7 @@ export default async function ProtectedPage() {
 
   // Fetch user profile data from the view for the current user only
   const userProfile = await getUserProfile();
-    // Check if user is admin
+  // Check if user is admin
   const isAdmin = userProfile?.role === 'admin';
   
   return (
@@ -52,7 +55,9 @@ export default async function ProtectedPage() {
               <Activity className="h-6 w-6 text-sky-600" />
             </div>
           </div>
-        </div>        {/* Key Metrics */}
+        </div>
+
+        {/* Key Metrics */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
           <Card className="bg-white/80 backdrop-blur-sm border-sky-200 p-4 lg:p-6 rounded-xl shadow-md hover:shadow-lg transition-all duration-300 group">
             <div className="flex items-center justify-between">
@@ -117,7 +122,9 @@ export default async function ProtectedPage() {
               </div>
             </div>
           </Card>
-        </div>        {/* Main Dashboard Grid */}
+        </div>
+
+        {/* Main Dashboard Grid */}
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
           {/* Recent Activity */}
           <div className="xl:col-span-2">
@@ -132,7 +139,7 @@ export default async function ProtectedPage() {
                 </button>
               </div>
               <div className="space-y-3 lg:space-y-4">
-                {[
+                {/*
                   { 
                     action: "Completed SOC 2 compliance review", 
                     time: "2 hours ago", 
@@ -163,22 +170,25 @@ export default async function ProtectedPage() {
                     type: "success",
                     details: "Valid until December 2025"
                   }
-                ].map((activity, index) => (
+                */}
+                {Array.from({ length: 5 }).map((_, index) => (
                   <div key={index} className="flex items-start gap-3 lg:gap-4 p-3 lg:p-4 rounded-lg bg-sky-50/30 border border-sky-100 hover:bg-sky-50/50 transition-colors">
                     <div className={`w-2 h-2 lg:w-3 lg:h-3 rounded-full mt-2 flex-shrink-0 ${
-                      activity.type === 'success' ? 'bg-green-500' :
-                      activity.type === 'warning' ? 'bg-amber-500' : 'bg-sky-500'
+                      index % 2 === 0 ? 'bg-green-500' :
+                      index % 3 === 0 ? 'bg-amber-500' : 'bg-sky-500'
                     }`}></div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-sky-900 break-words">{activity.action}</p>
-                      <p className="text-xs text-sky-600 mt-1 break-words">{activity.details}</p>
-                      <p className="text-xs text-sky-500 mt-1">{activity.time}</p>
+                      <p className="text-sm font-medium text-sky-900 break-words">Activity description here</p>
+                      <p className="text-xs text-sky-600 mt-1 break-words">Additional details about the activity</p>
+                      <p className="text-xs text-sky-500 mt-1">Time ago</p>
                     </div>
                   </div>
                 ))}
               </div>
             </Card>
-          </div>          {/* Quick Actions & Info */}
+          </div>
+
+          {/* Quick Actions & Info */}
           <div className="space-y-4 lg:space-y-6">
             {/* Quick Actions */}
             <Card className="bg-white/80 backdrop-blur-sm border-sky-200 rounded-xl shadow-md p-4 lg:p-6">
@@ -187,30 +197,46 @@ export default async function ProtectedPage() {
                 Quick Actions
               </h3>
               <div className="space-y-3">
-                <button className="w-full text-left p-3 lg:p-4 rounded-lg bg-gradient-to-r from-sky-500 to-blue-600 text-white hover:from-sky-600 hover:to-blue-700 transition-all duration-300 transform hover:scale-105">
+                <Link href="/protected/compliance/submit-checklist" className="block">
+                  <div className="w-full text-left p-3 lg:p-4 rounded-lg bg-gradient-to-r from-sky-500 to-blue-600 text-white hover:from-sky-600 hover:to-blue-700 transition-all duration-300 transform hover:scale-105">
+                    <div className="flex items-center gap-3">
+                      <CheckSquare className="h-5 w-5 flex-shrink-0" />
+                      <div className="min-w-0">
+                        <p className="font-medium truncate">Fill Checklists</p>
+                        <p className="text-sm opacity-90 truncate">Complete compliance checklists</p>
+                      </div>
+                    </div>
+                  </div>
+                </Link>
+                
+                <Link href="#" className="block">
+                  <div className="w-full text-left p-3 lg:p-4 rounded-lg bg-gradient-to-r from-green-500 to-emerald-600 text-white hover:from-green-600 hover:to-emerald-700 transition-all duration-300 transform hover:scale-105">
+                    <div className="flex items-center gap-3">
+                      <ListChecks className="h-5 w-5 flex-shrink-0" />
+                      <div className="min-w-0">
+                        <p className="font-medium truncate">Complete Forms</p>
+                        <p className="text-sm opacity-90 truncate">Submit compliance forms</p>
+                      </div>
+                    </div>
+                  </div>
+                </Link>
+
+                <button className="w-full text-left p-3 lg:p-4 rounded-lg bg-sky-50/50 border border-sky-100 hover:bg-sky-100/50 transition-colors">
                   <div className="flex items-center gap-3">
-                    <Shield className="h-5 w-5 flex-shrink-0" />
+                    <Shield className="h-5 w-5 text-sky-600 flex-shrink-0" />
                     <div className="min-w-0">
-                      <p className="font-medium truncate">Start Risk Assessment</p>
-                      <p className="text-sm opacity-90 truncate">Begin quarterly review</p>
+                      <p className="font-medium text-sky-900 truncate">Start Risk Assessment</p>
+                      <p className="text-sm text-sky-600 truncate">Begin quarterly review</p>
                     </div>
                   </div>
                 </button>
+                
                 <button className="w-full text-left p-3 lg:p-4 rounded-lg bg-sky-50/50 border border-sky-100 hover:bg-sky-100/50 transition-colors">
                   <div className="flex items-center gap-3">
                     <FileText className="h-5 w-5 text-sky-600 flex-shrink-0" />
                     <div className="min-w-0">
                       <p className="font-medium text-sky-900 truncate">Generate Report</p>
                       <p className="text-sm text-sky-600 truncate">Create compliance summary</p>
-                    </div>
-                  </div>
-                </button>
-                <button className="w-full text-left p-3 lg:p-4 rounded-lg bg-sky-50/50 border border-sky-100 hover:bg-sky-100/50 transition-colors">
-                  <div className="flex items-center gap-3">
-                    <Users className="h-5 w-5 text-sky-600 flex-shrink-0" />
-                    <div className="min-w-0">
-                      <p className="font-medium text-sky-900 truncate">Schedule Training</p>
-                      <p className="text-sm text-sky-600 truncate">Book team session</p>
                     </div>
                   </div>
                 </button>
@@ -248,36 +274,78 @@ export default async function ProtectedPage() {
               </div>
             </Card>
 
-            {/* User Profile Summary */}
-            {userProfile && (
-              <Card className="bg-white/80 backdrop-blur-sm border-sky-200 rounded-xl shadow-md p-4 lg:p-6">
-                <h3 className="text-lg font-semibold text-sky-900 mb-4">Profile Summary</h3>
-                <div className="space-y-3">
-                  <div className="flex justify-between items-center gap-2">
-                    <span className="text-sm text-sky-700 truncate">Role</span>
-                    <span className="bg-sky-100 text-sky-800 text-xs px-2 py-1 rounded-full flex-shrink-0">
-                      {userProfile.role}
-                    </span>
+            {/* Upcoming Deadlines */}
+            <Card className="bg-white/80 backdrop-blur-sm border-sky-200 rounded-xl shadow-md p-4 lg:p-6">
+              <h3 className="text-lg font-semibold text-sky-900 mb-4">Upcoming Deadlines</h3>
+              <div className="space-y-3 lg:space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-sky-900 truncate">PCI DSS Review</p>
+                    <p className="text-xs text-sky-600">Due in 3 days</p>
                   </div>
-                  <div className="flex justify-between items-center gap-2">
-                    <span className="text-sm text-sky-700 truncate">Member since</span>
-                    <span className="text-sm text-sky-900 flex-shrink-0">
-                      {new Date(userProfile.created_at).toLocaleDateString()}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center gap-2">
-                    <span className="text-sm text-sky-700 truncate">Last active</span>
-                    <span className="text-sm text-sky-900 flex-shrink-0">
-                      {userProfile.last_sign_in_at 
-                        ? formatDistanceToNow(new Date(userProfile.last_sign_in_at), { addSuffix: true })
-                        : 'Never'}
-                    </span>
+                  <div className="bg-red-100 px-2 py-1 rounded-full">
+                    <span className="text-xs font-medium text-red-700">High</span>
                   </div>
                 </div>
-              </Card>
-            )}
+                <div className="flex items-center justify-between">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-sky-900 truncate">Security Training</p>
+                    <p className="text-xs text-sky-600">Due in 1 week</p>
+                  </div>
+                  <div className="bg-amber-100 px-2 py-1 rounded-full">
+                    <span className="text-xs font-medium text-amber-700">Medium</span>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-sky-900 truncate">System Audit</p>
+                    <p className="text-xs text-sky-600">Due in 2 weeks</p>
+                  </div>
+                  <div className="bg-blue-100 px-2 py-1 rounded-full">
+                    <span className="text-xs font-medium text-blue-700">Normal</span>
+                  </div>
+                </div>
+              </div>
+            </Card>
           </div>
         </div>
+
+        {/* Bottom Section - Only visible to admins */}
+        {isAdmin && (
+          <Card className="bg-white/80 backdrop-blur-sm border-sky-200 rounded-xl shadow-md p-4 lg:p-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+              <h3 className="text-lg lg:text-xl font-semibold text-sky-900 flex items-center gap-2">
+                <Users className="h-5 w-5" />
+                Team Overview
+              </h3>
+              <Link href="/protected/user-management" className="text-sm text-sky-600 hover:text-sky-800 font-medium">
+                Manage Team
+              </Link>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {/*
+                { name: "Alex Johnson", role: "Security Officer", status: "active" },
+                { name: "Sam Wilson", role: "Compliance Manager", status: "active" },
+                { name: "Robin Chen", role: "Risk Analyst", status: "away" },
+                { name: "Taylor Morgan", role: "Auditor", status: "inactive" }
+              */}
+              {Array.from({ length: 4 }).map((_, index) => (
+                <div key={index} className="p-3 lg:p-4 rounded-lg bg-sky-50/30 border border-sky-100">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-2 h-2 rounded-full ${
+                      index % 2 === 0 ? 'bg-green-500' :
+                      index % 3 === 0 ? 'bg-amber-500' : 'bg-gray-400'
+                    }`}></div>
+                    <div>
+                      <p className="text-sm font-medium text-sky-900">Member Name</p>
+                      <p className="text-xs text-sky-600">Member Role</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Card>
+        )}
       </div>
     </DashboardLayout>
   );
