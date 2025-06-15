@@ -86,7 +86,18 @@ export default async function PreviewFormPage({
     };
 
     const options = getOptions(field);
+
+    if (field.isSection) {
       return (
+        <div className="bg-gradient-to-r from-indigo-50 via-purple-50 to-pink-50 rounded-lg border border-indigo-100 shadow-sm">
+          <div className="p-6">
+            <h3 className="text-2xl font-semibold text-indigo-900">{field.label}</h3>
+          </div>
+        </div>
+      );
+    }
+
+    return (
       <div key={field.id || index} className="space-y-3 p-4 bg-white/60 rounded-lg border border-sky-100 shadow-sm">
         <div className="flex items-center gap-3 flex-wrap">
           <Label className="text-sky-900 font-semibold text-base">
@@ -309,7 +320,7 @@ export default async function PreviewFormPage({
               {fields.length > 0 ? (
                 <div className="space-y-4">
                   {fields.map((field: any, index: number) => (
-                    <div key={field.id || index} className="bg-sky-50/20 rounded-lg p-4 border border-sky-100">
+                    <div key={field.id || index} className={field.isSection ? '' : 'bg-sky-50/20 rounded-lg p-4 border border-sky-100'}>
                       {renderField(field, index)}
                     </div>
                   ))}
