@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { useFormStatus } from "react-dom";
 import type { ActionResult } from "@/lib/types";
-import { Mail, UserCheck, AlertCircle, CheckCircle, User, Shield } from "lucide-react";
+import { Mail, UserCheck, AlertCircle, CheckCircle, User, Shield, UserPlus } from "lucide-react";
 
 // Submit button with loading state
 function SubmitButton() {
@@ -18,7 +18,7 @@ function SubmitButton() {
     <Button 
       type="submit" 
       disabled={pending}
-      className="bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 text-white px-8 py-3 rounded-lg font-medium transition-all duration-200 shadow-md hover:shadow-lg disabled:opacity-70 disabled:cursor-not-allowed min-w-[180px]"
+      className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-lg font-medium transition-all duration-200 shadow-sm hover:shadow-md disabled:opacity-70 disabled:cursor-not-allowed min-w-[180px]"
     >
       {pending ? (
         <>
@@ -60,63 +60,71 @@ export default function AddUserForm({ action }: { action: ServerAction }) {
       setErrorMessage(error?.message || "An unexpected error occurred");
       console.error(error);
     }
-  }
-    return (
-    <form id="add-user-form" action={clientAction}>
-      <CardContent className="space-y-6 p-8">
-        {/* Success Message */}
-        {successMessage && (
-          <div className="bg-gradient-to-r from-emerald-50 to-green-50 border border-emerald-200 rounded-lg p-4 flex items-start gap-3">
-            <div className="bg-emerald-100 p-1 rounded-full flex-shrink-0">
-              <CheckCircle className="h-4 w-4 text-emerald-600" />
-            </div>
-            <div>
-              <p className="text-emerald-800 font-medium">Success!</p>
-              <p className="text-emerald-700 text-sm mt-1">{successMessage}</p>
-            </div>
+  }  return (
+    <form id="add-user-form" action={clientAction} className="space-y-8">
+      {/* Success Message */}
+      {successMessage && (
+        <div className="bg-gradient-to-r from-emerald-50 to-green-50 border border-emerald-200 rounded-xl p-6 flex items-start gap-4">
+          <div className="bg-emerald-100 p-3 rounded-full flex-shrink-0">
+            <CheckCircle className="h-6 w-6 text-emerald-600" />
           </div>
-        )}
+          <div>
+            <p className="text-emerald-800 font-bold text-lg">Success!</p>
+            <p className="text-emerald-700 mt-1">{successMessage}</p>
+          </div>
+        </div>
+      )}
 
-        {/* Error Message */}
-        {errorMessage && (
-          <div className="bg-gradient-to-r from-red-50 to-rose-50 border border-red-200 rounded-lg p-4 flex items-start gap-3">
-            <div className="bg-red-100 p-1 rounded-full flex-shrink-0">
-              <AlertCircle className="h-4 w-4 text-red-600" />
-            </div>
-            <div>
-              <p className="text-red-800 font-medium">Error</p>
-              <p className="text-red-700 text-sm mt-1">{errorMessage}</p>
-            </div>
+      {/* Error Message */}
+      {errorMessage && (
+        <div className="bg-gradient-to-r from-red-50 to-rose-50 border border-red-200 rounded-xl p-6 flex items-start gap-4">
+          <div className="bg-red-100 p-3 rounded-full flex-shrink-0">
+            <AlertCircle className="h-6 w-6 text-red-600" />
           </div>
-        )}
-        
+          <div>
+            <p className="text-red-800 font-bold text-lg">Error</p>
+            <p className="text-red-700 mt-1">{errorMessage}</p>
+          </div>
+        </div>
+      )}
+
+      {/* Framework Details Section */}
+      <div className="space-y-8">
+        <div className="flex items-center gap-3 pb-4 border-b border-gray-200">
+          <div className="bg-gradient-to-r from-blue-500 to-blue-600 p-3 rounded-xl text-white">
+            <UserPlus className="h-6 w-6" />
+          </div>
+          <h3 className="text-xl font-bold text-gray-900">User Details</h3>
+        </div>
+
         {/* Email Field */}
         <div className="space-y-3">
-          <Label htmlFor="email" className="text-sky-900 font-medium flex items-center gap-2">
-            <Mail className="h-4 w-4 text-sky-600" />
-            Email Address
+          <Label htmlFor="email" className="text-gray-900 font-semibold text-base">
+            Email Address <span className="text-red-500">*</span>
           </Label>
           <Input 
             id="email" 
             name="email" 
-            placeholder="Enter user's email address" 
+            placeholder="e.g., john.doe@company.com" 
             type="email" 
             required 
-            className="bg-sky-50/50 border-sky-200 focus:border-sky-400 focus:ring-sky-400 rounded-lg px-4 py-3 text-sky-900 placeholder:text-sky-400"
+            className="h-14 bg-gray-50 border-gray-300 focus:border-blue-500 focus:ring-blue-500 focus:ring-2 rounded-xl px-4 text-gray-900 placeholder:text-gray-400 text-base transition-all duration-200"
           />
-          <p className="text-xs text-sky-600">The invitation will be sent to this email address</p>
+          <div className="flex items-center gap-2 text-sm text-blue-600">
+            <div className="w-1 h-1 bg-blue-500 rounded-full"></div>
+            <p>Choose a descriptive email that clearly identifies the user you want to invite</p>
+          </div>
         </div>
 
         {/* Role Field */}
         <div className="space-y-3">
-          <Label htmlFor="role" className="text-sky-900 font-medium flex items-center gap-2">
-            <Shield className="h-4 w-4 text-sky-600" />
-            User Role
+          <Label htmlFor="role" className="text-gray-900 font-semibold text-base">
+            User Role <span className="text-red-500">*</span>
           </Label>
           <select 
             id="role" 
             name="role"
-            className="flex h-12 w-full rounded-lg border-2 border-sky-200 bg-sky-50/50 px-4 py-3 text-sm text-sky-900 ring-offset-background focus:border-sky-400 focus:ring-2 focus:ring-sky-400 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 transition-all duration-200"
+            className="flex h-14 w-full rounded-xl border border-gray-300 bg-gray-50 px-4 py-3 text-base text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 transition-all duration-200"
             required
           >
             <option value="">Select a role...</option>
@@ -125,45 +133,44 @@ export default function AddUserForm({ action }: { action: ServerAction }) {
             <option value="external_auditor">External Auditor - Limited audit access</option>
             <option value="admin">Admin - Full system access</option>
           </select>
-          <p className="text-xs text-sky-600">This determines what the user can access and do in the system</p>
         </div>
 
-        {/* Role Information */}
-        <div className="bg-gradient-to-r from-sky-50 to-blue-50 border border-sky-200 rounded-lg p-4">
-          <h4 className="text-sky-900 font-medium mb-3 flex items-center gap-2">
-            <User className="h-4 w-4" />
-            Role Permissions Overview
-          </h4>
-          <div className="space-y-2 text-xs">
-            <div className="flex justify-between">
-              <span className="text-sky-700 font-medium">User:</span>
-              <span className="text-sky-600">View compliance data, complete assessments</span>
+        {/* What happens next section */}
+        <div className="bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 rounded-2xl p-8 border border-blue-200">
+          <div className="flex items-center gap-4 mb-6">
+            <div className="bg-gradient-to-r from-blue-500 to-indigo-600 p-3 rounded-xl text-white">
+              <Shield className="h-6 w-6" />
             </div>
-            <div className="flex justify-between">
-              <span className="text-sky-700 font-medium">Manager:</span>
-              <span className="text-sky-600">User permissions + manage teams, approve actions</span>
+            <h4 className="text-gray-900 font-bold text-lg">What happens next?</h4>
+          </div>
+          
+          <div className="grid grid-cols-1 gap-4 text-sm text-gray-700">
+            <div className="flex items-start gap-3">
+              <span className="w-2 h-2 bg-emerald-500 rounded-full mt-2 flex-shrink-0"></span>
+              <p className="leading-relaxed">Your user invitation will be created and ready for team collaboration</p>
             </div>
-            <div className="flex justify-between">
-              <span className="text-sky-700 font-medium">External Auditor:</span>
-              <span className="text-sky-600">Read-only access for audit purposes</span>
+            <div className="flex items-start gap-3">
+              <span className="w-2 h-2 bg-blue-500 rounded-full mt-2 flex-shrink-0"></span>
+              <p className="leading-relaxed">You can configure user permissions, access controls, and compliance workflows</p>
             </div>
-            <div className="flex justify-between">
-              <span className="text-sky-700 font-medium">Admin:</span>
-              <span className="text-sky-600">Full system access and user management</span>
+            <div className="flex items-start gap-3">
+              <span className="w-2 h-2 bg-purple-500 rounded-full mt-2 flex-shrink-0"></span>
+              <p className="leading-relaxed">Team members can be assigned and notification settings configured</p>
             </div>
           </div>
         </div>
-      </CardContent>
-      
-      <CardFooter className="flex justify-between items-center px-8 py-6 bg-gradient-to-r from-sky-50 to-blue-50 border-t border-sky-200">
-        <Link 
-          href="/protected/user-management" 
-          className="flex items-center gap-2 px-4 py-2 text-sm text-sky-600 hover:text-sky-800 hover:bg-sky-100 rounded-lg transition-all duration-200"
-        >
-          ← Back to User Management
-        </Link>
-        <SubmitButton />
-      </CardFooter>
+
+        {/* Submit Section */}
+        <div className="flex flex-col sm:flex-row justify-between items-center gap-4 pt-8 border-t border-gray-200">
+          <Link 
+            href="/protected/user-management" 
+            className="flex items-center gap-2 px-6 py-3 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-xl transition-all duration-200 font-medium"
+          >
+            ← Back to User Management
+          </Link>
+          <SubmitButton />
+        </div>
+      </div>
     </form>
   );
 }

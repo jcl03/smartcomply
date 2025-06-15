@@ -31,78 +31,141 @@ export default async function AddUserPage() {
   // If not admin, redirect to protected page
   if (!profile || profile.role !== 'admin') {
     return redirect("/protected");
-  }
-    return (
+  }  return (
     <DashboardLayout userProfile={currentUserProfile}>
-      <div className="space-y-8">
-        {/* Header Section */}
-        <div className="bg-gradient-to-r from-sky-50 via-blue-50 to-indigo-50 rounded-xl p-6 border border-sky-200 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="bg-sky-100 p-3 rounded-full">
-                <UserPlus className="h-6 w-6 text-sky-600" />
+      <div className="max-w-4xl mx-auto space-y-8">
+        {/* Header Section - Bold gradient like Create Framework */}
+        <div className="bg-gradient-to-r from-blue-600 via-purple-600 to-purple-700 rounded-2xl p-8 text-white shadow-xl">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+            <div className="flex items-start gap-6">
+              <div className="bg-white/20 backdrop-blur-sm p-4 rounded-xl shadow-sm">
+                <UserPlus className="h-8 w-8 text-white" />
               </div>
-              <div>
-                <h1 className="text-2xl font-bold text-sky-900">Invite New User</h1>
-                <p className="text-sky-600 mt-1">Send an invitation to add a new user to the platform</p>
+              <div className="flex-1">
+                <h1 className="text-4xl font-bold text-white mb-3">Invite New User</h1>
+                <p className="text-white/90 text-lg leading-relaxed max-w-2xl">
+                  Send invitations to add new team members and expand your compliance management team with secure access controls
+                </p>
               </div>
             </div>
             <Link 
               href="/protected/user-management"
-              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/80 border border-sky-200 text-sky-700 hover:bg-sky-50 hover:border-sky-300 transition-all duration-200 shadow-sm"
+              className="flex items-center gap-2 px-6 py-3 rounded-xl bg-white/20 backdrop-blur-sm text-white hover:bg-white/30 transition-all duration-200 font-medium shadow-sm hover:shadow-md"
             >
               <ArrowLeft className="h-4 w-4" />
-              Back to Users
+              Back to User Management
             </Link>
           </div>
         </div>
 
-        {/* Main Content */}
-        <div className="max-w-2xl mx-auto">
-          <Card className="bg-white/80 backdrop-blur-sm border-sky-200 shadow-md hover:shadow-lg transition-all duration-300">
-            <CardHeader className="bg-gradient-to-r from-sky-500 to-blue-600 text-white rounded-t-xl">
-              <div className="flex items-center gap-3">
-                <div className="bg-white/20 p-2 rounded-lg">
-                  <UserPlus className="h-5 w-5" />
+        {/* Main Content Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Main Form - Takes 2 columns */}
+          <div className="lg:col-span-2">
+            <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
+              <div className="bg-gradient-to-r from-gray-50 to-blue-50 p-6 border-b border-gray-200">
+                <div className="flex items-center gap-4">
+                  <div className="bg-blue-100 p-3 rounded-xl">
+                    <Shield className="h-6 w-6 text-blue-600" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-semibold text-gray-900">User Configuration</h2>
+                    <p className="text-gray-600">Configure user details and access permissions</p>
+                  </div>
                 </div>
-                <CardTitle className="text-lg">User Invitation Details</CardTitle>
               </div>
-            </CardHeader>
-            {/* Pass the action as a prop */}
-            <AddUserForm action={inviteUser} />
-          </Card>
-        </div>
+              
+              <div className="p-8">
+                {/* Pass the action as a prop */}
+                <AddUserForm action={inviteUser} />
+              </div>
+            </div>
+          </div>
 
-        {/* Information Section */}
-        <div className="max-w-2xl mx-auto">
-          <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200 shadow-sm">
-            <CardHeader>
-              <CardTitle className="text-blue-900 flex items-center gap-2">
-                <Shield className="h-5 w-5" />
-                How User Invitations Work
-              </CardTitle>
-            </CardHeader>
-            <div className="p-6 pt-0">
-              <div className="space-y-4 text-sm text-blue-700">
-                <div className="flex items-start gap-3">
-                  <span className="bg-blue-100 text-blue-600 rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">1</span>
-                  <p>An invitation email will be sent to the provided email address with a secure link.</p>
+          {/* Sidebar Information */}
+          <div className="space-y-6">
+            {/* Process Steps Card */}
+            <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-6 border-b border-gray-200">
+                <div className="flex items-center gap-3">
+                  <div className="bg-blue-100 p-2 rounded-lg">
+                    <Shield className="h-5 w-5 text-blue-600" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900">Invitation Process</h3>
+                    <p className="text-gray-600 text-sm">Step-by-step overview</p>
+                  </div>
                 </div>
-                <div className="flex items-start gap-3">
-                  <span className="bg-blue-100 text-blue-600 rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">2</span>
-                  <p>The recipient can click the link to set up their account and create a password.</p>
+              </div>
+              
+              <div className="p-6">
+                <div className="space-y-5">
+                  <div className="flex items-start gap-4">
+                    <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-full flex items-center justify-center text-sm font-semibold flex-shrink-0 shadow-sm">1</div>
+                    <div className="flex-1">
+                      <p className="font-semibold text-gray-900 mb-1">Email Sent</p>
+                      <p className="text-gray-600 text-sm leading-relaxed">Secure invitation email delivered to recipient</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-4">
+                    <div className="w-8 h-8 bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-full flex items-center justify-center text-sm font-semibold flex-shrink-0 shadow-sm">2</div>
+                    <div className="flex-1">
+                      <p className="font-semibold text-gray-900 mb-1">Account Setup</p>
+                      <p className="text-gray-600 text-sm leading-relaxed">User creates secure password and completes profile</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-4">
+                    <div className="w-8 h-8 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-full flex items-center justify-center text-sm font-semibold flex-shrink-0 shadow-sm">3</div>
+                    <div className="flex-1">
+                      <p className="font-semibold text-gray-900 mb-1">Access Granted</p>
+                      <p className="text-gray-600 text-sm leading-relaxed">Role-based permissions activated automatically</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-4">
+                    <div className="w-8 h-8 bg-gradient-to-r from-amber-500 to-amber-600 text-white rounded-full flex items-center justify-center text-sm font-semibold flex-shrink-0 shadow-sm">4</div>
+                    <div className="flex-1">
+                      <p className="font-semibold text-gray-900 mb-1">Team Ready</p>
+                      <p className="text-gray-600 text-sm leading-relaxed">User can immediately start collaborating</p>
+                    </div>
+                  </div>
                 </div>
-                <div className="flex items-start gap-3">
-                  <span className="bg-blue-100 text-blue-600 rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">3</span>
-                  <p>Once activated, they'll have access to the platform based on their assigned role.</p>
+              </div>
+            </div>            {/* Security Features Card */}
+            <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
+              <div className="bg-gradient-to-r from-gray-50 to-blue-50 p-6 border-b border-gray-200">
+                <div className="flex items-center gap-3">
+                  <div className="bg-blue-100 p-2 rounded-lg">
+                    <Shield className="h-5 w-5 text-blue-600" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900">Security Features</h3>
+                    <p className="text-gray-600 text-sm">Enterprise-grade protection</p>
+                  </div>
                 </div>
-                <div className="flex items-start gap-3">
-                  <span className="bg-blue-100 text-blue-600 rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">4</span>
-                  <p>You can resend activation emails or modify user permissions anytime from the user management page.</p>
+              </div>
+              
+              <div className="p-6">
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-2 h-2 bg-emerald-500 rounded-full"></div>
+                    <span className="text-gray-700 text-sm">End-to-end encryption</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                    <span className="text-gray-700 text-sm">Role-based access control</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+                    <span className="text-gray-700 text-sm">Complete audit trails</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="w-2 h-2 bg-amber-500 rounded-full"></div>
+                    <span className="text-gray-700 text-sm">Session management</span>
+                  </div>
                 </div>
               </div>
             </div>
-          </Card>
+          </div>
         </div>
       </div>
     </DashboardLayout>
