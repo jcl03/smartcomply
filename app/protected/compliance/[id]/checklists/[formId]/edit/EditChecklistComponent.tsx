@@ -40,9 +40,10 @@ function SubmitButton() {
 type ChecklistItem = {
   id: string;
   name: string;
-  type: 'document' | 'yesno';
+  type: 'document' | 'yesno' | 'checkbox';
   required: boolean;
   category?: string;
+  options?: string[];
 };
 
 export default function EditChecklistComponent({ checklist, complianceId }: { checklist: Checklist; complianceId: string }) {
@@ -62,14 +63,14 @@ export default function EditChecklistComponent({ checklist, complianceId }: { ch
       setItems(checklist.checklist_schema.items || []);
     }
   }, [checklist]);
-
   const addItem = () => {
     const newItem: ChecklistItem = {
       id: `item_${Date.now()}`,
       name: "",
       type: "yesno",
       required: false,
-      category: ""
+      category: "",
+      options: []
     };
     setItems([...items, newItem]);
   };
@@ -77,11 +78,41 @@ export default function EditChecklistComponent({ checklist, complianceId }: { ch
   const removeItem = (index: number) => {
     setItems(items.filter((_, i) => i !== index));
   };
-  
   const updateItem = (index: number, updates: Partial<ChecklistItem>) => {
     const updatedItems = [...items];
     updatedItems[index] = { ...updatedItems[index], ...updates };
+    
+    // If changing to checkbox type and no options exist, initialize with empty array
+    if (updates.type === 'checkbox' && !updatedItems[index].options) {
+      updatedItems[index].options = [];
+    }
+    
     setItems(updatedItems);
+  };
+
+  const addOption = (itemIndex: number) => {
+    const updatedItems = [...items];
+    if (!updatedItems[itemIndex].options) {
+      updatedItems[itemIndex].options = [];
+    }
+    updatedItems[itemIndex].options!.push("");
+    setItems(updatedItems);
+  };
+
+  const removeOption = (itemIndex: number, optionIndex: number) => {
+    const updatedItems = [...items];
+    if (updatedItems[itemIndex].options) {
+      updatedItems[itemIndex].options!.splice(optionIndex, 1);
+      setItems(updatedItems);
+    }
+  };
+
+  const updateOption = (itemIndex: number, optionIndex: number, value: string) => {
+    const updatedItems = [...items];
+    if (updatedItems[itemIndex].options) {
+      updatedItems[itemIndex].options![optionIndex] = value;
+      setItems(updatedItems);
+    }
   };
 
   const handleSubmit = async (formData: FormData) => {
@@ -216,13 +247,13 @@ export default function EditChecklistComponent({ checklist, complianceId }: { ch
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label className="text-sky-700 font-medium">Item Type *</Label>
-                        <select
+                        <Label className="text-sky-700 font-medium">Item Type *</Label>                        <select
                           value={item.type}
-                          onChange={(e) => updateItem(index, { type: e.target.value as 'document' | 'yesno' })}
+                          onChange={(e) => updateItem(index, { type: e.target.value as 'document' | 'yesno' | 'checkbox' })}
                           className="w-full p-2 bg-white border border-sky-200 rounded-md focus:border-sky-400 focus:ring-sky-200 text-sky-900"
                         >
                           <option value="yesno">Yes/No Question</option>
+                          <option value="checkbox">Multiple Choice (Checkboxes)</option>
                           <option value="document">Document Upload</option>
                         </select>
                       </div>
@@ -261,18 +292,62 @@ export default function EditChecklistComponent({ checklist, complianceId }: { ch
                               <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                             </svg>
                           )}
-                        </div>
-                        <Label className="text-sky-700 font-medium cursor-pointer" onClick={() => updateItem(index, { required: !item.required })}>Required</Label>
+                        </div>                        <Label className="text-sky-700 font-medium cursor-pointer" onClick={() => updateItem(index, { required: !item.required })}>Required</Label>
                       </div>
                     </div>
+
+                    {/* Options section for checkbox items */}
+                    {item.type === 'checkbox' && (
+                      <div className="mt-4">
+                        <div className="flex items-center justify-between mb-3">
+                          <Label className="text-sky-700 font-medium">Options</Label>
+                          <Button
+                            type="button"
+                            onClick={() => addOption(index)}
+                            variant="ghost"
+                            size="sm"
+                            className="text-sky-600 hover:text-sky-700 hover:bg-sky-50"
+                          >
+                            <Plus className="h-4 w-4 mr-1" />
+                            Add Option
+                          </Button>
+                        </div>
+                        <div className="space-y-2">
+                          {item.options && item.options.length > 0 ? (
+                            item.options.map((option, optionIndex) => (
+                              <div key={optionIndex} className="flex items-center gap-2">
+                                <Input
+                                  value={option}
+                                  onChange={(e) => updateOption(index, optionIndex, e.target.value)}
+                                  placeholder={`Option ${optionIndex + 1}`}
+                                  className="flex-1 bg-white border-sky-200 focus:border-sky-400 focus:ring-sky-200 text-sky-900 placeholder:text-sky-400"
+                                />
+                                <Button
+                                  type="button"
+                                  onClick={() => removeOption(index, optionIndex)}
+                                  variant="ghost"
+                                  size="sm"
+                                  className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                                >
+                                  <Minus className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            ))
+                          ) : (
+                            <p className="text-sky-600 text-sm italic">No options added yet. Click "Add Option" to get started.</p>
+                          )}
+                        </div>
+                      </div>
+                    )}
 
                     {/* Preview how this item will look */}
                     <div className="mt-4 p-3 bg-sky-50 rounded-lg border border-sky-100">
                       <Label className="text-xs text-sky-600 font-medium">Preview:</Label>
-                      <div className="flex items-start gap-3 mt-2">
-                        <div className="flex-shrink-0 mt-0.5">
+                      <div className="flex items-start gap-3 mt-2">                        <div className="flex-shrink-0 mt-0.5">
                           {item.type === 'document' ? (
                             <Upload className="w-4 h-4 text-emerald-600" />
+                          ) : item.type === 'checkbox' ? (
+                            <CheckSquare className="w-4 h-4 text-purple-600" />
                           ) : (
                             <CheckSquare className="w-4 h-4 text-sky-600" />
                           )}
@@ -282,13 +357,28 @@ export default function EditChecklistComponent({ checklist, complianceId }: { ch
                             <p className="text-sm font-medium text-sky-900">{item.name || 'Item name'}</p>
                             <span className={`px-2 py-1 text-xs rounded-full font-medium ${
                               item.type === 'document' ? 'bg-emerald-100 text-emerald-800' :
+                              item.type === 'checkbox' ? 'bg-purple-100 text-purple-800' :
                               'bg-sky-100 text-sky-800'
                             }`}>
-                              {item.type === 'document' ? 'Upload Document' : 'Yes/No'}
+                              {item.type === 'document' ? 'Upload Document' : 
+                               item.type === 'checkbox' ? 'Multiple Choice' : 'Yes/No'}
                             </span>
                           </div>
+                          {item.type === 'checkbox' && item.options && item.options.length > 0 && (
+                            <div className="mt-2 space-y-1">
+                              {item.options.slice(0, 3).map((option, optionIndex) => (
+                                <div key={optionIndex} className="flex items-center gap-2 text-xs text-sky-700">
+                                  <div className="w-3 h-3 border border-purple-300 rounded"></div>
+                                  <span>{option || `Option ${optionIndex + 1}`}</span>
+                                </div>
+                              ))}
+                              {item.options.length > 3 && (
+                                <p className="text-xs text-sky-600 italic">...and {item.options.length - 3} more options</p>
+                              )}
+                            </div>
+                          )}
                           {item.required && (
-                            <span className="inline-flex items-center gap-1 px-2 py-1 text-xs bg-red-100 text-red-800 rounded-full font-medium">
+                            <span className="inline-flex items-center gap-1 px-2 py-1 text-xs bg-red-100 text-red-800 rounded-full font-medium mt-2">
                               Required
                             </span>
                           )}
