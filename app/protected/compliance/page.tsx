@@ -1,4 +1,4 @@
-  import { createClient } from "@/utils/supabase/server";
+import { createClient } from "@/utils/supabase/server";
 import { redirect } from "next/navigation";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Shield, Plus, FileText, Archive } from "lucide-react";
@@ -7,6 +7,13 @@ import { isUserAdmin } from "@/lib/auth";
 import { archiveComplianceFramework } from "./actions";
 import DashboardLayout from "@/components/dashboard/dashboard-layout";
 import { getUserProfile } from "@/lib/api";
+
+async function handleArchive(formData: FormData) {
+  "use server";
+  const id = parseInt(formData.get("id") as string);
+  await archiveComplianceFramework(id);
+  redirect("/protected/compliance");
+}
 
 export default async function CompliancePage() {
   const supabase = await createClient();
@@ -42,15 +49,8 @@ export default async function CompliancePage() {
     .select('*')
     .eq('status', 'active')
     .order('name');
-
   if (error) {
     console.error("Error fetching compliance frameworks:", error);
-  }
-  async function handleArchive(formData: FormData) {
-    "use server";
-    const id = parseInt(formData.get("id") as string);
-    await archiveComplianceFramework(id);
-    redirect("/protected/compliance");
   }
 
   return (
@@ -147,19 +147,12 @@ export default async function CompliancePage() {
                           </Link>
                         </td>
                         <td className="p-4">
-                          {isAdmin ? (
-                            <div className="flex gap-2 flex-wrap">
+                          {isAdmin ? (                            <div className="flex gap-2 flex-wrap">
                               <Link
                                 href={`/protected/compliance/${framework.id}/edit`}
                                 className="px-3 py-1.5 text-xs font-medium bg-sky-50 text-sky-700 rounded-lg hover:bg-sky-100 transition-all duration-200 border border-sky-200"
                               >
                                 Edit
-                              </Link>
-                              <Link
-                                href={`/protected/compliance/${framework.id}/forms/add`}
-                                className="px-3 py-1.5 text-xs font-medium bg-gradient-to-r from-sky-500 to-sky-600 text-white rounded-lg hover:from-sky-600 hover:to-sky-700 transition-all duration-200 shadow-sm"
-                              >
-                                Add Form
                               </Link>
                               <form action={handleArchive} className="inline">
                                 <input type="hidden" name="id" value={framework.id} />
@@ -196,12 +189,11 @@ export default async function CompliancePage() {
                   >
                     <Plus size={16} className="mr-2" />
                     Create Your First Framework
-                  </Link>
-                )}
+                  </Link>                )}
               </div>
-            )}          </CardContent>
+            )}
+          </CardContent>
         </Card>
-        </div>
       </div>
     </DashboardLayout>
   );
