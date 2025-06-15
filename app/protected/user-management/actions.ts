@@ -141,12 +141,9 @@ export async function resendActivation(formData: FormData | { email: string }) {
   } else {
     email = formData.email;
   }
-  
-  if (!email) {
+    if (!email) {
     return { error: "Email is required" };
   }
-  
-  const adminClient = createAdminClient();
   const supabase = await createClient();
   
   try {
@@ -161,15 +158,19 @@ export async function resendActivation(formData: FormData | { email: string }) {
       console.error("Error finding user:", userError);
       return { error: "Could not find user with this email" };
     }
-    
-    // Send invitation email with magic link using admin client, directing to the invite page
-    const { error: inviteError } = await adminClient.auth.admin.inviteUserByEmail(email, {
-      redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback?next=/invite/${userData.id}`,
+
+    // Use signInWithOtp to send magic link to existing users
+    const { error: magicLinkError } = await supabase.auth.signInWithOtp({
+      email: email,
+      options: {
+        shouldCreateUser: false, // Don't create new user since they already exist
+        emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback?next=/invite/${userData.id}`,
+      }
     });
     
-    if (inviteError) {
-      console.error("Error resending activation:", inviteError);
-      return { error: inviteError?.message || "Failed to resend activation" };
+    if (magicLinkError) {
+      console.error("Error sending magic link:", magicLinkError);
+      return { error: magicLinkError?.message || "Failed to send activation email" };
     }
     
     // Revalidate the user management page
