@@ -132,7 +132,8 @@ export default async function ComplianceChecklistsPage({ params }: { params: Pro
                       <th className="text-left p-4 font-semibold text-sky-700">Status</th>
                       <th className="text-left p-4 font-semibold text-sky-700">Actions</th>
                     </tr>
-                  </thead>                  <tbody>
+                  </thead>
+                  <tbody>
                     {checklists.map((checklist, index) => (
                       <tr key={checklist.id} className={`border-b border-sky-100 hover:bg-sky-50/30 transition-colors ${index % 2 === 0 ? 'bg-sky-25/10' : ''}`}>
                         <td className="p-4">
@@ -159,11 +160,11 @@ export default async function ComplianceChecklistsPage({ params }: { params: Pro
                             </div>
                           </div>
                         </td>
-                        <td className="p-4">
-                          <span className="px-3 py-1 text-xs font-medium rounded-full bg-emerald-100 text-emerald-700 border border-emerald-200">
+                        <td className="p-4">                          <span className="px-3 py-1 text-xs font-medium rounded-full bg-emerald-100 text-emerald-700 border border-emerald-200">
                             Active
-                          </span>                        </td>                        <td className="p-4">
-                          {isAdmin ? (
+                          </span>
+                        </td>
+                        <td className="p-4">{isAdmin ? (
                             <div className="flex gap-2 flex-wrap">
                               <Link 
                                 href={`/protected/compliance/${id}/checklists/${checklist.id}/edit`}
@@ -175,12 +176,6 @@ export default async function ComplianceChecklistsPage({ params }: { params: Pro
                                 className="px-3 py-1.5 text-xs font-medium bg-sky-50 text-sky-700 rounded-lg hover:bg-sky-100 transition-all duration-200 border border-sky-200"
                               >
                                 Preview
-                              </Link>
-                              <Link 
-                                href={`/protected/compliance/${id}/checklists/${checklist.id}/fill`}
-                                className="px-3 py-1.5 text-xs font-medium bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg hover:from-green-600 hover:to-green-700 transition-all duration-200 shadow-sm"
-                              >
-                                Fill Checklist
                               </Link>
                               <form action={handleArchiveChecklist} className="inline">
                                 <input type="hidden" name="id" value={checklist.id} />

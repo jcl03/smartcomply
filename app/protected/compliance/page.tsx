@@ -147,19 +147,12 @@ export default async function CompliancePage() {
                           </Link>
                         </td>
                         <td className="p-4">
-                          {isAdmin ? (
-                            <div className="flex gap-2 flex-wrap">
+                          {isAdmin ? (                            <div className="flex gap-2 flex-wrap">
                               <Link
                                 href={`/protected/compliance/${framework.id}/edit`}
                                 className="px-3 py-1.5 text-xs font-medium bg-sky-50 text-sky-700 rounded-lg hover:bg-sky-100 transition-all duration-200 border border-sky-200"
                               >
                                 Edit
-                              </Link>
-                              <Link
-                                href={`/protected/compliance/${framework.id}/forms/add`}
-                                className="px-3 py-1.5 text-xs font-medium bg-gradient-to-r from-sky-500 to-sky-600 text-white rounded-lg hover:from-sky-600 hover:to-sky-700 transition-all duration-200 shadow-sm"
-                              >
-                                Add Form
                               </Link>
                               <form action={handleArchive} className="inline">
                                 <input type="hidden" name="id" value={framework.id} />
