@@ -1,4 +1,4 @@
-  import { createClient } from "@/utils/supabase/server";
+import { createClient } from "@/utils/supabase/server";
 import { redirect } from "next/navigation";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Shield, Plus, FileText, Archive } from "lucide-react";
@@ -7,6 +7,13 @@ import { isUserAdmin } from "@/lib/auth";
 import { archiveComplianceFramework } from "./actions";
 import DashboardLayout from "@/components/dashboard/dashboard-layout";
 import { getUserProfile } from "@/lib/api";
+
+async function handleArchive(formData: FormData) {
+  "use server";
+  const id = parseInt(formData.get("id") as string);
+  await archiveComplianceFramework(id);
+  redirect("/protected/compliance");
+}
 
 export default async function CompliancePage() {
   const supabase = await createClient();
@@ -42,15 +49,8 @@ export default async function CompliancePage() {
     .select('*')
     .eq('status', 'active')
     .order('name');
-
   if (error) {
     console.error("Error fetching compliance frameworks:", error);
-  }
-  async function handleArchive(formData: FormData) {
-    "use server";
-    const id = parseInt(formData.get("id") as string);
-    await archiveComplianceFramework(id);
-    redirect("/protected/compliance");
   }
 
   return (
@@ -196,12 +196,11 @@ export default async function CompliancePage() {
                   >
                     <Plus size={16} className="mr-2" />
                     Create Your First Framework
-                  </Link>
-                )}
+                  </Link>                )}
               </div>
-            )}          </CardContent>
+            )}
+          </CardContent>
         </Card>
-        </div>
       </div>
     </DashboardLayout>
   );
