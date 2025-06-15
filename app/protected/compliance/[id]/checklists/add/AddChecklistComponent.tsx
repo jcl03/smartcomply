@@ -311,14 +311,21 @@ export default function AddChecklistComponent({ action, complianceId }: { action
                         </select>
                       </div>
                     )}                    <div className="flex items-center space-x-2">
-                      <input
-                        type="checkbox"
-                        id={`required-${index}`}
-                        checked={item.required}
-                        onChange={(e) => updateItem(index, { required: e.target.checked })}
-                        className="rounded border-sky-300 text-sky-600 focus:ring-sky-200 bg-white"
-                      />
-                      <Label htmlFor={`required-${index}`} className="text-sky-700 font-medium">Required</Label>
+                      <div 
+                        onClick={() => updateItem(index, { required: !item.required })}
+                        className={`h-4 w-4 rounded border-2 cursor-pointer transition-all duration-200 flex items-center justify-center ${
+                          item.required 
+                            ? 'bg-sky-600 border-sky-600' 
+                            : 'bg-white border-sky-300 hover:border-sky-400'
+                        }`}
+                      >
+                        {item.required && (
+                          <svg className="h-3 w-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                          </svg>
+                        )}
+                      </div>
+                      <Label className="text-sky-700 font-medium cursor-pointer" onClick={() => updateItem(index, { required: !item.required })}>Required</Label>
                     </div>
                   </div>
                 </CardContent>
