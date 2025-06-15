@@ -18,10 +18,9 @@ export default async function Login(props: { searchParams: Promise<Message> }) {
   if (user && !user.user_metadata?.revoked) {
     redirect("/protected");
   }
-  const searchParams = await props.searchParams;
-  return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-gradient-to-br from-sky-100 via-blue-100 to-indigo-100 dark:from-slate-900 dark:via-slate-800 dark:to-gray-900 p-4">
-      <div className="w-full max-w-4xl grid md:grid-cols-2 shadow-2xl rounded-2xl overflow-hidden bg-white dark:bg-slate-800/50">
+  const searchParams = await props.searchParams;  return (
+    <div className="min-h-screen w-full flex items-center justify-center bg-gradient-to-br from-sky-100 via-blue-100 to-indigo-100 p-4">
+      <div className="w-full max-w-4xl grid md:grid-cols-2 shadow-2xl rounded-2xl overflow-hidden bg-white">
         {/* Left Column: Branding/Info */}
         <div className="hidden md:flex flex-col justify-center p-12 bg-gradient-to-br from-sky-500 to-blue-600 text-white">
           <div className="mx-auto w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center mb-6 shadow-xl">
@@ -58,15 +57,14 @@ export default async function Login(props: { searchParams: Promise<Message> }) {
               >
                 <path d="M12 2L2 7v10c0 5.55 3.84 9.739 9 11 5.16-1.261 9-5.45 9-11V7l-10-5z" />
               </svg>
-            </div>
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 dark:from-white dark:to-slate-300 bg-clip-text text-transparent mb-2">
+            </div>            <h1 className="text-3xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent mb-2">
               Welcome back
             </h1>
-            <p className="text-slate-600 dark:text-slate-400 text-md">
+            <p className="text-slate-600 text-md">
               Sign in to your account to continue.
             </p>
-            <div className="mt-4 p-3 bg-gradient-to-r from-sky-50 to-blue-50 dark:from-sky-900/30 dark:to-blue-900/30 rounded-lg border border-sky-200/50 dark:border-sky-700/50 shadow-inner">
-              <p className="text-xs text-sky-800 dark:text-sky-200 font-semibold flex items-center justify-center gap-1.5">
+            <div className="mt-4 p-3 bg-gradient-to-r from-sky-50 to-blue-50 rounded-lg border border-sky-200/50 shadow-inner">
+              <p className="text-xs text-sky-800 font-semibold flex items-center justify-center gap-1.5">
                 <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
                 </svg>

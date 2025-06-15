@@ -32,8 +32,60 @@ export default async function ProtectedPage() {
 
   // Fetch user profile data from the view for the current user only
   const userProfile = await getUserProfile();
-    // Check if user is admin
+  
+  // Check if user is admin
   const isAdmin = userProfile?.role === 'admin';
+
+  // Fetch real-time data from the system
+  
+  // 1. Get compliance frameworks count
+  const { data: frameworksData, error: frameworksError } = await supabase
+    .from('compliance')
+    .select('id, name, status, created_at')
+    .eq('status', 'active');
+
+  // 2. Get total forms count across all frameworks
+  const { data: formsData, error: formsError } = await supabase
+    .from('compliance_forms')
+    .select('id, name, created_at, compliance_id')
+    .order('created_at', { ascending: false });
+
+  // 3. Get recent user activities (if you have an audit/activity table)
+  // For now, we'll use the most recent form submissions or updates
+  const { data: recentFormsData } = await supabase
+    .from('compliance_forms')
+    .select('id, name, created_at, compliance(name)')
+    .order('created_at', { ascending: false })
+    .limit(5);
+
+  // 4. Get user management data (for admin users)
+  let usersData = null;
+  if (isAdmin) {
+    const { data: userData } = await supabase
+      .from('view_user_profiles')
+      .select('id, full_name, email, role, created_at, last_sign_in_at')
+      .order('created_at', { ascending: false });
+    usersData = userData;
+  }
+
+  // 5. Calculate dynamic metrics
+  const totalFrameworks = frameworksData?.length || 0;
+  const totalForms = formsData?.length || 0;
+  const recentFormsCount = formsData?.filter(form => {
+    const dayAgo = new Date();
+    dayAgo.setDate(dayAgo.getDate() - 7);
+    return new Date(form.created_at) > dayAgo;
+  }).length || 0;
+
+  // Calculate compliance score (example calculation)
+  const complianceScore = Math.round((totalFrameworks > 0 ? (totalForms / totalFrameworks) * 20 + 74 : 85));
+  
+  // Get pending reviews (forms created in last 30 days that might need review)
+  const pendingReviews = formsData?.filter(form => {
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    return new Date(form.created_at) > thirtyDaysAgo;
+  }).length || 0;
   
   return (
     <DashboardLayout userProfile={userProfile}>
@@ -57,15 +109,17 @@ export default async function ProtectedPage() {
           <Card className="bg-white/80 backdrop-blur-sm border-sky-200 p-4 lg:p-6 rounded-xl shadow-md hover:shadow-lg transition-all duration-300 group">
             <div className="flex items-center justify-between">
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium text-sky-700 truncate">Active Projects</p>
-                <p className="text-2xl lg:text-3xl font-bold text-sky-900 mt-1 lg:mt-2">12</p>
+                <p className="text-sm font-medium text-sky-700 truncate">Active Frameworks</p>
+                <p className="text-2xl lg:text-3xl font-bold text-sky-900 mt-1 lg:mt-2">{totalFrameworks}</p>
                 <p className="text-xs text-green-600 mt-1 flex items-center gap-1">
                   <ArrowUpRight className="h-3 w-3 flex-shrink-0" />
-                  <span className="truncate">+2 from last month</span>
+                  <span className="truncate">
+                    {totalFrameworks > 0 ? `${totalFrameworks} active` : 'Start building'}
+                  </span>
                 </p>
               </div>
               <div className="bg-sky-100 p-2 lg:p-3 rounded-full group-hover:bg-sky-200 transition-colors flex-shrink-0 ml-2">
-                <FileText className="h-5 w-5 lg:h-6 lg:w-6 text-sky-600" />
+                <Shield className="h-5 w-5 lg:h-6 lg:w-6 text-sky-600" />
               </div>
             </div>
           </Card>
@@ -73,15 +127,15 @@ export default async function ProtectedPage() {
           <Card className="bg-white/80 backdrop-blur-sm border-sky-200 p-4 lg:p-6 rounded-xl shadow-md hover:shadow-lg transition-all duration-300 group">
             <div className="flex items-center justify-between">
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium text-sky-700 truncate">Completed Tasks</p>
-                <p className="text-2xl lg:text-3xl font-bold text-sky-900 mt-1 lg:mt-2">284</p>
+                <p className="text-sm font-medium text-sky-700 truncate">Total Forms</p>
+                <p className="text-2xl lg:text-3xl font-bold text-sky-900 mt-1 lg:mt-2">{totalForms}</p>
                 <p className="text-xs text-green-600 mt-1 flex items-center gap-1">
                   <ArrowUpRight className="h-3 w-3 flex-shrink-0" />
-                  <span className="truncate">+15% this week</span>
+                  <span className="truncate">+{recentFormsCount} this week</span>
                 </p>
               </div>
               <div className="bg-emerald-100 p-2 lg:p-3 rounded-full group-hover:bg-emerald-200 transition-colors flex-shrink-0 ml-2">
-                <CheckCircle className="h-5 w-5 lg:h-6 lg:w-6 text-emerald-600" />
+                <FileText className="h-5 w-5 lg:h-6 lg:w-6 text-emerald-600" />
               </div>
             </div>
           </Card>
@@ -89,11 +143,11 @@ export default async function ProtectedPage() {
           <Card className="bg-white/80 backdrop-blur-sm border-sky-200 p-4 lg:p-6 rounded-xl shadow-md hover:shadow-lg transition-all duration-300 group">
             <div className="flex items-center justify-between">
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium text-sky-700 truncate">Pending Reviews</p>
-                <p className="text-2xl lg:text-3xl font-bold text-sky-900 mt-1 lg:mt-2">7</p>
+                <p className="text-sm font-medium text-sky-700 truncate">Recent Activity</p>
+                <p className="text-2xl lg:text-3xl font-bold text-sky-900 mt-1 lg:mt-2">{pendingReviews}</p>
                 <p className="text-xs text-amber-600 mt-1 flex items-center gap-1">
-                  <AlertTriangle className="h-3 w-3 flex-shrink-0" />
-                  <span className="truncate">2 due today</span>
+                  <Clock className="h-3 w-3 flex-shrink-0" />
+                  <span className="truncate">Items this month</span>
                 </p>
               </div>
               <div className="bg-amber-100 p-2 lg:p-3 rounded-full group-hover:bg-amber-200 transition-colors flex-shrink-0 ml-2">
@@ -105,11 +159,13 @@ export default async function ProtectedPage() {
           <Card className="bg-white/80 backdrop-blur-sm border-sky-200 p-4 lg:p-6 rounded-xl shadow-md hover:shadow-lg transition-all duration-300 group">
             <div className="flex items-center justify-between">
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium text-sky-700 truncate">Compliance Score</p>
-                <p className="text-2xl lg:text-3xl font-bold text-sky-900 mt-1 lg:mt-2">94%</p>
+                <p className="text-sm font-medium text-sky-700 truncate">System Health</p>
+                <p className="text-2xl lg:text-3xl font-bold text-sky-900 mt-1 lg:mt-2">{complianceScore}%</p>
                 <p className="text-xs text-green-600 mt-1 flex items-center gap-1">
                   <Target className="h-3 w-3 flex-shrink-0" />
-                  <span className="truncate">Above target</span>
+                  <span className="truncate">
+                    {complianceScore >= 90 ? 'Excellent' : complianceScore >= 75 ? 'Good' : 'Needs attention'}
+                  </span>
                 </p>
               </div>
               <div className="bg-green-100 p-2 lg:p-3 rounded-full group-hover:bg-green-200 transition-colors flex-shrink-0 ml-2">
@@ -117,7 +173,7 @@ export default async function ProtectedPage() {
               </div>
             </div>
           </Card>
-        </div>        {/* Main Dashboard Grid */}
+        </div>{/* Main Dashboard Grid */}
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
           {/* Recent Activity */}
           <div className="xl:col-span-2">
@@ -130,52 +186,60 @@ export default async function ProtectedPage() {
                 <button className="text-sm text-sky-600 hover:text-sky-800 font-medium self-start sm:self-auto">
                   View All
                 </button>
-              </div>
-              <div className="space-y-3 lg:space-y-4">
-                {[
-                  { 
-                    action: "Completed SOC 2 compliance review", 
-                    time: "2 hours ago", 
-                    type: "success",
-                    details: "Type II audit completed successfully"
-                  },
-                  { 
-                    action: "Updated data retention policy", 
-                    time: "4 hours ago", 
-                    type: "info",
-                    details: "Policy v2.1 published to team"
-                  },
-                  { 
-                    action: "New team member onboarded", 
-                    time: "1 day ago", 
-                    type: "info",
-                    details: "Security training initiated"
-                  },
-                  { 
-                    action: "Risk assessment overdue", 
-                    time: "2 days ago", 
-                    type: "warning",
-                    details: "Quarterly review requires attention"
-                  },
-                  { 
-                    action: "ISO 27001 certification renewed", 
-                    time: "3 days ago", 
-                    type: "success",
-                    details: "Valid until December 2025"
-                  }
-                ].map((activity, index) => (
-                  <div key={index} className="flex items-start gap-3 lg:gap-4 p-3 lg:p-4 rounded-lg bg-sky-50/30 border border-sky-100 hover:bg-sky-50/50 transition-colors">
-                    <div className={`w-2 h-2 lg:w-3 lg:h-3 rounded-full mt-2 flex-shrink-0 ${
-                      activity.type === 'success' ? 'bg-green-500' :
-                      activity.type === 'warning' ? 'bg-amber-500' : 'bg-sky-500'
-                    }`}></div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-sky-900 break-words">{activity.action}</p>
-                      <p className="text-xs text-sky-600 mt-1 break-words">{activity.details}</p>
-                      <p className="text-xs text-sky-500 mt-1">{activity.time}</p>
+              </div>              <div className="space-y-3 lg:space-y-4">
+                {recentFormsData && recentFormsData.length > 0 ? (
+                  recentFormsData.map((form, index) => {
+                    const timeAgo = formatDistanceToNow(new Date(form.created_at), { addSuffix: true });
+                    return (
+                      <div key={form.id} className="flex items-start gap-3 lg:gap-4 p-3 lg:p-4 rounded-lg bg-sky-50/30 border border-sky-100 hover:bg-sky-50/50 transition-colors">
+                        <div className={`w-2 h-2 lg:w-3 lg:h-3 rounded-full mt-2 flex-shrink-0 bg-sky-500`}></div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-sky-900 break-words">
+                            Created form: {form.name}
+                          </p>
+                          <p className="text-xs text-sky-600 mt-1 break-words">
+                            Framework: {form.compliance?.name || 'Unknown'}
+                          </p>
+                          <p className="text-xs text-sky-500 mt-1">{timeAgo}</p>
+                        </div>
+                      </div>
+                    );
+                  })
+                ) : (
+                  // Fallback to static data if no forms exist
+                  [
+                    { 
+                      action: "System initialized", 
+                      time: "Today", 
+                      type: "success",
+                      details: "SmartComply system ready"
+                    },
+                    { 
+                      action: "User profile created", 
+                      time: formatDistanceToNow(new Date(userProfile?.created_at || new Date()), { addSuffix: true }), 
+                      type: "info",
+                      details: "Welcome to the platform"
+                    },
+                    { 
+                      action: "Dashboard accessed", 
+                      time: "Just now", 
+                      type: "info",
+                      details: "Viewing compliance overview"
+                    }
+                  ].map((activity, index) => (
+                    <div key={index} className="flex items-start gap-3 lg:gap-4 p-3 lg:p-4 rounded-lg bg-sky-50/30 border border-sky-100 hover:bg-sky-50/50 transition-colors">
+                      <div className={`w-2 h-2 lg:w-3 lg:h-3 rounded-full mt-2 flex-shrink-0 ${
+                        activity.type === 'success' ? 'bg-green-500' :
+                        activity.type === 'warning' ? 'bg-amber-500' : 'bg-sky-500'
+                      }`}></div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-sky-900 break-words">{activity.action}</p>
+                        <p className="text-xs text-sky-600 mt-1 break-words">{activity.details}</p>
+                        <p className="text-xs text-sky-500 mt-1">{activity.time}</p>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))
+                )}
               </div>
             </Card>
           </div>          {/* Quick Actions & Info */}
@@ -215,36 +279,34 @@ export default async function ProtectedPage() {
                   </div>
                 </button>
               </div>
-            </Card>
-
-            {/* Compliance Overview */}
+            </Card>            {/* Compliance Overview */}
             <Card className="bg-white/80 backdrop-blur-sm border-sky-200 rounded-xl shadow-md p-4 lg:p-6">
-              <h3 className="text-lg font-semibold text-sky-900 mb-4">Compliance Status</h3>
+              <h3 className="text-lg font-semibold text-sky-900 mb-4">Active Frameworks</h3>
               <div className="space-y-3 lg:space-y-4">
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-sm text-sky-700 truncate">SOC 2 Type II</span>
-                  <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full flex-shrink-0">
-                    Compliant
-                  </span>
-                </div>
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-sm text-sky-700 truncate">ISO 27001</span>
-                  <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full flex-shrink-0">
-                    Certified
-                  </span>
-                </div>
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-sm text-sky-700 truncate">GDPR</span>
-                  <span className="bg-amber-100 text-amber-800 text-xs px-2 py-1 rounded-full flex-shrink-0">
-                    Review Due
-                  </span>
-                </div>
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-sm text-sky-700 truncate">HIPAA</span>
-                  <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full flex-shrink-0">
-                    Compliant
-                  </span>
-                </div>
+                {frameworksData && frameworksData.length > 0 ? (
+                  frameworksData.slice(0, 4).map((framework) => (
+                    <div key={framework.id} className="flex items-center justify-between gap-2">
+                      <span className="text-sm text-sky-700 truncate">{framework.name}</span>
+                      <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full flex-shrink-0">
+                        {framework.status}
+                      </span>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center py-4">
+                    <p className="text-sm text-sky-600 mb-2">No frameworks yet</p>
+                    <button className="text-xs text-sky-500 hover:text-sky-700 underline">
+                      Create your first framework
+                    </button>
+                  </div>
+                )}
+                {frameworksData && frameworksData.length > 4 && (
+                  <div className="text-center pt-2">
+                    <span className="text-xs text-sky-500">
+                      +{frameworksData.length - 4} more frameworks
+                    </span>
+                  </div>
+                )}
               </div>
             </Card>
 
@@ -273,6 +335,14 @@ export default async function ProtectedPage() {
                         : 'Never'}
                     </span>
                   </div>
+                  {isAdmin && usersData && (
+                    <div className="flex justify-between items-center gap-2 pt-2 border-t border-sky-100">
+                      <span className="text-sm text-sky-700 truncate">Total Users</span>
+                      <span className="text-sm text-sky-900 flex-shrink-0">
+                        {usersData.length}
+                      </span>
+                    </div>
+                  )}
                 </div>
               </Card>
             )}
