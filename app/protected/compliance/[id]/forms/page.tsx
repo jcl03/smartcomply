@@ -47,7 +47,7 @@ export default async function ComplianceFormsPage({ params }: { params: Promise<
     .from('form')
     .select('*')
     .eq('compliance_id', id)
-    .eq('status', 'active')
+    .in('status', ['active', 'draft'])
     .order('id');
   if (formsError) {
     console.error("Error fetching forms:", formsError);
@@ -151,34 +151,67 @@ export default async function ComplianceFormsPage({ params }: { params: Promise<
                             </div>
                           </td>
                           <td className="p-4">
-                            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 border border-green-200">
-                              Active
+                            <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
+                              form.status === 'active' 
+                                ? 'bg-green-100 text-green-800 border border-green-200'
+                                : 'bg-yellow-100 text-yellow-800 border border-yellow-200'
+                            }`}>
+                              {form.status === 'active' ? 'Active' : 'Draft'}
                             </span>
                           </td>
                           <td className="p-4">
                             <div className="flex gap-2">
-                              <Link 
-                                href={`/protected/compliance/${id}/forms/${form.id}/edit`}
-                                className="px-3 py-1.5 text-xs bg-sky-100 text-sky-700 rounded-lg hover:bg-sky-200 transition-colors font-medium border border-sky-200"
-                              >
-                                Edit
-                              </Link>
-                              <Link 
-                                href={`/protected/compliance/${id}/forms/${form.id}/preview`}
-                                className="px-3 py-1.5 text-xs bg-gradient-to-r from-sky-500 to-blue-600 text-white rounded-lg hover:from-sky-600 hover:to-blue-700 transition-colors font-medium shadow-sm"
-                              >
-                                Preview
-                              </Link>
-                              <form action={handleArchiveForm} className="inline">
-                                <input type="hidden" name="id" value={form.id} />
-                                <button
-                                  type="submit"
-                                  className="px-3 py-1.5 text-xs bg-orange-100 text-orange-700 rounded-lg hover:bg-orange-200 transition-colors flex items-center gap-1 font-medium border border-orange-200"
-                                >
-                                  <Archive className="h-3 w-3" />
-                                  Archive
-                                </button>
-                              </form>
+                              {form.status === 'draft' ? (
+                                <>
+                                  <Link 
+                                    href={`/protected/compliance/${id}/forms/${form.id}/edit`}
+                                    className="px-3 py-1.5 text-xs bg-sky-100 text-sky-700 rounded-lg hover:bg-sky-200 transition-colors font-medium border border-sky-200"
+                                  >
+                                    Edit
+                                  </Link>
+                                  <Link 
+                                    href={`/protected/compliance/${id}/forms/${form.id}/preview`}
+                                    className="px-3 py-1.5 text-xs bg-gradient-to-r from-sky-500 to-blue-600 text-white rounded-lg hover:from-sky-600 hover:to-blue-700 transition-colors font-medium shadow-sm"
+                                  >
+                                    Preview
+                                  </Link>
+                                  <form action={handleActivateForm} className="inline">
+                                    <input type="hidden" name="id" value={form.id} />
+                                    <button
+                                      type="submit"
+                                      className="px-3 py-1.5 text-xs bg-emerald-100 text-emerald-700 rounded-lg hover:bg-emerald-200 transition-colors flex items-center gap-1 font-medium border border-emerald-200"
+                                    >
+                                      <RotateCcw className="h-3 w-3" />
+                                      Activate
+                                    </button>
+                                  </form>
+                                </>
+                              ) : (
+                                <>
+                                  <Link 
+                                    href={`/protected/compliance/${id}/forms/${form.id}/edit`}
+                                    className="px-3 py-1.5 text-xs bg-sky-100 text-sky-700 rounded-lg hover:bg-sky-200 transition-colors font-medium border border-sky-200"
+                                  >
+                                    Edit
+                                  </Link>
+                                  <Link 
+                                    href={`/protected/compliance/${id}/forms/${form.id}/preview`}
+                                    className="px-3 py-1.5 text-xs bg-gradient-to-r from-sky-500 to-blue-600 text-white rounded-lg hover:from-sky-600 hover:to-blue-700 transition-colors font-medium shadow-sm"
+                                  >
+                                    Preview
+                                  </Link>
+                                  <form action={handleArchiveForm} className="inline">
+                                    <input type="hidden" name="id" value={form.id} />
+                                    <button
+                                      type="submit"
+                                      className="px-3 py-1.5 text-xs bg-orange-100 text-orange-700 rounded-lg hover:bg-orange-200 transition-colors flex items-center gap-1 font-medium border border-orange-200"
+                                    >
+                                      <Archive className="h-3 w-3" />
+                                      Archive
+                                    </button>
+                                  </form>
+                                </>
+                              )}
                             </div>
                           </td>
                         </tr>

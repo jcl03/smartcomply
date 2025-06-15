@@ -8,8 +8,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import Link from "next/link";
 import { useFormStatus } from "react-dom";
-import { Plus, Minus, Eye, Sparkles, AlertCircle, CheckCircle, FileText, Shield, ArrowLeft } from "lucide-react";
+import { Plus, Minus, Eye, Sparkles, AlertCircle, CheckCircle, FileText, Shield, ArrowLeft, Save } from "lucide-react";
 import type { ActionResult } from "@/lib/types";
+import { addFormDraft } from "../../../actions";
 
 // Submit button with loading state
 function SubmitButton() {
@@ -31,11 +32,39 @@ function SubmitButton() {
         ) : (
           <>
             <Sparkles className="h-5 w-5 mr-3" />
-            Create Framework
+            Create Form
           </>
         )}
       </Button>
     </div>
+  );
+}
+
+// Add DraftButton after SubmitButton component
+function DraftButton() {
+  const { pending } = useFormStatus();
+  
+  return (
+    <Button 
+      type="submit" 
+      name="action"
+      value="draft"
+      disabled={pending}
+      variant="outline"
+      className="bg-white hover:bg-gray-50 text-gray-700 border-gray-300 transition-all duration-200 shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed px-6 py-3 font-semibold rounded-lg"
+    >
+      {pending ? (
+        <>
+          <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin mr-2"></div>
+          Saving Draft...
+        </>
+      ) : (
+        <>
+          <Save className="h-4 w-4 mr-2" />
+          Save as Draft
+        </>
+      )}
+    </Button>
   );
 }
 
@@ -160,16 +189,20 @@ export default function AddFormComponent({ action, complianceId }: { action: Ser
       formData.append("form_schema", JSON.stringify(formSchema));
       formData.append("compliance_id", complianceId);
       
-      const result = await action(formData);
+      // Check if this is a draft save
+      const isDraft = formData.get("action") === "draft";
+      const result = await (isDraft ? addFormDraft(formData) : action(formData));
       
       if (result?.error) {
         setErrorMessage(result.error);
       } else {
-        setSuccessMessage("Form created successfully!");
-        // Reset form
-        setFormTitle("");
-        setFormDescription("");
-        setFields([]);
+        setSuccessMessage(isDraft ? "Form saved as draft!" : "Form created successfully!");
+        if (!isDraft) {
+          // Only reset form if it's not a draft
+          setFormTitle("");
+          setFormDescription("");
+          setFields([]);
+        }
       }
     } catch (error: any) {
       setErrorMessage(error?.message || "An unexpected error occurred");
@@ -691,8 +724,8 @@ export default function AddFormComponent({ action, complianceId }: { action: Ser
         </div>
         
         {renderPreview()}
-      </CardContent>        <CardFooter className="relative bg-gradient-to-r from-gray-50 via-blue-50/30 to-indigo-50/30 backdrop-blur-lg border-t border-white/50 p-8">
-        <div className="flex justify-between items-center w-full">
+      </CardContent>        <CardFooter className="flex justify-between gap-4 p-6 bg-gradient-to-br from-white via-blue-50/30 to-indigo-50/30 border-t border-gray-100">
+        <div className="flex items-center gap-4">
           <Link 
             href={`/protected/compliance/${complianceId}/forms`} 
             className="group inline-flex items-center gap-2 text-gray-600 hover:text-gray-800 font-semibold transition-all duration-300 hover:scale-105"
@@ -700,6 +733,13 @@ export default function AddFormComponent({ action, complianceId }: { action: Ser
             <ArrowLeft size={16} className="transition-transform group-hover:-translate-x-1" />
             Cancel
           </Link>
+          <div className="flex items-center gap-2 text-gray-500">
+            <AlertCircle className="h-4 w-4" />
+            <span className="text-sm">Draft forms can be edited later</span>
+          </div>
+        </div>
+        <div className="flex gap-4">
+          <DraftButton />
           <SubmitButton />
         </div>
       </CardFooter>
