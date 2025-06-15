@@ -190,8 +190,7 @@ export default async function UserManagementPage() {
                           </div>
                           <p className="text-sm text-gray-600">{profile.email}</p>
                         </div>
-                      </div>
-                      <div className="flex items-center gap-2">
+                      </div>                      <div className="flex items-center gap-2">
                         <span className={`px-2 py-1 text-xs font-medium rounded-full ${
                           profile.role === 'admin' 
                             ? 'bg-purple-100 text-purple-700 border border-purple-200' 
@@ -204,12 +203,17 @@ export default async function UserManagementPage() {
                           {profile.role === 'external_auditor' ? 'Auditor' : 
                            profile.role.charAt(0).toUpperCase() + profile.role.slice(1)}
                         </span>
-                        <Link 
-                          href={`/protected/user-management/${profile.id}/edit`}
-                          className="p-1 rounded-lg bg-blue-100 hover:bg-blue-200 transition-colors"
-                        >
-                          <Edit3 className="h-3 w-3 text-blue-600" />
-                        </Link>
+                        <div className="flex items-center gap-1">
+                          {!profile.last_sign_in_at && !profile.isRevoked && (
+                            <ResendActivationButton email={profile.email} />
+                          )}
+                          <Link 
+                            href={`/protected/user-management/${profile.id}/edit`}
+                            className="p-1 rounded-lg bg-blue-100 hover:bg-blue-200 transition-colors"
+                          >
+                            <Edit3 className="h-3 w-3 text-blue-600" />
+                          </Link>
+                        </div>
                       </div>
                     </div>
                   ))}
