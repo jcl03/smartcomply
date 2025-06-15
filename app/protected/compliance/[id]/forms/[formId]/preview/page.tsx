@@ -207,12 +207,30 @@ export default async function PreviewFormPage({
             className="border-sky-200 focus:border-sky-400 focus:ring-sky-200 bg-white text-sky-900 placeholder:text-sky-400" 
           />
         )}
-        
-        {field.type === "date" && (
+          {field.type === "date" && (
           <Input 
             type="date" 
             className="border-sky-200 focus:border-sky-400 focus:ring-sky-200 bg-white text-sky-900" 
           />
+        )}
+
+        {field.type === "image" && (
+          <div className="space-y-2">
+            <div className="border-2 border-dashed border-sky-300 rounded-lg p-8 text-center bg-sky-50/30 hover:bg-sky-50/50 transition-colors cursor-pointer">
+              <div className="flex flex-col items-center gap-3">
+                <div className="bg-sky-100 p-3 rounded-full">
+                  <svg className="h-8 w-8 text-sky-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                </div>
+                <div>
+                  <p className="text-sky-700 font-medium text-lg">Click to upload image</p>
+                  <p className="text-sky-500 text-sm">or drag and drop</p>
+                </div>
+                <p className="text-sky-400 text-xs">PNG, JPG, GIF up to 10MB</p>
+              </div>
+            </div>
+          </div>
         )}
       </div>
     );
