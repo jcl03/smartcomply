@@ -46,13 +46,13 @@ export default async function CompliancePage() {
   if (error) {
     console.error("Error fetching compliance frameworks:", error);
   }
-
   async function handleArchive(formData: FormData) {
     "use server";
     const id = parseInt(formData.get("id") as string);
     await archiveComplianceFramework(id);
     redirect("/protected/compliance");
   }
+
   return (
     <DashboardLayout userProfile={currentUserProfile}>
       <div className="space-y-8">
@@ -89,17 +89,17 @@ export default async function CompliancePage() {
           </div>
         </div>
 
-        {/* Active Frameworks Card */}
-        <Card className="bg-white/80 backdrop-blur-sm border-sky-200 shadow-md hover:shadow-lg transition-all duration-300">
-          <CardHeader className="bg-gradient-to-r from-sky-500 to-blue-600 text-white rounded-t-xl">
-            <div className="flex items-center gap-3">
-              <div className="bg-white/20 p-2 rounded-lg">
-                <FileText className="h-5 w-5" />
+          {/* Light Theme Active Frameworks Card */}
+          <Card className="bg-white border border-gray-200 shadow-lg hover:shadow-xl transition-all duration-300 rounded-xl overflow-hidden">
+            <CardHeader className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white p-6">
+              <div className="flex items-center gap-3">
+                <div className="bg-white/20 p-3 rounded-lg">
+                  <FileText className="h-6 w-6" />
+                </div>
+                <CardTitle className="text-xl font-bold text-white">Active Frameworks</CardTitle>
               </div>
-              <CardTitle className="text-lg">Active Frameworks</CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent className="p-0">
+            </CardHeader>
+            <CardContent className="p-0">
             {frameworks && frameworks.length > 0 ? (
               <div className="overflow-hidden">
                 <table className="w-full">
@@ -199,9 +199,9 @@ export default async function CompliancePage() {
                   </Link>
                 )}
               </div>
-            )}
-          </CardContent>
+            )}          </CardContent>
         </Card>
+        </div>
       </div>
     </DashboardLayout>
   );
