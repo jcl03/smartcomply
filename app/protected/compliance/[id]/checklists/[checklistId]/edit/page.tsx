@@ -11,10 +11,10 @@ import { Button } from "@/components/ui/button";
 export default async function EditChecklistPage({ 
   params 
 }: { 
-  params: Promise<{ id: string; formId: string }> 
+  params: Promise<{ id: string; checklistId: string }> 
 }) {
   const supabase = await createClient();
-  const { id, formId } = await params;
+  const { id, checklistId } = await params;
   
   // Get current user
   const { data: { user } } = await supabase.auth.getUser();
@@ -52,8 +52,7 @@ export default async function EditChecklistPage({
   // Fetch the checklist (only if active)
   const { data: checklist, error: checklistError } = await supabase
     .from('checklist')
-    .select('*')
-    .eq('id', formId)
+    .select('*')    .eq('id', checklistId)
     .eq('compliance_id', id)
     .eq('status', 'active')
     .single();
@@ -66,7 +65,7 @@ export default async function EditChecklistPage({
   const { data: checklistResponses } = await supabase
     .from('checklist_responses')
     .select('id')
-    .eq('checklist_id', formId)
+    .eq('checklist_id', checklistId)
     .limit(1);
 
   // Check if any responses have been submitted for the framework
@@ -155,8 +154,7 @@ export default async function EditChecklistPage({
                   </ul>
                 </div>
                 
-                <div className="flex justify-end gap-4 mt-6">
-                  <Link href={`/protected/view-compliance/${id}/checklists/${formId}`}>
+                <div className="flex justify-end gap-4 mt-6">                  <Link href={`/protected/view-compliance/${id}/checklists/${checklistId}`}>
                     <Button variant="outline">View Checklist</Button>
                   </Link>
                   <Link href={`/protected/compliance/${id}/checklists`}>

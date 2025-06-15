@@ -11,10 +11,10 @@ import { getUserProfile } from "@/lib/api";
 export default async function PreviewChecklistPage({ 
   params 
 }: { 
-  params: Promise<{ id: string; formId: string }> 
+  params: Promise<{ id: string; checklistId: string }> 
 }) {
   const supabase = await createClient();
-  const { id, formId } = await params;
+  const { id, checklistId } = await params;
   
   // Get current user
   const { data: { user } } = await supabase.auth.getUser();
@@ -50,8 +50,7 @@ export default async function PreviewChecklistPage({
   }  // Fetch the checklist (only if active)
   const { data: checklist, error: checklistError } = await supabase
     .from('checklist')
-    .select('*')
-    .eq('id', formId)
+    .select('*')    .eq('id', checklistId)
     .eq('compliance_id', id)
     .eq('status', 'active')
     .single();
@@ -88,7 +87,7 @@ export default async function PreviewChecklistPage({
             </div>
 
             <Link 
-              href={`/protected/compliance/${id}/checklists/${formId}/edit`}
+              href={`/protected/compliance/${id}/checklists/${checklistId}/edit`}
               className="inline-flex items-center justify-center rounded-lg bg-gradient-to-r from-sky-500 to-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:from-sky-600 hover:to-blue-700 transition-all duration-200 shadow-md hover:shadow-lg"
             >
               <FileText className="h-4 w-4 mr-2" />
