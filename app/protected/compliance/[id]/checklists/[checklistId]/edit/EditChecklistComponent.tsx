@@ -40,7 +40,7 @@ function SubmitButton() {
 type ChecklistItem = {
   id: string;
   name: string;
-  type: 'document' | 'yesno' | 'checkbox';
+  type: 'document' | 'checkbox';
   required: boolean;
   category?: string;
   options?: string[];
@@ -54,20 +54,22 @@ export default function EditChecklistComponent({ checklist, complianceId }: { ch
   const [items, setItems] = useState<ChecklistItem[]>([]);
   const [showPreview, setShowPreview] = useState(false);
   const router = useRouter();
-  
-  // Initialize checklist data from existing checklist
+    // Initialize checklist data from existing checklist
   useEffect(() => {
     if (checklist.checklist_schema) {
       setChecklistTitle(checklist.checklist_schema.title || "");
       setChecklistDescription(checklist.checklist_schema.description || "");
-      setItems(checklist.checklist_schema.items || []);
+      // Filter out any existing yesno items and convert them to checkbox items
+      const filteredItems = (checklist.checklist_schema.items || []).filter((item: any) => {
+        return item.type === 'document' || item.type === 'checkbox';
+      });
+      setItems(filteredItems);
     }
-  }, [checklist]);
-  const addItem = () => {
+  }, [checklist]);const addItem = () => {
     const newItem: ChecklistItem = {
       id: `item_${Date.now()}`,
       name: "",
-      type: "yesno",
+      type: "checkbox",
       required: false,
       category: "",
       options: []
@@ -249,10 +251,9 @@ export default function EditChecklistComponent({ checklist, complianceId }: { ch
                       <div className="space-y-2">
                         <Label className="text-sky-700 font-medium">Item Type *</Label>                        <select
                           value={item.type}
-                          onChange={(e) => updateItem(index, { type: e.target.value as 'document' | 'yesno' | 'checkbox' })}
+                          onChange={(e) => updateItem(index, { type: e.target.value as 'document' | 'checkbox' })}
                           className="w-full p-2 bg-white border border-sky-200 rounded-md focus:border-sky-400 focus:ring-sky-200 text-sky-900"
                         >
-                          <option value="yesno">Yes/No Question</option>
                           <option value="checkbox">Multiple Choice (Checkboxes)</option>
                           <option value="document">Document Upload</option>
                         </select>
@@ -346,22 +347,17 @@ export default function EditChecklistComponent({ checklist, complianceId }: { ch
                       <div className="flex items-start gap-3 mt-2">                        <div className="flex-shrink-0 mt-0.5">
                           {item.type === 'document' ? (
                             <Upload className="w-4 h-4 text-emerald-600" />
-                          ) : item.type === 'checkbox' ? (
-                            <CheckSquare className="w-4 h-4 text-purple-600" />
                           ) : (
-                            <CheckSquare className="w-4 h-4 text-sky-600" />
+                            <CheckSquare className="w-4 h-4 text-purple-600" />
                           )}
                         </div>
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-1">
-                            <p className="text-sm font-medium text-sky-900">{item.name || 'Item name'}</p>
-                            <span className={`px-2 py-1 text-xs rounded-full font-medium ${
+                            <p className="text-sm font-medium text-sky-900">{item.name || 'Item name'}</p>                            <span className={`px-2 py-1 text-xs rounded-full font-medium ${
                               item.type === 'document' ? 'bg-emerald-100 text-emerald-800' :
-                              item.type === 'checkbox' ? 'bg-purple-100 text-purple-800' :
-                              'bg-sky-100 text-sky-800'
+                              'bg-purple-100 text-purple-800'
                             }`}>
-                              {item.type === 'document' ? 'Upload Document' : 
-                               item.type === 'checkbox' ? 'Multiple Choice' : 'Yes/No'}
+                              {item.type === 'document' ? 'Upload Document' : 'Multiple Choice'}
                             </span>
                           </div>
                           {item.type === 'checkbox' && item.options && item.options.length > 0 && (
