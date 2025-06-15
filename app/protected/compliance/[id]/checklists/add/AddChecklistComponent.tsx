@@ -43,7 +43,7 @@ function SubmitButton() {
 type ChecklistItem = {
   id: string;
   name: string;
-  type: 'document' | 'yesno';
+  type: 'document';
   required: boolean;
   category?: string;
 };
@@ -372,14 +372,12 @@ export default function AddChecklistComponent({ action, complianceId }: { action
                     </div>
 
                     <div className="space-y-2">
-                      <Label className="text-sky-700 font-medium">Type *</Label>
-                      <select
+                      <Label className="text-sky-700 font-medium">Type *</Label>                      <select
                         value={item.type}
-                        onChange={(e) => updateItem(index, { type: e.target.value as 'document' | 'yesno' })}
+                        onChange={(e) => updateItem(index, { type: e.target.value as 'document' })}
                         className="w-full p-2 bg-white border border-sky-200 rounded-md focus:border-sky-400 focus:ring-sky-200 text-sky-900"
                       >
                         <option value="document">Document Upload</option>
-                        <option value="yesno">Yes/No Question</option>
                       </select>
                     </div>                    {categories.length > 0 && (
                       <div className="space-y-2">

@@ -53,18 +53,21 @@ export default async function PreviewFormPage({
   if (frameworkError || !framework) {
     return redirect("/protected/compliance");
   }
-  // Fetch the form (only if active)
+  // Fetch the form (allow both active and draft status)
   const { data: form, error: formError } = await supabase
     .from('form')
     .select('*')
     .eq('id', formId)
     .eq('compliance_id', id)
-    .eq('status', 'active')
+    .in('status', ['active', 'draft'])
     .single();
 
   if (formError || !form) {
     return redirect(`/protected/compliance/${id}/forms`);
   }
+
+  // Add a visual indicator for draft forms
+  const isDraft = form.status === 'draft';
 
   const formSchema = form.form_schema || {};
   const fields = formSchema.fields || [];
@@ -248,7 +251,18 @@ export default async function PreviewFormPage({
               </div>
               <div>
                 <h1 className="text-3xl font-bold text-sky-900">Preview Form #{form.id}</h1>
-                <p className="text-sky-600 mt-1">Review the form structure and field layout</p>
+                <p className="text-sky-600 mt-1">
+                  {isDraft ? (
+                    <span className="inline-flex items-center gap-2">
+                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 border border-yellow-200">
+                        Draft Form
+                      </span>
+                      Review the draft form structure and field layout
+                    </span>
+                  ) : (
+                    "Review the form structure and field layout"
+                  )}
+                </p>
               </div>
             </div>
             <div className="flex gap-3">

@@ -47,13 +47,13 @@ export default async function EditFormPage({
   if (frameworkError || !framework) {
     return redirect("/protected/compliance");
   }
-  // Fetch the form (only if active)
+  // Fetch the form (only if active or draft)
   const { data: form, error: formError } = await supabase
     .from('form')
     .select('*')
     .eq('id', formId)
     .eq('compliance_id', id)
-    .eq('status', 'active')
+    .in('status', ['active', 'draft'])
     .single();
 
   if (formError || !form) {
@@ -86,7 +86,7 @@ export default async function EditFormPage({
     (allFormResponses && allFormResponses.length > 0) || 
     (checklistResponses && checklistResponses.length > 0);
   
-  const canEdit = !hasFormResponses && !hasFrameworkResponses;
+  const canEdit = form.status === 'draft' || (!hasFormResponses && !hasFrameworkResponses);
 
   if (!canEdit) {
     return (

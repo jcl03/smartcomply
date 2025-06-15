@@ -580,3 +580,55 @@ export async function activateChecklist(checklistId: number): Promise<ActionResu
 
   return { success: true };
 }
+
+
+export async function addFormDraft(formData: FormData): Promise<ActionResult> {
+  const supabase = await createClient();
+  
+  // Get current user
+  const { data: { user } } = await supabase.auth.getUser();
+  
+  if (!user) {
+    return { error: "Unauthorized" };
+  }
+  
+  // Check if user is admin
+  const { data: profile } = await supabase
+    .from('view_user_profiles')
+    .select('role')
+    .eq('email', user.email)
+    .single();
+    
+  if (!profile || profile.role !== 'admin') {
+    return { error: "Insufficient permissions" };
+  }
+
+  const complianceId = formData.get("compliance_id") as string;
+  const formSchemaStr = formData.get("form_schema") as string;
+
+  if (!complianceId || !formSchemaStr) {
+    return { error: "Compliance ID and form schema are required" };
+  }
+
+  let formSchema;
+  try {
+    formSchema = JSON.parse(formSchemaStr);
+  } catch (error) {
+    return { error: "Invalid JSON format in form schema" };
+  }
+
+  const { error } = await supabase
+    .from('form')
+    .insert([{ 
+      compliance_id: parseInt(complianceId),
+      form_schema: formSchema,
+      status: 'draft'  // Set status as draft
+    }]);
+
+  if (error) {
+    console.error("Error creating draft form:", error);
+    return { error: "Failed to create draft form" };
+  }
+
+  return { success: true };
+}
