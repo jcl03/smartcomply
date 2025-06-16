@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
-import { ChecklistFillForm } from "@/components/checklist/checklist-form";
+import { ChecklistFillForm } from "@/components/checklist/checklist-fill-form";
 // We'll copy the client component code directly here instead of importing
 // since Next.js has issues with importing from dynamic route folders
 

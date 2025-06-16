@@ -25,16 +25,15 @@ export default async function PreviewChecklistPage({
   
   // Get current user profile for dashboard layout
   const currentUserProfile = await getUserProfile();
-  
-  // Check if user is admin
+    // Get user profile to check access
   const { data: profile } = await supabase
     .from('view_user_profiles')
     .select('role')
     .eq('email', user.email)
     .single();
     
-  // If not admin, redirect to protected page
-  if (!profile || profile.role !== 'admin') {
+  // Allow admin, manager, and user roles to access
+  if (!profile || !['admin', 'manager', 'user'].includes(profile.role)) {
     return redirect("/protected");
   }
   // Fetch compliance framework (only active ones)
@@ -85,15 +84,15 @@ export default async function PreviewChecklistPage({
                 <h1 className="text-2xl font-bold text-sky-900">Preview Checklist</h1>
                 <p className="text-sky-600">#{checklist.id} • {framework.name}</p>
               </div>
-            </div>
-
-            <Link 
-              href={`/protected/compliance/${id}/checklists/${checklistId}/edit`}
-              className="inline-flex items-center justify-center rounded-lg bg-gradient-to-r from-sky-500 to-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:from-sky-600 hover:to-blue-700 transition-all duration-200 shadow-md hover:shadow-lg"
-            >
-              <FileText className="h-4 w-4 mr-2" />
-              Edit Checklist
-            </Link>
+            </div>            {profile.role === 'admin' && (
+              <Link 
+                href={`/protected/compliance/${id}/checklists/${checklistId}/edit`}
+                className="inline-flex items-center justify-center rounded-lg bg-gradient-to-r from-sky-500 to-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:from-sky-600 hover:to-blue-700 transition-all duration-200 shadow-md hover:shadow-lg"
+              >
+                <FileText className="h-4 w-4 mr-2" />
+                Edit Checklist
+              </Link>
+            )}
           </div>
         </div>
         
@@ -171,10 +170,13 @@ export default async function PreviewChecklistPage({
                   <div className="flex items-center gap-3 p-3 bg-sky-50 rounded-lg border border-sky-100">
                     <div className="bg-sky-100 p-2 rounded-full">
                       <CheckSquare className="h-4 w-4 text-sky-600" />
-                    </div>
-                    <div>
+                    </div>                    <div>
                       <Label className="text-sky-700 font-medium">Items Count</Label>
-                      <p className="font-semibold text-sky-900">{checklistSchema.items?.length || 0} items</p>
+                      <p className="font-semibold text-sky-900">
+                        {checklistSchema.sections 
+                          ? checklistSchema.sections.reduce((total: number, section: any) => total + (section.items?.length || 0), 0)
+                          : checklistSchema.items?.length || 0} items
+                      </p>
                     </div>
                   </div>
                 </div>

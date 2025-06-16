@@ -64,9 +64,12 @@ export default async function ViewComplianceChecklistsPage({ params }: { params:
                   </p>
                 </div>
               </div>
-              
-              <div className="text-sm text-gray-600">
-                <p>{checklist.checklist_schema?.items?.length || 0} items</p>
+                <div className="text-sm text-gray-600">
+                <p>
+                  {checklist.checklist_schema?.sections 
+                    ? checklist.checklist_schema.sections.reduce((total: number, section: any) => total + (section.items?.length || 0), 0)
+                    : checklist.checklist_schema?.items?.length || 0} items
+                </p>
               </div>
             </div>
           ))}

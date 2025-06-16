@@ -206,9 +206,10 @@ export default async function ComplianceChecklistsPage({ params }: { params: Pro
                           <div className="max-w-xs">
                             {checklist.checklist_schema?.title ? (
                               <div className="font-medium text-sm text-sky-900">{checklist.checklist_schema.title}</div>
-                            ) : (
-                              <div className="text-sky-600 text-sm">
-                                {checklist.checklist_schema?.items?.length || 0} items                              </div>
+                            ) : (                              <div className="text-sky-600 text-sm">
+                                {checklist.checklist_schema?.sections 
+                                  ? checklist.checklist_schema.sections.reduce((total: number, section: any) => total + (section.items?.length || 0), 0)
+                                  : checklist.checklist_schema?.items?.length || 0} items</div>
                             )}
                             <div className="text-xs text-sky-600 mt-1 truncate">
                               {checklist.checklist_schema?.description || 'No description'}
