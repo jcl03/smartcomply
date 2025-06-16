@@ -79,3 +79,118 @@ export async function getAllUserProfilesWithRevocationStatus() {
     return data.map(profile => ({ ...profile, isRevoked: false }));
   }
 }
+
+export async function getAuditById(id: string) {
+  const supabase = await createClient();
+  
+  const { data, error } = await supabase
+    .from('audit')
+    .select(`
+      id,
+      form_id,
+      user_id,
+      status,
+      created_at,
+      last_edit_at,
+      result,
+      marks,
+      percentage,
+      comments,
+      title,
+      audit_data,
+      form:form_id (
+        id,
+        form_schema,
+        compliance_id,
+        status,
+        date_created,
+        compliance:compliance_id (
+          id,
+          name,
+          description
+        )
+      )
+    `)
+    .eq('id', id)
+    .single();
+
+  if (error) {
+    console.error("Error fetching audit:", error);
+    return null;
+  }
+
+  return data;
+}
+
+export async function getUserAudits(userId: string) {
+  const supabase = await createClient();
+  
+  const { data, error } = await supabase
+    .from('audit')
+    .select(`
+      id,
+      form_id,
+      user_id,
+      status,
+      created_at,
+      last_edit_at,
+      result,
+      marks,
+      percentage,
+      comments,
+      title,
+      form:form_id (
+        id,
+        form_schema,
+        compliance_id,
+        compliance:compliance_id (
+          name
+        )
+      )
+    `)
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error("Error fetching user audits:", error);
+    return [];
+  }
+
+  return data;
+}
+
+export async function getAllAudits() {
+  const supabase = await createClient();
+  
+  const { data, error } = await supabase
+    .from('audit')
+    .select(`
+      id,
+      form_id,
+      user_id,
+      status,
+      created_at,
+      last_edit_at,
+      result,
+      marks,
+      percentage,
+      comments,
+      title,
+      form:form_id (
+        id,
+        form_schema,
+        compliance_id,
+        compliance:compliance_id (
+          name
+        )
+      )
+    `)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error("Error fetching all audits:", error);
+    return [];
+  }
+
+  return data;
+}
