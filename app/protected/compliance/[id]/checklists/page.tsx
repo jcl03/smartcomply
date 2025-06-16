@@ -208,13 +208,13 @@ export default async function ComplianceChecklistsPage({ params }: { params: Pro
                               <div className="font-medium text-sm text-sky-900">{checklist.checklist_schema.title}</div>
                             ) : (
                               <div className="text-sky-600 text-sm">
-                                {checklist.checklist_schema?.items?.length || 0} items
-                              </div>
+                                {checklist.checklist_schema?.items?.length || 0} items                              </div>
                             )}
                             <div className="text-xs text-sky-600 mt-1 truncate">
                               {checklist.checklist_schema?.description || 'No description'}
                             </div>
-                          </div>                        </td>
+                          </div>
+                        </td>
                         <td className="p-4">
                           <span className={`px-3 py-1 text-xs font-medium rounded-full border ${
                             checklist.status === 'active' ? 'bg-emerald-100 text-emerald-700 border-emerald-200' :
@@ -222,10 +222,9 @@ export default async function ComplianceChecklistsPage({ params }: { params: Pro
                             'bg-gray-100 text-gray-700 border-gray-200'
                           }`}>
                             {checklist.status === 'active' ? 'Published' : 
-                             checklist.status === 'draft' ? 'Draft' : 
-                             'Archived'}
+                             checklist.status === 'draft' ? 'Draft' :                             'Archived'}
                           </span>
-                        </td>                        <td className="p-4">
+                        </td><td className="p-4">
                           {isAdmin ? (
                             <div className="flex gap-2 flex-wrap">
                               <Link 
@@ -315,8 +314,8 @@ export default async function ComplianceChecklistsPage({ params }: { params: Pro
                                 <span className="px-3 py-1.5 text-xs font-medium bg-gray-50 text-gray-600 rounded-lg border border-gray-200">
                                   {checklist.status === 'draft' ? 'Draft - Not Available' : 'Archived - Not Available'}
                                 </span>
-                              )}
-                            </div>                          )}
+                              )}                            </div>
+                          )}
                         </td>
                       </tr>
                     ))}
