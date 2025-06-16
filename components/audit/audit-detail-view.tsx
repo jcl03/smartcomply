@@ -34,7 +34,8 @@ interface AuditDetailData {
   percentage: number;
   comments: string;
   title: string;
-  audit_data: any;  form: {
+  audit_data: any;
+  form: {
     id: number;
     form_schema: any;
     compliance_id: number;
@@ -45,11 +46,10 @@ interface AuditDetailData {
       name: string;
       description: string;
     }[];
-  }[];
-  user_profile: {
+  }[];  user_profile?: {
     full_name: string;
     email: string;
-  };
+  } | null;
 }
 
 interface AuditDetailViewProps {

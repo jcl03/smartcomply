@@ -2,7 +2,7 @@ import { getUserProfile } from "@/lib/api";
 import { createClient } from "@/utils/supabase/server";
 import { redirect, notFound } from "next/navigation";
 import DashboardLayout from "@/components/dashboard/dashboard-layout";
-import AuditDetailView from "@/components/audit/audit-detail-view";
+import AuditDetailView from "../../../../components/audit/audit-detail-view";
 
 interface AuditDetailPageProps {
   params: {
@@ -11,7 +11,8 @@ interface AuditDetailPageProps {
 }
 
 export default async function AuditDetailPage({ params }: AuditDetailPageProps) {
-  const supabase = await createClient();
+  try {
+    const supabase = await createClient();
 
   const {
     data: { user },
@@ -62,9 +63,10 @@ export default async function AuditDetailPage({ params }: AuditDetailPageProps) 
     .eq('id', params.id)
     .single();
   const { data: audit, error } = await auditQuery;
-
   if (error || !audit) {
     console.error("Error fetching audit:", error);
+    console.error("Error details:", JSON.stringify(error, null, 2));
+    console.error("Audit ID:", params.id);
     return notFound();
   }
   // Fetch user profile for the audit
@@ -82,7 +84,6 @@ export default async function AuditDetailPage({ params }: AuditDetailPageProps) 
   if (!isManager && audit.user_id !== user.id) {
     return redirect("/protected/Audit");
   }
-
   return (
     <DashboardLayout userProfile={userProfile}>
       <div className="space-y-6 p-6">
@@ -94,4 +95,9 @@ export default async function AuditDetailPage({ params }: AuditDetailPageProps) 
       </div>
     </DashboardLayout>
   );
+  } catch (err) {
+    console.error("Unexpected error in audit detail page:", err);
+    console.error("Audit ID:", params.id);
+    return notFound();
+  }
 }
