@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { ArrowLeft, Plus, CheckSquare, List, Archive, RotateCcw } from "lucide-react";
 import Link from "next/link";
-import { archiveChecklist, activateChecklist } from "../../actions";
+import { archiveChecklist, activateChecklist, draftChecklist } from "../../actions";
 import DashboardLayout from "@/components/dashboard/dashboard-layout";
 import { getUserProfile } from "@/lib/api";
 
@@ -45,12 +45,11 @@ export default async function ComplianceChecklistsPage({ params }: { params: Pro
 
   if (frameworkError || !framework) {
     return redirect("/protected/compliance");
-  }  // Fetch checklists for this framework (only active ones by default)
+  }  // Fetch checklists for this framework (all statuses)
   const { data: checklists, error: checklistsError } = await supabase
     .from('checklist')
     .select('*')
     .eq('compliance_id', id)
-    .eq('status', 'active')
     .order('id');
   if (checklistsError) {
     console.error("Error fetching checklists:", checklistsError);
@@ -62,11 +61,17 @@ export default async function ComplianceChecklistsPage({ params }: { params: Pro
     await archiveChecklist(checklistId);
     redirect(`/protected/compliance/${id}/checklists`);
   }
-
   async function handleActivateChecklist(formData: FormData) {
     "use server";
     const checklistId = parseInt(formData.get("id") as string);
     await activateChecklist(checklistId);
+    redirect(`/protected/compliance/${id}/checklists`);
+  }
+
+  async function handleDraftChecklist(formData: FormData) {
+    "use server";
+    const checklistId = parseInt(formData.get("id") as string);
+    await draftChecklist(checklistId);
     redirect(`/protected/compliance/${id}/checklists`);
   }
   return (
@@ -109,6 +114,57 @@ export default async function ComplianceChecklistsPage({ params }: { params: Pro
               )}
             </div>
           </div>
+        </div>
+
+        {/* Status Summary */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <Card className="bg-white border-green-200">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="bg-green-100 p-2 rounded-full">
+                  <CheckSquare className="h-4 w-4 text-green-600" />
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">Published</p>
+                  <p className="text-lg font-semibold text-green-700">
+                    {checklists?.filter(c => c.status === 'active').length || 0}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card className="bg-white border-yellow-200">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="bg-yellow-100 p-2 rounded-full">
+                  <CheckSquare className="h-4 w-4 text-yellow-600" />
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">Drafts</p>
+                  <p className="text-lg font-semibold text-yellow-700">
+                    {checklists?.filter(c => c.status === 'draft').length || 0}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card className="bg-white border-gray-200">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="bg-gray-100 p-2 rounded-full">
+                  <Archive className="h-4 w-4 text-gray-600" />
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">Archived</p>
+                  <p className="text-lg font-semibold text-gray-700">
+                    {checklists?.filter(c => c.status === 'archive').length || 0}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
         {/* Compliance Checklists Card */}
@@ -158,51 +214,109 @@ export default async function ComplianceChecklistsPage({ params }: { params: Pro
                             <div className="text-xs text-sky-600 mt-1 truncate">
                               {checklist.checklist_schema?.description || 'No description'}
                             </div>
-                          </div>
-                        </td>
-                        <td className="p-4">                          <span className="px-3 py-1 text-xs font-medium rounded-full bg-emerald-100 text-emerald-700 border border-emerald-200">
-                            Active
+                          </div>                        </td>
+                        <td className="p-4">
+                          <span className={`px-3 py-1 text-xs font-medium rounded-full border ${
+                            checklist.status === 'active' ? 'bg-emerald-100 text-emerald-700 border-emerald-200' :
+                            checklist.status === 'draft' ? 'bg-yellow-100 text-yellow-700 border-yellow-200' :
+                            'bg-gray-100 text-gray-700 border-gray-200'
+                          }`}>
+                            {checklist.status === 'active' ? 'Published' : 
+                             checklist.status === 'draft' ? 'Draft' : 
+                             'Archived'}
                           </span>
-                        </td>
-                        <td className="p-4">{isAdmin ? (
+                        </td>                        <td className="p-4">
+                          {isAdmin ? (
                             <div className="flex gap-2 flex-wrap">
                               <Link 
                                 href={`/protected/compliance/${id}/checklists/${checklist.id}/edit`}
                                 className="px-3 py-1.5 text-xs font-medium bg-sky-50 text-sky-700 rounded-lg hover:bg-sky-100 transition-all duration-200 border border-sky-200"
                               >
                                 Edit
-                              </Link>                              <Link 
+                              </Link>
+                              <Link 
                                 href={`/protected/compliance/${id}/checklists/${checklist.id}/preview`}
                                 className="px-3 py-1.5 text-xs font-medium bg-sky-50 text-sky-700 rounded-lg hover:bg-sky-100 transition-all duration-200 border border-sky-200"
                               >
                                 Preview
                               </Link>
-                              <form action={handleArchiveChecklist} className="inline">
-                                <input type="hidden" name="id" value={checklist.id} />
-                                <button
-                                  type="submit"
-                                  className="px-3 py-1.5 text-xs font-medium bg-orange-50 text-orange-700 rounded-lg hover:bg-orange-100 transition-all duration-200 border border-orange-200 flex items-center gap-2"
+                              
+                              {/* Status-specific action buttons */}
+                              {checklist.status === 'active' && (
+                                <form action={handleArchiveChecklist} className="inline">
+                                  <input type="hidden" name="id" value={checklist.id} />
+                                  <button
+                                    type="submit"
+                                    className="px-3 py-1.5 text-xs font-medium bg-orange-50 text-orange-700 rounded-lg hover:bg-orange-100 transition-all duration-200 border border-orange-200 flex items-center gap-1"
+                                  >
+                                    <Archive size={12} />
+                                    Archive
+                                  </button>
+                                </form>
+                              )}
+                              
+                              {checklist.status === 'draft' && (
+                                <>
+                                  <form action={handleActivateChecklist} className="inline">
+                                    <input type="hidden" name="id" value={checklist.id} />
+                                    <button
+                                      type="submit"
+                                      className="px-3 py-1.5 text-xs font-medium bg-green-50 text-green-700 rounded-lg hover:bg-green-100 transition-all duration-200 border border-green-200 flex items-center gap-1"
+                                    >
+                                      <CheckSquare size={12} />
+                                      Publish
+                                    </button>
+                                  </form>
+                                  <form action={handleArchiveChecklist} className="inline">
+                                    <input type="hidden" name="id" value={checklist.id} />
+                                    <button
+                                      type="submit"
+                                      className="px-3 py-1.5 text-xs font-medium bg-orange-50 text-orange-700 rounded-lg hover:bg-orange-100 transition-all duration-200 border border-orange-200 flex items-center gap-1"
+                                    >
+                                      <Archive size={12} />
+                                      Archive
+                                    </button>
+                                  </form>
+                                </>
+                              )}
+                              
+                              {checklist.status === 'archive' && (
+                                <form action={handleActivateChecklist} className="inline">
+                                  <input type="hidden" name="id" value={checklist.id} />
+                                  <button
+                                    type="submit"
+                                    className="px-3 py-1.5 text-xs font-medium bg-green-50 text-green-700 rounded-lg hover:bg-green-100 transition-all duration-200 border border-green-200 flex items-center gap-1"
+                                  >
+                                    <CheckSquare size={12} />
+                                    Publish
+                                  </button>
+                                </form>
+                              )}
+                            </div>
+                          ) : (
+                            <div className="flex gap-2 flex-wrap">
+                              <Link 
+                                href={`/protected/compliance/${id}/checklists/${checklist.id}/preview`}
+                                className="px-3 py-1.5 text-xs font-medium bg-sky-50 text-sky-700 rounded-lg hover:bg-sky-100 transition-all duration-200 border border-sky-200"
+                              >
+                                Preview
+                              </Link>
+                              {/* Only show Fill Checklist for active checklists */}
+                              {checklist.status === 'active' && (
+                                <Link 
+                                  href={`/protected/compliance/${id}/checklists/${checklist.id}/fill`}
+                                  className="px-3 py-1.5 text-xs font-medium bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg hover:from-green-600 hover:to-green-700 transition-all duration-200 shadow-sm"
                                 >
-                                  <Archive size={12} />
-                                  Archive
-                                </button>
-                              </form>
-                            </div>
-                          ) : (                            <div className="flex gap-2 flex-wrap">
-                              <Link 
-                                href={`/protected/compliance/${id}/checklists/${checklist.id}/preview`}
-                                className="px-3 py-1.5 text-xs font-medium bg-sky-50 text-sky-700 rounded-lg hover:bg-sky-100 transition-all duration-200 border border-sky-200"
-                              >
-                                Preview
-                              </Link>
-                              <Link 
-                                href={`/protected/compliance/${id}/checklists/${checklist.id}/fill`}
-                                className="px-3 py-1.5 text-xs font-medium bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg hover:from-green-600 hover:to-green-700 transition-all duration-200 shadow-sm"
-                              >
-                                Fill Checklist
-                              </Link>
-                            </div>
-                          )}
+                                  Fill Checklist
+                                </Link>
+                              )}
+                              {/* Show status info for non-active checklists */}
+                              {checklist.status !== 'active' && (
+                                <span className="px-3 py-1.5 text-xs font-medium bg-gray-50 text-gray-600 rounded-lg border border-gray-200">
+                                  {checklist.status === 'draft' ? 'Draft - Not Available' : 'Archived - Not Available'}
+                                </span>
+                              )}
+                            </div>                          )}
                         </td>
                       </tr>
                     ))}

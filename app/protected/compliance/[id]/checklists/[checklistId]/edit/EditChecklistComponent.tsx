@@ -20,19 +20,40 @@ interface Checklist {
   compliance_id: string;
   checklist_schema: any;
   created_at: string;
+  status: string;
 }
 
 // Submit button with loading state
-function SubmitButton() {
+function SubmitButton({ action }: { action: string }) {
   const { pending } = useFormStatus();
+  const isPublish = action === 'publish';
+  const isDraft = action === 'draft';
+  const isUpdate = action === 'update';
   
   return (
     <Button 
-      type="submit" 
+      type="submit"
+      name="action"
+      value={action}
       disabled={pending}
-      className="bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 text-white transition-all duration-200 shadow-md hover:shadow-lg"
+      className={`text-white transition-all duration-200 shadow-md hover:shadow-lg ${
+        isPublish 
+          ? 'bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700' 
+          : isDraft
+          ? 'bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700'
+          : 'bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700'
+      }`}
     >
-      {pending ? "Updating..." : "Update Checklist"}
+      {pending ? (
+        <>
+          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+          {isPublish ? 'Publishing...' : isDraft ? 'Saving Draft...' : 'Updating...'}
+        </>
+      ) : (
+        <>
+          {isPublish ? 'Publish Checklist' : isDraft ? 'Save as Draft' : 'Update Checklist'}
+        </>
+      )}
     </Button>
   );
 }
@@ -40,105 +61,144 @@ function SubmitButton() {
 type ChecklistItem = {
   id: string;
   name: string;
-  type: 'document' | 'checkbox';
-  required: boolean;
-  category?: string;
-  options?: string[];
+  type: 'document' | 'yesno';
+  autoFail?: boolean;
 };
 
-export default function EditChecklistComponent({ checklist, complianceId }: { checklist: Checklist; complianceId: string }) {
-  const [errorMessage, setErrorMessage] = useState("");
+type ChecklistSection = {
+  id: string;
+  name: string;
+  items: ChecklistItem[];
+};
+
+export default function EditChecklistComponent({ 
+  checklist, 
+  complianceId, 
+  hasResponses = false 
+}: { 
+  checklist: Checklist; 
+  complianceId: string; 
+  hasResponses?: boolean;
+}) {  const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
   const [checklistTitle, setChecklistTitle] = useState("");
   const [checklistDescription, setChecklistDescription] = useState("");
-  const [items, setItems] = useState<ChecklistItem[]>([]);
+  const [sections, setSections] = useState<ChecklistSection[]>([]);
   const [showPreview, setShowPreview] = useState(false);
+  const [currentStatus, setCurrentStatus] = useState(checklist.status || "draft");
   const router = useRouter();
-    // Initialize checklist data from existing checklist
+
+  // Initialize checklist data from existing checklist
   useEffect(() => {
     if (checklist.checklist_schema) {
       setChecklistTitle(checklist.checklist_schema.title || "");
       setChecklistDescription(checklist.checklist_schema.description || "");
-      // Filter out any existing yesno items and convert them to checkbox items
-      const filteredItems = (checklist.checklist_schema.items || []).filter((item: any) => {
-        return item.type === 'document' || item.type === 'checkbox';
-      });
-      setItems(filteredItems);
+      
+      // Handle both new (sections) and old (items) format
+      if (checklist.checklist_schema.sections) {
+        // New format with sections
+        setSections(checklist.checklist_schema.sections);
+      } else if (checklist.checklist_schema.items) {
+        // Old format with items - convert to sections
+        const items = checklist.checklist_schema.items.map((item: any) => ({
+          id: item.id || `item_${Date.now()}_${Math.random()}`,
+          name: item.name || "",
+          type: item.type || 'document',
+          autoFail: item.autoFail || false,
+          sectionId: 'general'
+        }));
+        
+        setSections([{
+          id: 'general',
+          name: 'General',
+          items: items
+        }]);
+      }
     }
-  }, [checklist]);const addItem = () => {
+  }, [checklist]);  const addSection = () => {
+    const newSection: ChecklistSection = {
+      id: `section_${Date.now()}`,
+      name: "",
+      items: []
+    };
+    setSections([...sections, newSection]);
+  };
+
+  const removeSection = (sectionIndex: number) => {
+    setSections(sections.filter((_, i) => i !== sectionIndex));
+  };
+
+  const updateSection = (sectionIndex: number, updates: Partial<ChecklistSection>) => {
+    const updatedSections = [...sections];
+    updatedSections[sectionIndex] = { ...updatedSections[sectionIndex], ...updates };
+    setSections(updatedSections);
+  };
+  const addItem = (sectionIndex: number) => {
+    const updatedSections = [...sections];
     const newItem: ChecklistItem = {
       id: `item_${Date.now()}`,
       name: "",
-      type: "checkbox",
-      required: false,
-      category: "",
-      options: []
+      type: "document",
+      autoFail: false
     };
-    setItems([...items, newItem]);
+    updatedSections[sectionIndex].items.push(newItem);
+    setSections(updatedSections);
   };
   
-  const removeItem = (index: number) => {
-    setItems(items.filter((_, i) => i !== index));
+  const removeItem = (sectionIndex: number, itemIndex: number) => {
+    const updatedSections = [...sections];
+    updatedSections[sectionIndex].items = updatedSections[sectionIndex].items.filter((_, i) => i !== itemIndex);
+    setSections(updatedSections);
   };
-  const updateItem = (index: number, updates: Partial<ChecklistItem>) => {
-    const updatedItems = [...items];
-    updatedItems[index] = { ...updatedItems[index], ...updates };
-    
-    // If changing to checkbox type and no options exist, initialize with empty array
-    if (updates.type === 'checkbox' && !updatedItems[index].options) {
-      updatedItems[index].options = [];
-    }
-    
-    setItems(updatedItems);
-  };
-
-  const addOption = (itemIndex: number) => {
-    const updatedItems = [...items];
-    if (!updatedItems[itemIndex].options) {
-      updatedItems[itemIndex].options = [];
-    }
-    updatedItems[itemIndex].options!.push("");
-    setItems(updatedItems);
-  };
-
-  const removeOption = (itemIndex: number, optionIndex: number) => {
-    const updatedItems = [...items];
-    if (updatedItems[itemIndex].options) {
-      updatedItems[itemIndex].options!.splice(optionIndex, 1);
-      setItems(updatedItems);
-    }
-  };
-
-  const updateOption = (itemIndex: number, optionIndex: number, value: string) => {
-    const updatedItems = [...items];
-    if (updatedItems[itemIndex].options) {
-      updatedItems[itemIndex].options![optionIndex] = value;
-      setItems(updatedItems);
-    }
-  };
-
-  const handleSubmit = async (formData: FormData) => {
+  
+  const updateItem = (sectionIndex: number, itemIndex: number, updates: Partial<ChecklistItem>) => {
+    const updatedSections = [...sections];
+    updatedSections[sectionIndex].items[itemIndex] = { 
+      ...updatedSections[sectionIndex].items[itemIndex], 
+      ...updates 
+    };
+    setSections(updatedSections);
+  };  const handleSubmit = async (formData: FormData) => {
     setErrorMessage("");
     setSuccessMessage("");
 
     try {
+      // Get the action from the clicked button
+      const actionType = formData.get("action") as string;
+      let status = currentStatus; // Keep current status by default
+      
+      // Update status based on action
+      if (actionType === "publish") {
+        status = "active";
+      } else if (actionType === "draft") {
+        status = "draft";
+      }
+      // For "update" action, keep the current status
+
       const checklistSchema = {
         title: checklistTitle,
         description: checklistDescription,
-        items: items
+        sections: sections
       };
 
       // Create FormData with the required fields
       const submitData = new FormData();
       submitData.append("checklist_id", checklist.id);
       submitData.append("checklist_schema", JSON.stringify(checklistSchema));
+      submitData.append("status", status);
 
       const result: ActionResult = await updateChecklist(submitData);
-      
-      if (result.error) {
+        if (result.error) {
         setErrorMessage(result.error);
       } else {
-        setSuccessMessage("Checklist updated successfully!");
+        // Update current status if it changed
+        setCurrentStatus(status);
+        
+        const successMsg = actionType === "publish" ? "Checklist published successfully!" : 
+                          actionType === "draft" ? "Checklist saved as draft!" : 
+                          "Checklist updated successfully!";
+        setSuccessMessage(successMsg);
+        
         // Redirect after a short delay
         setTimeout(() => {
           router.push(`/protected/compliance/${complianceId}/checklists`);
@@ -148,11 +208,10 @@ export default function EditChecklistComponent({ checklist, complianceId }: { ch
       setErrorMessage("An unexpected error occurred");
     }
   };
-
   const checklistSchema = {
     title: checklistTitle,
     description: checklistDescription,
-    items: items
+    sections: sections
   };
 
   return (
@@ -169,6 +228,23 @@ export default function EditChecklistComponent({ checklist, complianceId }: { ch
               {successMessage}
             </div>
           )}
+
+          {/* Status Indicator */}
+          <div className="flex items-center justify-between p-4 bg-gradient-to-r from-sky-50 to-blue-50 rounded-lg border border-sky-200">
+            <div className="flex items-center gap-3">
+              <CheckSquare className="h-5 w-5 text-sky-600" />
+              <span className="text-sky-900 font-medium">Current Status:</span>
+            </div>
+            <span className={`px-3 py-1 text-sm font-medium rounded-full ${
+              currentStatus === 'active' ? 'bg-green-100 text-green-800 border border-green-200' :
+              currentStatus === 'draft' ? 'bg-yellow-100 text-yellow-800 border border-yellow-200' :
+              'bg-gray-100 text-gray-800 border border-gray-200'
+            }`}>
+              {currentStatus === 'active' ? 'Published' : 
+               currentStatus === 'draft' ? 'Draft' : 
+               'Archived'}
+            </span>
+          </div>
 
           {/* Checklist Metadata */}
           <Card className="bg-white/80 backdrop-blur-sm border-sky-200 shadow-sm">
@@ -227,18 +303,27 @@ export default function EditChecklistComponent({ checklist, complianceId }: { ch
               <CardContent className="p-6">
                 <ChecklistPreview schema={checklistSchema} />
               </CardContent>
-            </Card>
-          ) : (
-            /* Edit Mode */
-            <div className="space-y-4">
-              {items.map((item, index) => (
-                <Card key={item.id} className="border border-sky-200 bg-sky-25/10 hover:bg-sky-50/30 transition-colors">
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between mb-4">
-                      <h4 className="font-semibold text-sky-900">Item #{index + 1}</h4>
+            </Card>          ) : (
+            /* Edit Mode - Section-based structure */
+            <div className="space-y-6">
+              {sections.map((section, sectionIndex) => (
+                <Card key={section.id} className="border border-sky-200 bg-gradient-to-r from-sky-50/50 to-blue-50/50">
+                  <CardHeader className="bg-gradient-to-r from-sky-100 to-blue-100 border-b border-sky-200">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3 flex-1">
+                        <div className="bg-sky-600 text-white rounded-full w-8 h-8 flex items-center justify-center text-sm font-bold">
+                          {sectionIndex + 1}
+                        </div>
+                        <Input
+                          value={section.name}
+                          onChange={(e) => updateSection(sectionIndex, { name: e.target.value })}
+                          placeholder="Enter section name"
+                          className="font-semibold text-sky-900 bg-white/80 border-sky-200 focus:border-sky-400 focus:ring-sky-200"
+                        />
+                      </div>
                       <Button
                         type="button"
-                        onClick={() => removeItem(index)}
+                        onClick={() => removeSection(sectionIndex)}
                         variant="ghost"
                         size="sm"
                         className="text-red-500 hover:text-red-700 hover:bg-red-50"
@@ -246,174 +331,152 @@ export default function EditChecklistComponent({ checklist, complianceId }: { ch
                         <Minus className="h-4 w-4" />
                       </Button>
                     </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label className="text-sky-700 font-medium">Item Type *</Label>                        <select
-                          value={item.type}
-                          onChange={(e) => updateItem(index, { type: e.target.value as 'document' | 'checkbox' })}
-                          className="w-full p-2 bg-white border border-sky-200 rounded-md focus:border-sky-400 focus:ring-sky-200 text-sky-900"
-                        >
-                          <option value="checkbox">Multiple Choice (Checkboxes)</option>
-                          <option value="document">Document Upload</option>
-                        </select>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label className="text-sky-700 font-medium">Item Name *</Label>
-                        <Input
-                          value={item.name}
-                          onChange={(e) => updateItem(index, { name: e.target.value })}
-                          placeholder="Enter item name"
-                          className="bg-white border-sky-200 focus:border-sky-400 focus:ring-sky-200 text-sky-900 placeholder:text-sky-400"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                      <div className="space-y-2">
-                        <Label className="text-sky-700 font-medium">Category (Optional)</Label>
-                        <Input
-                          value={item.category || ""}
-                          onChange={(e) => updateItem(index, { category: e.target.value })}
-                          placeholder="Enter category name"
-                          className="bg-white border-sky-200 focus:border-sky-400 focus:ring-sky-200 text-sky-900 placeholder:text-sky-400"
-                        />
-                      </div>                      <div className="flex items-center gap-2 pt-6">
-                        <div 
-                          onClick={() => updateItem(index, { required: !item.required })}
-                          className={`h-4 w-4 rounded border-2 cursor-pointer transition-all duration-200 flex items-center justify-center ${
-                            item.required 
-                              ? 'bg-sky-600 border-sky-600' 
-                              : 'bg-white border-sky-300 hover:border-sky-400'
-                          }`}
-                        >
-                          {item.required && (
-                            <svg className="h-3 w-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                            </svg>
-                          )}
-                        </div>                        <Label className="text-sky-700 font-medium cursor-pointer" onClick={() => updateItem(index, { required: !item.required })}>Required</Label>
-                      </div>
-                    </div>
-
-                    {/* Options section for checkbox items */}
-                    {item.type === 'checkbox' && (
-                      <div className="mt-4">
-                        <div className="flex items-center justify-between mb-3">
-                          <Label className="text-sky-700 font-medium">Options</Label>
-                          <Button
-                            type="button"
-                            onClick={() => addOption(index)}
-                            variant="ghost"
-                            size="sm"
-                            className="text-sky-600 hover:text-sky-700 hover:bg-sky-50"
-                          >
-                            <Plus className="h-4 w-4 mr-1" />
-                            Add Option
-                          </Button>
-                        </div>
-                        <div className="space-y-2">
-                          {item.options && item.options.length > 0 ? (
-                            item.options.map((option, optionIndex) => (
-                              <div key={optionIndex} className="flex items-center gap-2">
-                                <Input
-                                  value={option}
-                                  onChange={(e) => updateOption(index, optionIndex, e.target.value)}
-                                  placeholder={`Option ${optionIndex + 1}`}
-                                  className="flex-1 bg-white border-sky-200 focus:border-sky-400 focus:ring-sky-200 text-sky-900 placeholder:text-sky-400"
-                                />
-                                <Button
-                                  type="button"
-                                  onClick={() => removeOption(index, optionIndex)}
-                                  variant="ghost"
-                                  size="sm"
-                                  className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                                >
-                                  <Minus className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            ))
-                          ) : (
-                            <p className="text-sky-600 text-sm italic">No options added yet. Click "Add Option" to get started.</p>
-                          )}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Preview how this item will look */}
-                    <div className="mt-4 p-3 bg-sky-50 rounded-lg border border-sky-100">
-                      <Label className="text-xs text-sky-600 font-medium">Preview:</Label>
-                      <div className="flex items-start gap-3 mt-2">                        <div className="flex-shrink-0 mt-0.5">
-                          {item.type === 'document' ? (
-                            <Upload className="w-4 h-4 text-emerald-600" />
-                          ) : (
-                            <CheckSquare className="w-4 h-4 text-purple-600" />
-                          )}
-                        </div>
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
-                            <p className="text-sm font-medium text-sky-900">{item.name || 'Item name'}</p>                            <span className={`px-2 py-1 text-xs rounded-full font-medium ${
-                              item.type === 'document' ? 'bg-emerald-100 text-emerald-800' :
-                              'bg-purple-100 text-purple-800'
-                            }`}>
-                              {item.type === 'document' ? 'Upload Document' : 'Multiple Choice'}
-                            </span>
-                          </div>
-                          {item.type === 'checkbox' && item.options && item.options.length > 0 && (
-                            <div className="mt-2 space-y-1">
-                              {item.options.slice(0, 3).map((option, optionIndex) => (
-                                <div key={optionIndex} className="flex items-center gap-2 text-xs text-sky-700">
-                                  <div className="w-3 h-3 border border-purple-300 rounded"></div>
-                                  <span>{option || `Option ${optionIndex + 1}`}</span>
-                                </div>
-                              ))}
-                              {item.options.length > 3 && (
-                                <p className="text-xs text-sky-600 italic">...and {item.options.length - 3} more options</p>
-                              )}
+                  </CardHeader>
+                  <CardContent className="p-4">
+                    <div className="space-y-4">
+                      {section.items.map((item, itemIndex) => (
+                        <Card key={item.id} className="border border-sky-200 bg-white/60 hover:bg-white/80 transition-colors">
+                          <CardContent className="p-4">
+                            <div className="flex items-center justify-between mb-4">
+                              <h4 className="font-semibold text-sky-900">Item #{itemIndex + 1}</h4>
+                              <Button
+                                type="button"
+                                onClick={() => removeItem(sectionIndex, itemIndex)}
+                                variant="ghost"
+                                size="sm"
+                                className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                              >
+                                <Minus className="h-4 w-4" />
+                              </Button>
                             </div>
-                          )}
-                          {item.required && (
-                            <span className="inline-flex items-center gap-1 px-2 py-1 text-xs bg-red-100 text-red-800 rounded-full font-medium mt-2">
-                              Required
-                            </span>
-                          )}
-                        </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <div className="space-y-2">
+                                <Label className="text-sky-700 font-medium">Item Type *</Label>
+                                <select
+                                  value={item.type}
+                                  onChange={(e) => updateItem(sectionIndex, itemIndex, { type: e.target.value as 'document' | 'yesno' })}
+                                  className="w-full p-2 bg-white border border-sky-200 rounded-md focus:border-sky-400 focus:ring-sky-200 text-sky-900"
+                                >
+                                  <option value="document">Document Upload</option>
+                                  <option value="yesno">Yes/No</option>
+                                </select>
+                              </div>
+
+                              <div className="space-y-2">
+                                <Label className="text-sky-700 font-medium">Item Name *</Label>
+                                <Input
+                                  value={item.name}
+                                  onChange={(e) => updateItem(sectionIndex, itemIndex, { name: e.target.value })}
+                                  placeholder="Enter item name"
+                                  className="bg-white border-sky-200 focus:border-sky-400 focus:ring-sky-200 text-sky-900 placeholder:text-sky-400"
+                                />
+                              </div>
+                            </div>
+
+                            <div className="mt-4">
+                              <div className="flex items-center gap-2">
+                                <div 
+                                  onClick={() => updateItem(sectionIndex, itemIndex, { autoFail: !item.autoFail })}
+                                  className={`h-4 w-4 rounded border-2 cursor-pointer transition-all duration-200 flex items-center justify-center ${
+                                    item.autoFail 
+                                      ? 'bg-red-600 border-red-600' 
+                                      : 'bg-white border-sky-300 hover:border-sky-400'
+                                  }`}
+                                >
+                                  {item.autoFail && (
+                                    <svg className="h-3 w-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                    </svg>
+                                  )}
+                                </div>
+                                <Label className="text-sky-700 font-medium cursor-pointer" onClick={() => updateItem(sectionIndex, itemIndex, { autoFail: !item.autoFail })}>
+                                  Auto-fail if not completed
+                                </Label>
+                              </div>
+                            </div>
+
+                            {/* Preview how this item will look */}
+                            <div className="mt-4 p-3 bg-sky-50 rounded-lg border border-sky-100">
+                              <Label className="text-xs text-sky-600 font-medium">Preview:</Label>
+                              <div className="flex items-start gap-3 mt-2">
+                                <div className="flex-shrink-0 mt-0.5">
+                                  {item.type === 'document' ? (
+                                    <Upload className="w-4 h-4 text-emerald-600" />
+                                  ) : (
+                                    <CheckSquare className="w-4 h-4 text-purple-600" />
+                                  )}
+                                </div>
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <p className="text-sm font-medium text-sky-900">{item.name || 'Item name'}</p>
+                                    <span className={`px-2 py-1 text-xs rounded-full font-medium ${
+                                      item.type === 'document' ? 'bg-emerald-100 text-emerald-800' :
+                                      'bg-purple-100 text-purple-800'
+                                    }`}>
+                                      {item.type === 'document' ? 'Upload Document' : 'Yes/No'}
+                                    </span>
+                                  </div>
+                                  {item.autoFail && (
+                                    <span className="inline-flex items-center gap-1 px-2 py-1 text-xs bg-red-100 text-red-800 rounded-full font-medium mt-2">
+                                      Auto-fail
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+
+                      {/* Add Item Button */}
+                      <div className="flex justify-center pt-2">
+                        <Button 
+                          type="button" 
+                          onClick={() => addItem(sectionIndex)}
+                          variant="outline"
+                          className="border-sky-300 text-sky-700 hover:bg-sky-50 hover:border-sky-400"
+                        >
+                          <Plus className="h-4 w-4 mr-2" />
+                          Add Item
+                        </Button>
                       </div>
                     </div>
                   </CardContent>
                 </Card>
               ))}
 
-              {items.length === 0 && (
+              {/* No Sections State */}
+              {sections.length === 0 && (
                 <div className="text-center py-12 px-6 border-2 border-dashed border-sky-200 rounded-lg bg-sky-50/30">
                   <div className="bg-sky-50 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
                     <CheckSquare className="h-8 w-8 text-sky-400" />
                   </div>
-                  <h3 className="text-lg font-semibold text-sky-800 mb-2">No Items Added</h3>
+                  <h3 className="text-lg font-semibold text-sky-800 mb-2">No Sections Added</h3>
                   <p className="text-sky-600 mb-4">
-                    Start building your checklist by adding your first item.
+                    Start building your checklist by adding your first section.
                   </p>
                   <Button 
                     type="button" 
-                    onClick={addItem}
+                    onClick={addSection}
                     className="bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 text-white transition-all duration-200 shadow-md hover:shadow-lg"
                   >
                     <Plus className="h-4 w-4 mr-2" />
-                    Add Your First Item
+                    Add Your First Section
                   </Button>
                 </div>
               )}
 
-              {items.length > 0 && (
+              {/* Add Section Button */}
+              {sections.length > 0 && (
                 <div className="flex justify-center pt-4">
                   <Button 
                     type="button" 
-                    onClick={addItem}
+                    onClick={addSection}
                     className="bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 text-white transition-all duration-200 shadow-md hover:shadow-lg"
                   >
                     <Plus className="h-4 w-4 mr-2" />
-                    Add Item
+                    Add Section
                   </Button>
                 </div>
               )}
@@ -426,7 +489,12 @@ export default function EditChecklistComponent({ checklist, complianceId }: { ch
           >
             Cancel
           </Link>
-          <SubmitButton />
+            {/* Action buttons based on current status and responses */}
+          <div className="flex gap-3">
+            {currentStatus !== "active" && <SubmitButton action="publish" />}
+            {(currentStatus === "draft" || (currentStatus === "active" && !hasResponses)) && <SubmitButton action="draft" />}
+            <SubmitButton action="update" />
+          </div>
         </CardFooter>
       </form>
     </>

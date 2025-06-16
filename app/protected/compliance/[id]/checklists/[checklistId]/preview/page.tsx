@@ -47,12 +47,13 @@ export default async function PreviewChecklistPage({
 
   if (frameworkError || !framework) {
     return redirect("/protected/compliance");
-  }  // Fetch the checklist (only if active)
+  }  // Fetch the checklist (allow both active and draft status)
   const { data: checklist, error: checklistError } = await supabase
     .from('checklist')
-    .select('*')    .eq('id', checklistId)
+    .select('*')
+    .eq('id', checklistId)
     .eq('compliance_id', id)
-    .eq('status', 'active')
+    .in('status', ['active', 'draft'])
     .single();
 
   if (checklistError || !checklist) {

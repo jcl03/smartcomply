@@ -191,7 +191,39 @@ export function ChecklistFillForm({ complianceId, checklistId }: Props) {
                 </div>
               )}
 
-              {item.type === "file" && (
+              {item.type === "yesno" && (
+                <div>
+                  <Label>Select Option</Label>
+                  <div className="flex gap-4 mt-2">
+                    <label className="flex items-center space-x-2">
+                      <input
+                        type="radio"
+                        name={item.id}
+                        value="yes"
+                        checked={formData[item.id] === "yes"}
+                        onChange={(e) => handleInputChange(item.id, e.target.value)}
+                        required={item.required}
+                        className="text-green-600"
+                      />
+                      <span>Yes</span>
+                    </label>
+                    <label className="flex items-center space-x-2">
+                      <input
+                        type="radio"
+                        name={item.id}
+                        value="no"
+                        checked={formData[item.id] === "no"}
+                        onChange={(e) => handleInputChange(item.id, e.target.value)}
+                        required={item.required}
+                        className="text-red-600"
+                      />
+                      <span>No</span>
+                    </label>
+                  </div>
+                </div>
+              )}
+
+              {(item.type === "file" || item.type === "document") && (
                 <div>
                   <Label>Upload File</Label>
                   <div className="mt-1">

@@ -47,14 +47,14 @@ export default async function EditChecklistPage({
 
   if (frameworkError || !framework) {
     return redirect("/protected/compliance");
-  }
-  
-  // Fetch the checklist (only if active)
+  }  
+  // Fetch the checklist (allow both active and draft status)
   const { data: checklist, error: checklistError } = await supabase
     .from('checklist')
-    .select('*')    .eq('id', checklistId)
+    .select('*')
+    .eq('id', checklistId)
     .eq('compliance_id', id)
-    .eq('status', 'active')
+    .in('status', ['active', 'draft'])
     .single();
     
   if (checklistError || !checklist) {
@@ -80,14 +80,13 @@ export default async function EditChecklistPage({
     .select('id')
     .eq('compliance_id', id)
     .limit(1);
-
-  // Determine if editing is allowed (no responses)
+  // Determine if editing is allowed (same logic as forms)
   const hasChecklistResponses = checklistResponses && checklistResponses.length > 0;
   const hasFrameworkResponses = 
     (allChecklistResponses && allChecklistResponses.length > 0) || 
     (formResponses && formResponses.length > 0);
   
-  const canEdit = !hasChecklistResponses && !hasFrameworkResponses;
+  const canEdit = checklist.status === 'draft' || (!hasChecklistResponses && !hasFrameworkResponses);
 
   if (!canEdit) {
     return (
@@ -209,8 +208,11 @@ export default async function EditChecklistPage({
               </div>
               <CardTitle className="text-lg">Edit Compliance Checklist</CardTitle>
             </div>
-          </CardHeader>
-          <EditChecklistComponent checklist={checklist} complianceId={id} />
+          </CardHeader>          <EditChecklistComponent 
+            checklist={checklist} 
+            complianceId={id} 
+            hasResponses={!!(hasChecklistResponses || hasFrameworkResponses)}
+          />
         </Card>
       </div>
     </DashboardLayout>

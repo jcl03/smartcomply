@@ -13,26 +13,45 @@ import type { ActionResult } from "@/lib/types";
 import { ChecklistPreview } from "@/components/checklist/checklist-preview";
 
 // Submit button with loading state
-function SubmitButton() {
+function SubmitButton({ action }: { action: string }) {
   const { pending } = useFormStatus();
+  const isPublish = action === 'publish';
   
   return (
     <div className="relative group">
-      <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl blur-lg opacity-75 group-hover:opacity-100 transition duration-300"></div>
+      <div className={`absolute inset-0 rounded-xl blur-lg opacity-75 group-hover:opacity-100 transition duration-300 ${
+        isPublish ? 'bg-gradient-to-r from-blue-600 to-purple-600' : 
+        'bg-gradient-to-r from-gray-500 to-gray-600'
+      }`}></div>
       <Button 
-        type="submit" 
+        type="submit"
+        name="action"
+        value={action}
         disabled={pending}
-        className="relative bg-gradient-to-r from-blue-600 via-indigo-700 to-purple-800 hover:from-blue-700 hover:via-indigo-800 hover:to-purple-900 text-white transition-all duration-300 shadow-2xl hover:shadow-3xl disabled:opacity-50 disabled:cursor-not-allowed px-8 py-4 font-bold rounded-xl text-lg border border-white/20 backdrop-blur-sm hover:scale-105 transform"
+        className={`relative text-white transition-all duration-300 shadow-2xl hover:shadow-3xl disabled:opacity-50 disabled:cursor-not-allowed px-6 py-3 font-bold rounded-xl border border-white/20 backdrop-blur-sm hover:scale-105 transform ${
+          isPublish 
+            ? 'bg-gradient-to-r from-blue-600 via-indigo-700 to-purple-800 hover:from-blue-700 hover:via-indigo-800 hover:to-purple-900' 
+            : 'bg-gradient-to-r from-gray-600 to-gray-700 hover:from-gray-700 hover:to-gray-800'
+        }`}
       >
         {pending ? (
           <>
-            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-3"></div>
-            Creating Checklist...
+            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+            {isPublish ? 'Publishing...' : 'Saving Draft...'}
           </>
         ) : (
           <>
-            <Sparkles className="h-5 w-5 mr-3" />
-            Create Checklist
+            {isPublish ? (
+              <>
+                <Sparkles className="h-4 w-4 mr-2" />
+                Publish Checklist
+              </>
+            ) : (
+              <>
+                <CheckSquare className="h-4 w-4 mr-2" />
+                Save as Draft
+              </>
+            )}
           </>
         )}
       </Button>
@@ -43,92 +62,104 @@ function SubmitButton() {
 type ChecklistItem = {
   id: string;
   name: string;
-  type: 'document';
-  required: boolean;
-  category?: string;
+  type: 'document' | 'yesno';
+  autoFail?: boolean;
+  sectionId: string;
+};
+
+type ChecklistSection = {
+  id: string;
+  name: string;
+  items: ChecklistItem[];
 };
 
 type ServerAction = (formData: FormData) => Promise<ActionResult>;
 
-export default function AddChecklistComponent({ action, complianceId }: { action: ServerAction; complianceId: string }) {
-  const [errorMessage, setErrorMessage] = useState("");
+export default function AddChecklistComponent({ action, complianceId }: { action: ServerAction; complianceId: string }) {  const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
   const [checklistTitle, setChecklistTitle] = useState("");
   const [checklistDescription, setChecklistDescription] = useState("");
-  const [items, setItems] = useState<ChecklistItem[]>([]);
-  const [showPreview, setShowPreview] = useState(false);
-  const [categories, setCategories] = useState<string[]>([]);
-  const [newCategory, setNewCategory] = useState("");
+  const [sections, setSections] = useState<ChecklistSection[]>([]);
+  const [showPreview, setShowPreview] = useState(false);  const addSection = () => {
+    const newSection: ChecklistSection = {
+      id: `section_${Date.now()}`,
+      name: "",
+      items: []
+    };
+    setSections([...sections, newSection]);
+  };
 
-  const addItem = () => {
+  const removeSection = (sectionIndex: number) => {
+    setSections(sections.filter((_, i) => i !== sectionIndex));
+  };
+
+  const updateSection = (sectionIndex: number, updates: Partial<ChecklistSection>) => {
+    const updatedSections = [...sections];
+    updatedSections[sectionIndex] = { ...updatedSections[sectionIndex], ...updates };
+    setSections(updatedSections);
+  };
+
+  const addItem = (sectionIndex: number) => {
+    const updatedSections = [...sections];
     const newItem: ChecklistItem = {
       id: `item_${Date.now()}`,
       name: "",
       type: "document",
-      required: false,
+      autoFail: false,
+      sectionId: updatedSections[sectionIndex].id
     };
-    setItems([...items, newItem]);
+    updatedSections[sectionIndex].items.push(newItem);
+    setSections(updatedSections);
   };
   
-  const removeItem = (index: number) => {
-    setItems(items.filter((_, i) => i !== index));
+  const removeItem = (sectionIndex: number, itemIndex: number) => {
+    const updatedSections = [...sections];
+    updatedSections[sectionIndex].items = updatedSections[sectionIndex].items.filter((_, i) => i !== itemIndex);
+    setSections(updatedSections);
   };
   
-  const updateItem = (index: number, updates: Partial<ChecklistItem>) => {
-    const updatedItems = [...items];
-    updatedItems[index] = { ...updatedItems[index], ...updates };
-    setItems(updatedItems);
-  };
-
-  const addCategory = () => {
-    if (newCategory.trim() && !categories.includes(newCategory.trim())) {
-      setCategories([...categories, newCategory.trim()]);
-      setNewCategory("");
-    }
-  };
-
-  const removeCategory = (categoryToRemove: string) => {
-    setCategories(categories.filter(cat => cat !== categoryToRemove));
-    // Remove category from items that use it
-    setItems(items.map(item => 
-      item.category === categoryToRemove 
-        ? { ...item, category: undefined }
-        : item
-    ));
-  };
-
-  const handleSubmit = async (formData: FormData) => {
+  const updateItem = (sectionIndex: number, itemIndex: number, updates: Partial<ChecklistItem>) => {
+    const updatedSections = [...sections];
+    updatedSections[sectionIndex].items[itemIndex] = { 
+      ...updatedSections[sectionIndex].items[itemIndex], 
+      ...updates 
+    };
+    setSections(updatedSections);
+  };  const handleSubmit = async (formData: FormData) => {
     try {
       setErrorMessage("");
-      setSuccessMessage("");
+      setSuccessMessage("");      // Get the action from the clicked button
+      const actionType = formData.get("action") as string;
+      const status = actionType === "publish" ? "active" : "draft";
 
       // Create the checklist schema
       const checklistSchema = {
         title: checklistTitle,
         description: checklistDescription,
-        items: items,
-        categories: categories
-      };      // Add schema to form data
+        sections: sections
+      };
+
+      // Add schema and status to form data
       formData.append("checklist_schema", JSON.stringify(checklistSchema));
       formData.append("compliance_id", complianceId);
+      formData.append("status", status);
 
       const result = await action(formData);
       
       if (result.error) {
         setErrorMessage(result.error);
       } else {
-        setSuccessMessage("Checklist created successfully!");
+        const successMsg = actionType === "publish" ? "Checklist published successfully!" : "Checklist saved as draft!";
+        setSuccessMessage(successMsg);
         // Reset form
         setChecklistTitle("");
         setChecklistDescription("");
-        setItems([]);
-        setCategories([]);
+        setSections([]);
       }
     } catch (error) {
       setErrorMessage("An error occurred while creating the checklist.");
     }
-  };
-  if (showPreview) {
+  };  if (showPreview) {
     return (
       <div className="space-y-6 p-6">
         <div className="flex items-center justify-between">
@@ -145,12 +176,12 @@ export default function AddChecklistComponent({ action, complianceId }: { action
           schema={{
             title: checklistTitle || "Untitled Checklist",
             description: checklistDescription,
-            items: items
+            sections: sections
           }}
         />
       </div>
     );
-  }  return (
+  }return (
     <form action={handleSubmit}>
       <CardContent className="space-y-8 p-8 bg-gradient-to-br from-white via-blue-50/30 to-indigo-50/30">
         {errorMessage && (
@@ -271,151 +302,149 @@ export default function AddChecklistComponent({ action, complianceId }: { action
               </div>
             </div>
           </div>
-        </div>
-
-      {/* Categories Management */}
-      <Card className="bg-white/80 backdrop-blur-sm border-sky-200 shadow-sm">
-        <CardHeader className="bg-gradient-to-r from-sky-50 to-blue-50 border-b border-sky-100 rounded-t-xl">
-          <CardTitle className="text-sky-900">Categories (Optional)</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4 pt-6">          <div className="flex gap-2">
-            <Input
-              value={newCategory}
-              onChange={(e) => setNewCategory(e.target.value)}
-              placeholder="Enter category name"
-              onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addCategory())}
-              className="bg-white border-sky-200 focus:border-sky-400 focus:ring-sky-200 text-sky-900 placeholder:text-sky-400"
-            />
-            <Button 
-              type="button" 
-              onClick={addCategory} 
-              className="bg-sky-50 text-sky-700 hover:bg-sky-100 border border-sky-200 transition-all duration-200"
-            >
-              <Plus className="h-4 w-4" />
-            </Button>
-          </div>
-
-          {categories.length > 0 && (
-            <div className="flex flex-wrap gap-2">
-              {categories.map((category, index) => (
-                <div key={index} className="flex items-center gap-1 bg-sky-100 text-sky-800 px-3 py-1.5 rounded-lg border border-sky-200">
-                  <span className="text-sm font-medium">{category}</span>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => removeCategory(category)}
-                    className="h-4 w-4 p-0 hover:bg-sky-200 text-sky-600"
-                  >
-                    <Minus className="h-3 w-3" />
-                  </Button>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Checklist Items */}
+        </div>      {/* Sections Management */}
       <Card className="bg-white/80 backdrop-blur-sm border-sky-200 shadow-sm">
         <CardHeader className="bg-gradient-to-r from-sky-50 to-blue-50 border-b border-sky-100 rounded-t-xl">
           <CardTitle className="flex items-center justify-between text-sky-900">
-            Checklist Items
+            Checklist Sections
             <Button 
               type="button" 
-              onClick={addItem} 
+              onClick={addSection} 
               className="bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 text-white transition-all duration-200 shadow-sm hover:shadow-md"
               size="sm"
             >
               <Plus className="h-4 w-4 mr-2" />
-              Add Item
+              Add Section
             </Button>
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4 pt-6">
-          {items.length === 0 ? (
+        <CardContent className="space-y-6 pt-6">
+          {sections.length === 0 ? (
             <div className="text-center py-12 px-6">
               <div className="bg-sky-50 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
                 <CheckSquare className="h-8 w-8 text-sky-400" />
               </div>
-              <h3 className="text-lg font-semibold text-sky-800 mb-2">No Items Added</h3>
+              <h3 className="text-lg font-semibold text-sky-800 mb-2">No Sections Added</h3>
               <p className="text-sky-600 mb-4">
-                No items added yet. Click "Add Item" to get started.
+                Start by adding a section to organize your checklist items.
               </p>
             </div>
           ) : (
-            items.map((item, index) => (
-              <Card key={item.id} className="border border-sky-200 bg-sky-25/10 hover:bg-sky-50/30 transition-colors">
-                <CardContent className="pt-4">
-                  <div className="flex items-start justify-between mb-4">
-                    <h4 className="font-semibold text-sky-900">Item {index + 1}</h4>
+            sections.map((section, sectionIndex) => (
+              <Card key={section.id} className="border border-sky-200 bg-sky-25/10">
+                <CardHeader className="bg-sky-50/50 border-b border-sky-100">
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1">
+                      <Label className="text-sky-700 font-medium">Section Name *</Label>
+                      <Input
+                        value={section.name}
+                        onChange={(e) => updateSection(sectionIndex, { name: e.target.value })}
+                        placeholder={`Section ${sectionIndex + 1} name`}
+                        className="mt-1 bg-white border-sky-200 focus:border-sky-400 focus:ring-sky-200 text-sky-900 placeholder:text-sky-400"
+                      />
+                    </div>
                     <Button
                       type="button"
-                      onClick={() => removeItem(index)}
+                      onClick={() => removeSection(sectionIndex)}
                       variant="ghost"
                       size="sm"
-                      className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                      className="text-red-500 hover:text-red-700 hover:bg-red-50 ml-4"
                     >
                       <Minus className="h-4 w-4" />
                     </Button>
                   </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">                    <div className="space-y-2">
-                      <Label className="text-sky-700 font-medium">Item Name *</Label>
-                      <Input
-                        value={item.name}
-                        onChange={(e) => updateItem(index, { name: e.target.value })}
-                        placeholder="Enter item name"
-                        required
-                        className="bg-white border-sky-200 focus:border-sky-400 focus:ring-sky-200 text-sky-900 placeholder:text-sky-400"
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label className="text-sky-700 font-medium">Type *</Label>                      <select
-                        value={item.type}
-                        onChange={(e) => updateItem(index, { type: e.target.value as 'document' })}
-                        className="w-full p-2 bg-white border border-sky-200 rounded-md focus:border-sky-400 focus:ring-sky-200 text-sky-900"
-                      >
-                        <option value="document">Document Upload</option>
-                      </select>
-                    </div>                    {categories.length > 0 && (
-                      <div className="space-y-2">
-                        <Label className="text-sky-700 font-medium">Category</Label>
-                        <select
-                          value={item.category || ""}
-                          onChange={(e) => updateItem(index, { category: e.target.value || undefined })}
-                          className="w-full p-2 bg-white border border-sky-200 rounded-md focus:border-sky-400 focus:ring-sky-200 text-sky-900"
-                        >
-                          <option value="">No Category</option>
-                          {categories.map((category) => (
-                            <option key={category} value={category}>
-                              {category}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                    )}                    <div className="flex items-center space-x-2">
-                      <div 
-                        onClick={() => updateItem(index, { required: !item.required })}
-                        className={`h-4 w-4 rounded border-2 cursor-pointer transition-all duration-200 flex items-center justify-center ${
-                          item.required 
-                            ? 'bg-sky-600 border-sky-600' 
-                            : 'bg-white border-sky-300 hover:border-sky-400'
-                        }`}
-                      >
-                        {item.required && (
-                          <svg className="h-3 w-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                          </svg>
-                        )}
-                      </div>
-                      <Label className="text-sky-700 font-medium cursor-pointer" onClick={() => updateItem(index, { required: !item.required })}>Required</Label>
-                    </div>
+                </CardHeader>
+                <CardContent className="space-y-4 pt-4">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-sm font-medium text-sky-700">Items in this section</h4>
+                    <Button 
+                      type="button" 
+                      onClick={() => addItem(sectionIndex)} 
+                      variant="outline"
+                      size="sm"
+                      className="text-sky-600 border-sky-300 hover:bg-sky-50"
+                    >
+                      <Plus className="h-3 w-3 mr-1" />
+                      Add Item
+                    </Button>
                   </div>
+                  
+                  {section.items.length === 0 ? (
+                    <div className="text-center py-6 border-2 border-dashed border-sky-200 rounded-lg bg-sky-50/30">
+                      <p className="text-sky-600 text-sm">No items in this section yet</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {section.items.map((item, itemIndex) => (
+                        <Card key={item.id} className="border border-sky-200 bg-white">
+                          <CardContent className="pt-3 pb-3">
+                            <div className="flex items-start justify-between mb-3">
+                              <h5 className="text-sm font-medium text-sky-900">Item {itemIndex + 1}</h5>
+                              <Button
+                                type="button"
+                                onClick={() => removeItem(sectionIndex, itemIndex)}
+                                variant="ghost"
+                                size="sm"
+                                className="text-red-500 hover:text-red-700 hover:bg-red-50 h-6 w-6 p-0"
+                              >
+                                <Minus className="h-3 w-3" />
+                              </Button>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                              <div className="space-y-2">
+                                <Label className="text-sky-700 font-medium text-sm">Item Name *</Label>
+                                <Input
+                                  value={item.name}
+                                  onChange={(e) => updateItem(sectionIndex, itemIndex, { name: e.target.value })}
+                                  placeholder="Enter item name"
+                                  className="bg-white border-sky-200 focus:border-sky-400 focus:ring-sky-200 text-sky-900 placeholder:text-sky-400"
+                                />
+                              </div>
+
+                              <div className="space-y-2">
+                                <Label className="text-sky-700 font-medium text-sm">Type *</Label>
+                                <select
+                                  value={item.type}
+                                  onChange={(e) => updateItem(sectionIndex, itemIndex, { type: e.target.value as 'document' | 'yesno' })}
+                                  className="w-full p-2 bg-white border border-sky-200 rounded-md focus:border-sky-400 focus:ring-sky-200 text-sky-900"
+                                >
+                                  <option value="document">Document Upload</option>
+                                  <option value="yesno">Yes/No</option>
+                                </select>
+                              </div>
+                            </div>
+
+                            <div className="mt-3">
+                              <div className="flex items-center space-x-2">
+                                <div 
+                                  onClick={() => updateItem(sectionIndex, itemIndex, { autoFail: !item.autoFail })}
+                                  className={`h-4 w-4 rounded border-2 cursor-pointer transition-all duration-200 flex items-center justify-center ${
+                                    item.autoFail 
+                                      ? 'bg-red-600 border-red-600' 
+                                      : 'bg-white border-red-300 hover:border-red-400'
+                                  }`}
+                                >
+                                  {item.autoFail && (
+                                    <svg className="h-3 w-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                    </svg>
+                                  )}
+                                </div>
+                                <Label className="text-red-700 font-medium cursor-pointer text-sm" onClick={() => updateItem(sectionIndex, itemIndex, { autoFail: !item.autoFail })}>
+                                  Auto-fail if not completed
+                                </Label>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  )}
                 </CardContent>
               </Card>
-            ))          )}
+            ))
+          )}
         </CardContent>
       </Card>
       </CardContent>
@@ -427,18 +456,22 @@ export default function AddChecklistComponent({ action, complianceId }: { action
               <Button className="group inline-flex items-center gap-2 bg-white/70 backdrop-blur-sm text-gray-600 hover:text-gray-800 border border-gray-200 font-semibold transition-all duration-300 hover:scale-105 rounded-xl px-6 py-3">
                 <ArrowLeft size={16} className="transition-transform group-hover:-translate-x-1" />
                 Cancel
-              </Button>
-            </Link>
+              </Button>            </Link>
             <Button
               type="button"
               onClick={() => setShowPreview(true)}
-              disabled={!checklistTitle || items.length === 0}
+              disabled={!checklistTitle || sections.length === 0}
               className="group inline-flex items-center gap-2 bg-white/70 backdrop-blur-sm text-blue-600 hover:text-blue-800 border border-blue-200 font-semibold transition-all duration-300 hover:scale-105 rounded-xl px-6 py-3 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Eye className="h-4 w-4" />
               Preview
             </Button>
-          </div>          <SubmitButton />
+          </div>
+            {/* Action Buttons */}
+          <div className="flex gap-3">
+            <SubmitButton action="draft" />
+            <SubmitButton action="publish" />
+          </div>
         </div>
       </CardFooter>
     </form>

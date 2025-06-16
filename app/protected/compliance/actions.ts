@@ -399,12 +399,17 @@ export async function addChecklist(formData: FormData): Promise<ActionResult> {
   if (!profile || profile.role !== 'admin') {
     return { error: "Insufficient permissions" };
   }
-
   const complianceId = formData.get("compliance_id") as string;
   const checklistSchemaStr = formData.get("checklist_schema") as string;
+  const status = formData.get("status") as string || "draft"; // Default to draft
 
   if (!complianceId || !checklistSchemaStr) {
     return { error: "Compliance ID and checklist schema are required" };
+  }
+
+  // Validate status
+  if (!["draft", "active", "archive"].includes(status)) {
+    return { error: "Invalid status. Must be draft, active, or archive" };
   }
 
   let checklistSchema;
@@ -419,7 +424,7 @@ export async function addChecklist(formData: FormData): Promise<ActionResult> {
     .insert([{ 
       compliance_id: parseInt(complianceId),
       checklist_schema: checklistSchema,
-      status: 'active'
+      status: status
     }]);
 
   if (error) {
@@ -450,12 +455,17 @@ export async function updateChecklist(formData: FormData): Promise<ActionResult>
   if (!profile || profile.role !== 'admin') {
     return { error: "Insufficient permissions" };
   }
-
   const checklistId = formData.get("checklist_id") as string;
   const checklistSchemaStr = formData.get("checklist_schema") as string;
+  const status = formData.get("status") as string;
 
   if (!checklistId || !checklistSchemaStr) {
     return { error: "Checklist ID and checklist schema are required" };
+  }
+
+  // Validate status if provided
+  if (status && !["draft", "active", "archive"].includes(status)) {
+    return { error: "Invalid status. Must be draft, active, or archive" };
   }
 
   let checklistSchema;
@@ -465,9 +475,15 @@ export async function updateChecklist(formData: FormData): Promise<ActionResult>
     return { error: "Invalid JSON format in checklist schema" };
   }
 
+  // Prepare update data
+  const updateData: any = { checklist_schema: checklistSchema };
+  if (status) {
+    updateData.status = status;
+  }
+
   const { error } = await supabase
     .from('checklist')
-    .update({ checklist_schema: checklistSchema })
+    .update(updateData)
     .eq('id', parseInt(checklistId));
 
   if (error) {
@@ -581,6 +597,39 @@ export async function activateChecklist(checklistId: number): Promise<ActionResu
   return { success: true };
 }
 
+export async function draftChecklist(checklistId: number): Promise<ActionResult> {
+  const supabase = await createClient();
+  
+  // Get current user
+  const { data: { user } } = await supabase.auth.getUser();
+  
+  if (!user) {
+    return { error: "Unauthorized" };
+  }
+  
+  // Check if user is admin
+  const { data: profile } = await supabase
+    .from('view_user_profiles')
+    .select('role')
+    .eq('email', user.email)
+    .single();
+    
+  if (!profile || profile.role !== 'admin') {
+    return { error: "Insufficient permissions" };
+  }
+
+  const { error } = await supabase
+    .from('checklist')
+    .update({ status: 'draft' })
+    .eq('id', checklistId);
+
+  if (error) {
+    console.error("Error changing checklist to draft:", error);
+    return { error: "Failed to change checklist to draft" };
+  }
+
+  return { success: true };
+}
 
 export async function addFormDraft(formData: FormData): Promise<ActionResult> {
   const supabase = await createClient();
