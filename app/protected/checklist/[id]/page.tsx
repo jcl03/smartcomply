@@ -19,7 +19,8 @@ import {
   Building,
   ClipboardList,
   CheckSquare,
-  AlertTriangle
+  AlertTriangle,
+  BarChart3
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { getUserProfile } from "@/lib/api";
@@ -135,6 +136,47 @@ export default async function ChecklistViewPage({ params }: Props) {
       .getPublicUrl(filePath);
     return data.publicUrl;
   };
+
+  // Calculate progress based on completed items in response data
+  const calculateProgress = () => {
+    if (!schema?.sections?.length) return { completed: 0, total: 0, percentage: 0 };
+    
+    let total = 0;
+    let completed = 0;
+      schema.sections.forEach((section: any) => {
+      section.items.forEach((item: any) => {
+        total += 1;
+        const value = responseData[item.id];
+          if (item.type === 'document') {
+          // Document is completed if it has a valid file
+          if (value && (value.filePath || value.isTemporary)) {
+            completed += 1;
+          }
+        } else if (item.type === 'yesno') {
+          // Yes/No is completed only if the answer is 'yes'
+          if (value === 'yes') {
+            completed += 1;
+          }
+        } else {
+          // Other types are completed if they have any value
+          if (value) {
+            completed += 1;
+          }
+        }
+      });
+    });
+    
+    // Add the title field to the count
+    total += 1;
+    if (response.title?.trim()) {
+      completed += 1;
+    }
+    
+    const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
+    return { completed, total, percentage };
+  };
+
+  const progress = calculateProgress();
 
   const renderChecklistItem = (item: any, sectionName: string) => {
     const itemData = responseData[item.id];
@@ -306,6 +348,46 @@ export default async function ChecklistViewPage({ params }: Props) {
             </div>
           </div>
         </div>
+
+        {/* Progress Bar */}
+        <Card className="bg-white border border-gray-200 shadow-sm">
+          <CardContent className="p-4">
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <BarChart3 className="h-4 w-4 text-blue-600" />
+                  <span className="text-sm font-medium text-gray-700">Completion Progress</span>
+                </div>
+                <span className="text-sm font-semibold text-blue-600">
+                  {progress.completed} of {progress.total} items ({progress.percentage}%)
+                </span>
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-2.5">
+                <div 
+                  className={`h-2.5 rounded-full transition-all duration-500 ${
+                    progress.percentage === 100 
+                      ? 'bg-gradient-to-r from-green-400 to-emerald-500' 
+                      : progress.percentage >= 75 
+                        ? 'bg-gradient-to-r from-blue-400 to-sky-500'
+                        : progress.percentage >= 50 
+                          ? 'bg-gradient-to-r from-yellow-400 to-orange-500'
+                          : 'bg-gradient-to-r from-red-400 to-pink-500'
+                  }`}
+                  style={{ width: `${progress.percentage}%` }}
+                ></div>
+              </div>
+              <div className="flex items-center justify-between text-xs text-gray-500">
+                <span>
+                  {progress.percentage === 100 ? '✅ Complete' : 
+                   progress.percentage >= 75 ? '🟦 Almost done' :
+                   progress.percentage >= 50 ? '🟨 Halfway there' :
+                   '🟥 Getting started'}
+                </span>
+                <span>{progress.total - progress.completed} items remaining</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Response Info */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

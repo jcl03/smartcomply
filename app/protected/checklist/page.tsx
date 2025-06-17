@@ -166,6 +166,49 @@ export default async function ChecklistResponsesPage() {
         return <Badge className="bg-slate-100 text-slate-700 hover:bg-slate-100 border-slate-200">Draft</Badge>;
     }
   };
+
+  // Calculate progress for a single response
+  const calculateResponseProgress = (response: any, checklistSchema: any) => {
+    if (!checklistSchema?.sections?.length) return { completed: 0, total: 0, percentage: 0 };
+    
+    let total = 0;
+    let completed = 0;
+    const responseData = response.response_data || {};
+    
+    checklistSchema.sections.forEach((section: any) => {
+      section.items.forEach((item: any) => {
+        total += 1;
+        const value = responseData[item.id];
+        
+        if (item.type === 'document') {
+          // Document is completed if it has a valid file
+          if (value && (value.filePath || value.isTemporary)) {
+            completed += 1;
+          }
+        } else if (item.type === 'yesno') {
+          // Yes/No is completed only if the answer is 'yes'
+          if (value === 'yes') {
+            completed += 1;
+          }
+        } else {
+          // Other types are completed if they have any value
+          if (value) {
+            completed += 1;
+          }
+        }
+      });
+    });
+    
+    // Add the title field to the count
+    total += 1;
+    if (response.title?.trim()) {
+      completed += 1;
+    }
+    
+    const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
+    return { completed, total, percentage };
+  };
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
@@ -375,10 +418,10 @@ export default async function ChecklistResponsesPage() {
             {responses && responses.length > 0 ? (
               <div className="overflow-hidden">
                 <table className="w-full">
-                  <thead className="bg-sky-50 border-b border-sky-100">
-                    <tr>
+                  <thead className="bg-sky-50 border-b border-sky-100">                    <tr>
                       <th className="text-left p-4 font-semibold text-sky-700">Checklist</th>
                       <th className="text-left p-4 font-semibold text-sky-700">Status</th>
+                      <th className="text-left p-4 font-semibold text-sky-700">Progress</th>
                       <th className="text-left p-4 font-semibold text-sky-700">Framework</th>
                       {profile.role === 'manager' && (
                         <th className="text-left p-4 font-semibold text-sky-700">Submitted By</th>
@@ -403,10 +446,41 @@ export default async function ChecklistResponsesPage() {
                               </p>
                               <p className="text-xs text-slate-500">ID: {response.id}</p>
                             </div>
-                          </div>
-                        </td>
+                          </div>                        </td>
                         <td className="p-4">
                           {getStatusBadge(response.status)}
+                        </td>
+                        <td className="p-4">
+                          {(() => {
+                            const schema = checklistInfo[response.checklist_id]?.checklist_schema;
+                            const progress = calculateResponseProgress(response, schema);
+                            return (
+                              <div className="space-y-2">
+                                <div className="flex items-center justify-between">
+                                  <span className="text-xs font-medium text-slate-600">
+                                    {progress.completed}/{progress.total}
+                                  </span>
+                                  <span className="text-xs font-semibold text-blue-600">
+                                    {progress.percentage}%
+                                  </span>
+                                </div>
+                                <div className="w-full bg-gray-200 rounded-full h-1.5">
+                                  <div 
+                                    className={`h-1.5 rounded-full transition-all duration-300 ${
+                                      progress.percentage === 100 
+                                        ? 'bg-gradient-to-r from-green-400 to-emerald-500' 
+                                        : progress.percentage >= 75 
+                                          ? 'bg-gradient-to-r from-blue-400 to-sky-500'
+                                          : progress.percentage >= 50 
+                                            ? 'bg-gradient-to-r from-yellow-400 to-orange-500'
+                                            : 'bg-gradient-to-r from-red-400 to-pink-500'
+                                    }`}
+                                    style={{ width: `${progress.percentage}%` }}
+                                  ></div>
+                                </div>
+                              </div>
+                            );
+                          })()}
                         </td>
                         <td className="p-4">
                           <p className="font-medium text-slate-700">

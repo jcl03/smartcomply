@@ -7,7 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { ArrowUpCircle, CheckSquare, Upload, AlertTriangle, FileText, X, Save, ArrowLeft } from "lucide-react";
+import { ArrowUpCircle, CheckSquare, Upload, AlertTriangle, FileText, X, Save, ArrowLeft, BarChart3 } from "lucide-react";
 import DashboardLayout from "@/components/dashboard/dashboard-layout";
 import Link from "next/link";
 
@@ -43,6 +43,7 @@ export default function ChecklistEditForm({ response, userProfile }: Props) {
   const [submitting, setSubmitting] = useState(false);
   const [uploading, setUploading] = useState<Record<string, boolean>>({});
   const [tempFiles, setTempFiles] = useState<Record<string, File>>({});
+  const [progress, setProgress] = useState({ completed: 0, total: 0, percentage: 0 });
   const { toast } = useToast();
   const supabase = createClient();
 
@@ -70,6 +71,13 @@ export default function ChecklistEditForm({ response, userProfile }: Props) {
       });
     };
   }, [tempFiles]);
+
+  // Calculate progress whenever form data or schema changes
+  useEffect(() => {
+    if (schema?.sections?.length) {
+      setProgress(calculateProgress());
+    }
+  }, [formData, schema]);
 
   const getFileUrl = (filePath: string) => {
     const { data } = supabase.storage
@@ -140,6 +148,46 @@ export default function ChecklistEditForm({ response, userProfile }: Props) {
 
   const handleCancel = () => {
     router.push(`/protected/checklist/${response.id}`);
+  };
+
+  // Calculate progress based on completed items
+  const calculateProgress = () => {
+    if (!schema?.sections?.length) return { completed: 0, total: 0, percentage: 0 };
+    
+    let total = 0;
+    let completed = 0;
+    
+    schema.sections.forEach((section) => {
+      section.items.forEach((item) => {
+        total += 1;
+        const value = formData[item.id];
+          if (item.type === 'document') {
+          // Document is completed if it has a valid file
+          if (value && (value.filePath || value.isTemporary)) {
+            completed += 1;
+          }
+        } else if (item.type === 'yesno') {
+          // Yes/No is completed only if the answer is 'yes'
+          if (value === 'yes') {
+            completed += 1;
+          }
+        } else {
+          // Other types are completed if they have any value
+          if (value) {
+            completed += 1;
+          }
+        }
+      });
+    });
+    
+    // Add the title field to the count
+    total += 1;
+    if (formData['checklist_title']?.trim()) {
+      completed += 1;
+    }
+    
+    const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
+    return { completed, total, percentage };
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -328,6 +376,46 @@ export default function ChecklistEditForm({ response, userProfile }: Props) {
             </Button>
           </div>
         </div>
+
+        {/* Progress Bar */}
+        <Card className="bg-white border border-gray-200 shadow-sm">
+          <CardContent className="p-4">
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <BarChart3 className="h-4 w-4 text-blue-600" />
+                  <span className="text-sm font-medium text-gray-700">Completion Progress</span>
+                </div>
+                <span className="text-sm font-semibold text-blue-600">
+                  {progress.completed} of {progress.total} items ({progress.percentage}%)
+                </span>
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-2.5">
+                <div 
+                  className={`h-2.5 rounded-full transition-all duration-500 ${
+                    progress.percentage === 100 
+                      ? 'bg-gradient-to-r from-green-400 to-emerald-500' 
+                      : progress.percentage >= 75 
+                        ? 'bg-gradient-to-r from-blue-400 to-sky-500'
+                        : progress.percentage >= 50 
+                          ? 'bg-gradient-to-r from-yellow-400 to-orange-500'
+                          : 'bg-gradient-to-r from-red-400 to-pink-500'
+                  }`}
+                  style={{ width: `${progress.percentage}%` }}
+                ></div>
+              </div>
+              <div className="flex items-center justify-between text-xs text-gray-500">
+                <span>
+                  {progress.percentage === 100 ? '✅ Complete' : 
+                   progress.percentage >= 75 ? '🟦 Almost done' :
+                   progress.percentage >= 50 ? '🟨 Halfway there' :
+                   '🟥 Getting started'}
+                </span>
+                <span>{progress.total - progress.completed} items remaining</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Form */}
         <Card className="bg-white border border-gray-200 shadow-sm">
