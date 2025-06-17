@@ -35,8 +35,8 @@ const navigation = [
   { name: "User Management", href: "/protected/user-management", icon: Users, adminOnly: true },
   { name: "Compliance", href: "/protected/compliance", icon: Shield },
   { name: "Documents", href: "/protected/documents", icon: Folder, excludeForAdmin: true },
-  { name: "Audit History", href: "/protected/Audit", icon: CheckCircle, excludeForAdmin: true, excludeForAdmin: true },
-  { name: "Reports", href: "/protected/reports", icon: FileText },
+  { name: "Audit History", href: "/protected/Audit", icon: CheckCircle, excludeForAdmin: true },
+  { name: "Reports", href: "/protected/reports", icon: FileText, excludeForAdmin: true },
 ];
 
 export default function DashboardLayout({ children, userProfile }: DashboardLayoutProps) {  const [sidebarOpen, setSidebarOpen] = useState(false);
