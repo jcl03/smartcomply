@@ -5,6 +5,7 @@ import { CheckSquare, ArrowLeft, AlertTriangle } from "lucide-react";
 import Link from "next/link";
 import { addChecklist } from "../../../actions";
 import AddChecklistComponent from "./AddChecklistComponent";
+import BreadcrumbWrapper from "./BreadcrumbWrapper";
 import DashboardLayout from "@/components/dashboard/dashboard-layout";
 import { getUserProfile } from "@/lib/api";
 import { Button } from "@/components/ui/button";
@@ -67,11 +68,11 @@ export default async function AddChecklistPage({ params }: { params: Promise<{ i
 
   // Can only add new checklists if no responses have been submitted
   const canAddChecklist = !hasFrameworkResponses;
-
   if (!canAddChecklist) {
     return (
       <DashboardLayout userProfile={currentUserProfile}>
-        <div className="space-y-8">
+        <BreadcrumbWrapper complianceId={id} complianceName={framework.name}>
+          <div className="space-y-8">
           {/* Header Section */}
           <div className="bg-gradient-to-r from-sky-50 via-blue-50 to-indigo-50 rounded-xl p-6 border border-sky-200 shadow-sm">
             <div className="flex items-center justify-between">
@@ -135,16 +136,16 @@ export default async function AddChecklistPage({ params }: { params: Promise<{ i
                   </Link>
                 </div>
               </div>
-            </CardContent>
-          </Card>
+            </CardContent>          </Card>
         </div>
+        </BreadcrumbWrapper>
       </DashboardLayout>
     );
   }
-
   return (
     <DashboardLayout userProfile={currentUserProfile}>
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-indigo-50">
+      <BreadcrumbWrapper complianceId={id} complianceName={framework.name}>
+        <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-indigo-50">
         <div className="space-y-8 p-6">
           {/* Cinematic Header Section */}
           <div className="relative overflow-hidden bg-gradient-to-r from-blue-600 via-indigo-700 to-purple-800 rounded-2xl shadow-2xl">
@@ -210,9 +211,9 @@ export default async function AddChecklistPage({ params }: { params: Promise<{ i
                 <AddChecklistComponent action={addChecklist} complianceId={id} />
               </Card>
             </div>
-          </div>
-        </div>
+          </div>        </div>
       </div>
+      </BreadcrumbWrapper>
     </DashboardLayout>
   );
 }
