@@ -205,16 +205,16 @@ export function ChecklistFillForm({ complianceId, checklistId, checklist, framew
       
       // Check for auto-fail conditions first
       if (hasAutoFailures) {
-        result = "fail";
+        result = "failed";
       } else {        // Check if all items are properly completed for a pass
         schema.sections.forEach((section) => {
           section.items.forEach((item) => {
             const value = uploadedFormData[item.id];
             
             if (item.type === 'document' && !value) {
-              result = "fail"; // Missing document = fail
+              result = "failed"; // Missing document = failed
             } else if (item.type === 'yesno' && value !== 'yes') {
-              result = "fail"; // Not "yes" = fail
+              result = "failed"; // Not "yes" = failed
             }
           });
         });

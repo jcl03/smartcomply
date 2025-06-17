@@ -3,7 +3,6 @@ import { redirect } from "next/navigation";
 import DashboardLayout from "@/components/dashboard/dashboard-layout";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { 
   CheckCircle, 
@@ -12,8 +11,16 @@ import {
   FileText, 
   Users, 
   Calendar,
-  Eye
+  Eye,
+  User,
+  Shield,
+  Activity,
+  BarChart3,
+  Plus,
+  ClipboardList
 } from "lucide-react";
+import { formatDistanceToNow } from "date-fns";
+import { getUserProfile } from "@/lib/api";
 
 export default async function ChecklistResponsesPage() {
   const supabase = await createClient();
@@ -31,38 +38,62 @@ export default async function ChecklistResponsesPage() {
     .single();
   if (!profile) {
     return redirect("/sign-in");
-  }
-  // Debug logging
+  }  // Debug logging
   console.log('User profile:', profile);
-  console.log('Current user ID:', user.id);// Only allow managers to access this page
-  if (profile.role !== 'manager') {
-    console.log('Access denied - user role:', profile.role);
-    return redirect("/protected");
-  }// Fetch all checklist responses for managers to view
-  const { data: responses, error } = await supabase
-    .from('checklist_responses')
-    .select(`
-      id,
-      checklist_id,
-      status,
-      result,
-      title,
-      last_edit_at,
-      created_at,
-      user_id,
-      response_data
-    `)    .order('created_at', { ascending: false });
+  console.log('Current user ID:', user.id);
 
+  // Fetch checklist responses based on user role
+  let responses, error;
+  if (profile.role === 'manager') {
+    // Managers can view all checklist responses
+    const result = await supabase
+      .from('checklist_responses')
+      .select(`
+        id,
+        checklist_id,
+        status,
+        result,
+        title,
+        last_edit_at,
+        created_at,
+        user_id,
+        response_data
+      `)
+      .order('created_at', { ascending: false });
+    responses = result.data;
+    error = result.error;
+  } else {
+    // Regular users can only view their own checklist responses
+    const result = await supabase
+      .from('checklist_responses')
+      .select(`
+        id,
+        checklist_id,
+        status,
+        result,
+        title,
+        last_edit_at,
+        created_at,
+        user_id,
+        response_data
+      `)
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false });
+    responses = result.data;
+    error = result.error;
+  }
   // Debug logging
   console.log('Responses query result:', { responses, error });
   console.log('Raw response data:', responses);
 
   // Also try a simple count to see if there are any responses at all
-  const { count, error: countError } = await supabase
-    .from('checklist_responses')
-    .select('*', { count: 'exact', head: true });
+  let countQuery = supabase.from('checklist_responses').select('*', { count: 'exact', head: true });
+  if (profile.role !== 'manager') {
+    countQuery = countQuery.eq('user_id', user.id);
+  }
+  const { count, error: countError } = await countQuery;
 
-  console.log('Total count in checklist_responses table:', count, countError);
+  console.log(`Total count in checklist_responses table for ${profile.role}:`, count, countError);
 
   // Fetch checklist info separately if needed
   let checklistInfo: Record<string, any> = {};
@@ -88,10 +119,9 @@ export default async function ChecklistResponsesPage() {
       }, {} as Record<string, any>);
     }
   }
-
-  // Fetch user profiles for all unique user_ids
+  // Fetch user profiles for all unique user_ids (only needed for managers)
   let userProfiles: Record<string, any> = {};
-  if (responses && responses.length > 0) {
+  if (responses && responses.length > 0 && profile.role === 'manager') {
     const userIds = Array.from(new Set(responses.map(r => r.user_id)));
     const { data: profiles } = await supabase
       .from('view_user_profiles')
@@ -112,33 +142,30 @@ export default async function ChecklistResponsesPage() {
   console.log('Responses data:', responses);
   console.log('Checklist info:', checklistInfo);
   console.log('User profiles:', userProfiles);
-
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'completed':
-        return <CheckCircle className="h-4 w-4 text-green-500" />;
+        return <CheckCircle className="h-4 w-4 text-emerald-600" />;
       case 'failed':
-        return <XCircle className="h-4 w-4 text-red-500" />;
+        return <XCircle className="h-4 w-4 text-red-600" />;
       case 'in_progress':
-        return <Clock className="h-4 w-4 text-yellow-500" />;
+        return <Clock className="h-4 w-4 text-yellow-600" />;
       default:
-        return <FileText className="h-4 w-4 text-gray-500" />;
+        return <FileText className="h-4 w-4 text-slate-500" />;
     }
   };
-
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'completed':
-        return <Badge className="bg-green-100 text-green-800 hover:bg-green-100">Completed</Badge>;
+        return <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100 border-emerald-200">Completed</Badge>;
       case 'failed':
-        return <Badge className="bg-red-100 text-red-800 hover:bg-red-100">Failed</Badge>;
+        return <Badge className="bg-red-100 text-red-700 hover:bg-red-100 border-red-200">Failed</Badge>;
       case 'in_progress':
-        return <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">In Progress</Badge>;
+        return <Badge className="bg-yellow-100 text-yellow-700 hover:bg-yellow-100 border-yellow-200">In Progress</Badge>;
       default:
-        return <Badge className="bg-gray-100 text-gray-800 hover:bg-gray-100">Draft</Badge>;
+        return <Badge className="bg-slate-100 text-slate-700 hover:bg-slate-100 border-slate-200">Draft</Badge>;
     }
   };
-
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
@@ -147,180 +174,313 @@ export default async function ChecklistResponsesPage() {
       hour: '2-digit',
       minute: '2-digit'
     });
-  };
+  };  // Get current user profile for dashboard layout
+  const currentUserProfile = await getUserProfile();
 
   return (
-    <DashboardLayout userProfile={profile}>
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-sky-900">Checklists</h1>
-            <p className="text-sky-600 mt-1">
-              View all checklists submitted by users and managers
-            </p>
-          </div>
-          <div className="flex items-center gap-2 text-sm text-sky-600">
-            <Users className="h-4 w-4" />
-            <span>{responses?.length || 0} total responses</span>
+    <DashboardLayout userProfile={currentUserProfile}>
+      <div className="space-y-8 p-6">
+        {/* Hero Welcome Section */}
+        <div className="relative overflow-hidden bg-gradient-to-br from-slate-50 via-sky-50 to-blue-50 rounded-3xl border border-slate-200/50 shadow-2xl">
+          {/* Background Pattern */}
+          <div className="absolute inset-0 bg-gradient-to-r from-blue-600/5 via-sky-500/5 to-indigo-600/5"></div>
+          <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-br from-sky-400/10 to-blue-600/10 rounded-full -translate-y-48 translate-x-48"></div>
+          <div className="absolute bottom-0 left-0 w-80 h-80 bg-gradient-to-tr from-indigo-400/10 to-sky-500/10 rounded-full translate-y-40 -translate-x-40"></div>
+          
+          <div className="relative z-10 p-8 lg:p-12">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+              <div className="space-y-4">
+                <div className="flex items-center gap-4">
+                  <div className="relative">
+                    <div className="bg-gradient-to-br from-sky-500 to-blue-600 p-4 rounded-2xl shadow-lg">
+                      <ClipboardList className="h-8 w-8 text-white" />
+                    </div>
+                    <div className="absolute -top-1 -right-1 w-4 h-4 bg-emerald-500 rounded-full border-2 border-white animate-pulse"></div>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-slate-600 mb-1">Checklist Management</p>
+                    <h1 className="text-3xl lg:text-4xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent">
+                      {profile.role === 'manager' ? 'All Submissions' : 'My Submissions'}
+                    </h1>
+                  </div>
+                </div>
+                <p className="text-lg text-slate-600 max-w-2xl">
+                  {profile.role === 'manager' 
+                    ? "Monitor all checklist submissions across your organization and track compliance progress."
+                    : "View your submitted checklists and track your compliance completion status."
+                  }
+                </p>
+                
+                <div className="flex items-center gap-6 pt-2">
+                  <div className="flex items-center gap-2 text-sm text-slate-500">
+                    <div className="w-2 h-2 bg-emerald-500 rounded-full"></div>
+                    <span>System Operational</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm text-slate-500">
+                    <ClipboardList className="h-4 w-4" />
+                    <span>{responses?.length || 0} Total Submissions</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm text-slate-500">
+                    {profile.role === 'manager' ? <Shield className="h-4 w-4" /> : <User className="h-4 w-4" />}
+                    <span>{profile.role === 'manager' ? 'Manager Access' : 'User Access'}</span>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="lg:text-right space-y-3">
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <Link
+                    href="/protected/compliance"
+                    className="inline-flex items-center justify-center rounded-xl bg-white/90 backdrop-blur-sm px-4 py-3 text-sm font-medium text-slate-700 hover:bg-white transition-all duration-200 border border-slate-200 shadow-lg hover:shadow-xl"
+                  >
+                    <Shield size={16} className="mr-2" />
+                    View Frameworks
+                  </Link>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
+        {/* Key Metrics Dashboard */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          {/* Total Submissions */}
+          <Card className="group relative overflow-hidden bg-gradient-to-br from-blue-50 to-sky-50 border-blue-200/50 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-500 hover:-translate-y-1">
+            <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-blue-400/20 to-sky-500/20 rounded-full -translate-y-10 translate-x-10"></div>
+            <div className="relative z-10">
+              <div className="flex items-center justify-between mb-4">
+                <div className="bg-blue-100 p-3 rounded-xl shadow-sm group-hover:shadow-md transition-all duration-300">
+                  <FileText className="h-6 w-6 text-blue-600" />
+                </div>
+                <div className="text-right">
+                  <p className="text-2xl lg:text-3xl font-bold text-blue-900">{responses?.length || 0}</p>
+                </div>
+              </div>
+              <h3 className="text-sm font-semibold text-blue-700 uppercase tracking-wider mb-1">
+                {profile.role === 'manager' ? 'Total Submissions' : 'My Submissions'}
+              </h3>
+              <p className="text-blue-600 text-sm flex items-center gap-1">
+                <Activity className="h-4 w-4" />
+                {profile.role === 'manager' ? 'All team responses' : 'Your responses'}
+              </p>
+            </div>
+          </Card>
+
+          {/* Completed */}
+          <Card className="group relative overflow-hidden bg-gradient-to-br from-emerald-50 to-green-50 border-emerald-200/50 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-500 hover:-translate-y-1">
+            <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-emerald-400/20 to-green-500/20 rounded-full -translate-y-10 translate-x-10"></div>
+            <div className="relative z-10">
+              <div className="flex items-center justify-between mb-4">
+                <div className="bg-emerald-100 p-3 rounded-xl shadow-sm group-hover:shadow-md transition-all duration-300">
+                  <CheckCircle className="h-6 w-6 text-emerald-600" />
+                </div>
+                <div className="text-right">
+                  <p className="text-2xl lg:text-3xl font-bold text-emerald-900">
+                    {responses?.filter(r => r.status === 'completed').length || 0}
+                  </p>
+                </div>
+              </div>
+              <h3 className="text-sm font-semibold text-emerald-700 uppercase tracking-wider mb-1">Completed</h3>
+              <p className="text-emerald-600 text-sm flex items-center gap-1">
+                <CheckCircle className="h-4 w-4" />
+                Successfully finished
+              </p>
+            </div>
+          </Card>
+
+          {/* In Progress */}
+          <Card className="group relative overflow-hidden bg-gradient-to-br from-yellow-50 to-orange-50 border-yellow-200/50 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-500 hover:-translate-y-1">
+            <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-yellow-400/20 to-orange-500/20 rounded-full -translate-y-10 translate-x-10"></div>
+            <div className="relative z-10">
+              <div className="flex items-center justify-between mb-4">
+                <div className="bg-yellow-100 p-3 rounded-xl shadow-sm group-hover:shadow-md transition-all duration-300">
+                  <Clock className="h-6 w-6 text-yellow-600" />
+                </div>
+                <div className="text-right">
+                  <p className="text-2xl lg:text-3xl font-bold text-yellow-900">
+                    {responses?.filter(r => r.status === 'in_progress').length || 0}
+                  </p>
+                </div>
+              </div>
+              <h3 className="text-sm font-semibold text-yellow-700 uppercase tracking-wider mb-1">In Progress</h3>
+              <p className="text-yellow-600 text-sm flex items-center gap-1">
+                <Clock className="h-4 w-4" />
+                Currently working
+              </p>
+            </div>
+          </Card>
+
+          {/* Failed/Issues */}
+          <Card className="group relative overflow-hidden bg-gradient-to-br from-red-50 to-pink-50 border-red-200/50 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-500 hover:-translate-y-1">
+            <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-red-400/20 to-pink-500/20 rounded-full -translate-y-10 translate-x-10"></div>
+            <div className="relative z-10">
+              <div className="flex items-center justify-between mb-4">
+                <div className="bg-red-100 p-3 rounded-xl shadow-sm group-hover:shadow-md transition-all duration-300">
+                  <XCircle className="h-6 w-6 text-red-600" />
+                </div>
+                <div className="text-right">
+                  <p className="text-2xl lg:text-3xl font-bold text-red-900">
+                    {responses?.filter(r => r.status === 'failed').length || 0}
+                  </p>
+                </div>
+              </div>
+              <h3 className="text-sm font-semibold text-red-700 uppercase tracking-wider mb-1">Issues</h3>
+              <p className="text-red-600 text-sm flex items-center gap-1">
+                <XCircle className="h-4 w-4" />
+                Need attention
+              </p>
+            </div>
+          </Card>
+        </div>
+
+        {/* Error Display */}
         {error && (
-          <Card className="border-red-200 bg-red-50">
+          <Card className="border-red-200 bg-red-50 rounded-2xl">
             <CardContent className="pt-6">
               <div className="flex items-center gap-2 text-red-700">
                 <XCircle className="h-5 w-5" />
-                <p>Error loading checklist. Please try again.</p>
+                <p>Error loading checklists. Please try again.</p>
               </div>
             </CardContent>
           </Card>
-        )}        {responses && responses.length === 0 ? (
-          <Card className="text-center py-12">
-            <CardContent>
-              <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No checklists found</h3>
-              <p className="text-gray-600">
-                No checklist have been submitted yet.
-              </p>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="space-y-4">
-            {/* Debug info */}
-            <Card className="bg-blue-50 border-blue-200">
-              <CardContent className="pt-6">
-                <h4 className="font-medium text-blue-900 mb-2">Debug Information:</h4>                <p className="text-sm text-blue-700">
-                  Total responses: {responses?.length || 0}
-                </p>
-                <p className="text-sm text-blue-700">
-                  Checklist info loaded: {Object.keys(checklistInfo).length}
-                </p>
-                <p className="text-sm text-blue-700">
-                  User profiles loaded: {Object.keys(userProfiles).length}
-                </p>
-                {responses && responses.length > 0 && (
-                  <details className="mt-2">
-                    <summary className="text-sm text-blue-700 cursor-pointer">View raw data</summary>
-                    <pre className="text-xs text-blue-600 mt-2 overflow-auto">
-                      {JSON.stringify(responses[0], null, 2)}
-                    </pre>
-                  </details>
-                )}
-              </CardContent>
-            </Card>
-              {/* Actual response cards */}
-            <div className="grid gap-4">
-              {responses?.map((response) => (
-              <Card key={response.id} className="hover:shadow-md transition-shadow">
-                <CardContent className="p-6">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2">
-                        {getStatusIcon(response.status)}                        <h3 className="text-lg font-semibold text-sky-900">
-                          {response.title || 
-                           checklistInfo[response.checklist_id]?.checklist_schema?.title || 
-                           `Checklist ${response.checklist_id}`}
-                        </h3>
-                        {getStatusBadge(response.status)}
-                      </div>
-                      
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mt-4 text-sm">                        <div>
-                          <p className="text-gray-500 font-medium">Framework</p>
-                          <p className="text-sky-900">
-                            {checklistInfo[response.checklist_id]?.compliance?.name || 'Unknown Framework'}
-                          </p>
-                        </div>
-                        
-                        <div>
-                          <p className="text-gray-500 font-medium">Submitted By</p>
-                          <div>
-                            <p className="text-sky-900">{userProfiles[response.user_id]?.full_name || 'Unknown User'}</p>
-                            <p className="text-xs text-gray-500">{userProfiles[response.user_id]?.email || 'No email'}</p>
-                            <Badge variant="outline" className="text-xs mt-1">
-                              {userProfiles[response.user_id]?.role || 'user'}
-                            </Badge>
-                          </div>
-                        </div>
-                        
-                        <div>
-                          <p className="text-gray-500 font-medium">Created</p>
-                          <p className="text-sky-900 flex items-center gap-1">
-                            <Calendar className="h-3 w-3" />
-                            {formatDate(response.created_at)}
-                          </p>
-                        </div>
-                        
-                        <div>
-                          <p className="text-gray-500 font-medium">Last Modified</p>
-                          <p className="text-sky-900 flex items-center gap-1">
-                            <Calendar className="h-3 w-3" />
-                            {formatDate(response.last_edit_at || response.created_at)}
-                          </p>
-                        </div>
-                      </div>                      {(response.result || response.response_data) && (
-                        <div className="mt-4 space-y-2">
-                          {response.result && (
-                            <div className="p-3 bg-gray-50 rounded-lg">
-                              <p className="text-gray-500 font-medium text-xs mb-1">Result</p>
-                              <p className="text-sm font-medium text-gray-900">
-                                {response.result}
-                              </p>
-                            </div>
-                          )}
-                          
-                          {response.response_data && (
-                            <div className="p-3 bg-blue-50 rounded-lg">
-                              <p className="text-gray-500 font-medium text-xs mb-1">Response Summary</p>
-                              <div className="text-sm text-gray-700">
-                                {(() => {
-                                  try {
-                                    const data = typeof response.response_data === 'string' 
-                                      ? JSON.parse(response.response_data) 
-                                      : response.response_data;
-                                    
-                                    const itemCount = Object.keys(data).filter(key => key.startsWith('item_')).length;
-                                    const fileCount = Object.values(data).filter((value: any) => 
-                                      value && typeof value === 'object' && value.fileName
-                                    ).length;
-                                    
-                                    return (
-                                      <div className="space-y-1">
-                                        <p>Items completed: {itemCount}</p>
-                                        <p>Files uploaded: {fileCount}</p>
-                                        {data.checklist_title && (
-                                          <p>Title: {data.checklist_title}</p>
-                                        )}
-                                      </div>
-                                    );
-                                  } catch (e) {
-                                    return <p>Response data available</p>;
-                                  }
-                                })()}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                    
-                    <div className="ml-4">                      <Button
-                        variant="outline"
-                        size="sm"
-                        asChild
-                        className="hover:bg-sky-50 hover:border-sky-300"
-                      >
-                        <Link href={`/protected/documents/${response.id}`}>
-                          <Eye className="h-4 w-4 mr-2" />
-                          View Details
-                        </Link>
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>              ))}
+        )}
+
+        {/* Submissions Overview */}
+        <Card className="bg-white/90 backdrop-blur-md border-slate-200/50 rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-500 overflow-hidden">
+          <div className="bg-gradient-to-r from-slate-800 via-slate-700 to-slate-800 text-white p-6 relative overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-r from-blue-600/10 via-sky-500/10 to-indigo-600/10"></div>
+            <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-white/5 to-transparent rounded-full -translate-y-16 translate-x-16"></div>
+            
+            <div className="relative z-10 flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="bg-white/20 backdrop-blur-sm p-3 rounded-xl border border-white/30">
+                  <ClipboardList className="h-6 w-6" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold">
+                    {profile.role === 'manager' ? 'All Checklist Submissions' : 'My Checklist Submissions'}
+                  </h3>
+                  <p className="text-slate-300 text-sm">
+                    {profile.role === 'manager' ? 'Monitor team compliance progress' : 'Track your compliance status'}
+                  </p>
+                </div>
+              </div>
+              <div className="bg-white/10 px-3 py-1 rounded-lg text-sm font-medium">
+                {responses?.length || 0} {responses?.length === 1 ? 'Submission' : 'Submissions'}
+              </div>
             </div>
           </div>
-        )}
+
+          <CardContent className="p-0">
+            {responses && responses.length > 0 ? (
+              <div className="overflow-hidden">
+                <table className="w-full">
+                  <thead className="bg-sky-50 border-b border-sky-100">
+                    <tr>
+                      <th className="text-left p-4 font-semibold text-sky-700">Checklist</th>
+                      <th className="text-left p-4 font-semibold text-sky-700">Status</th>
+                      <th className="text-left p-4 font-semibold text-sky-700">Framework</th>
+                      {profile.role === 'manager' && (
+                        <th className="text-left p-4 font-semibold text-sky-700">Submitted By</th>
+                      )}
+                      <th className="text-left p-4 font-semibold text-sky-700">Submitted</th>
+                      <th className="text-left p-4 font-semibold text-sky-700">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {responses.map((response, index) => (
+                      <tr key={response.id} className={`border-b border-sky-100 hover:bg-sky-50/30 transition-colors ${index % 2 === 0 ? 'bg-sky-25/10' : ''}`}>
+                        <td className="p-4">
+                          <div className="flex items-center gap-3">
+                            <div className="bg-sky-100 p-2 rounded-full">
+                              {getStatusIcon(response.status)}
+                            </div>
+                            <div>
+                              <p className="font-semibold text-sky-900">
+                                {response.title || 
+                                 checklistInfo[response.checklist_id]?.checklist_schema?.title || 
+                                 `Checklist ${response.checklist_id}`}
+                              </p>
+                              <p className="text-xs text-slate-500">ID: {response.id}</p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="p-4">
+                          {getStatusBadge(response.status)}
+                        </td>
+                        <td className="p-4">
+                          <p className="font-medium text-slate-700">
+                            {checklistInfo[response.checklist_id]?.compliance?.name || 'Unknown Framework'}
+                          </p>
+                        </td>
+                        {profile.role === 'manager' && (
+                          <td className="p-4">
+                            <div>
+                              <p className="font-medium text-slate-700">
+                                {userProfiles[response.user_id]?.full_name || 'Unknown User'}
+                              </p>
+                              <p className="text-xs text-slate-500">
+                                {userProfiles[response.user_id]?.email || 'No email'}
+                              </p>
+                              <span className="px-2 py-1 text-xs font-medium rounded-full bg-slate-100 text-slate-700 border border-slate-200 mt-1 inline-block">
+                                {userProfiles[response.user_id]?.role || 'user'}
+                              </span>
+                            </div>
+                          </td>
+                        )}
+                        <td className="p-4">
+                          <div className="text-sm">
+                            <p className="font-medium text-slate-700">
+                              {formatDate(response.created_at)}
+                            </p>
+                            <p className="text-xs text-slate-500">
+                              {formatDistanceToNow(new Date(response.created_at), { addSuffix: true })}
+                            </p>
+                          </div>
+                        </td>                        <td className="p-4">
+                          <Link
+                            href={`/protected/checklist/${response.id}`}
+                            className="px-3 py-1.5 text-xs font-medium bg-sky-50 text-sky-700 rounded-lg hover:bg-sky-100 transition-all duration-200 border border-sky-200 inline-flex items-center gap-2"
+                          >
+                            <Eye className="h-3 w-3" />
+                            View Checklist
+                          </Link>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="text-center py-16 px-6">
+                <div className="relative mx-auto mb-8">
+                  <div className="bg-gradient-to-br from-sky-100 to-blue-100 rounded-full w-24 h-24 flex items-center justify-center mx-auto shadow-lg">
+                    <ClipboardList className="h-12 w-12 text-sky-500" />
+                  </div>
+                  <div className="absolute -top-2 -right-2 w-8 h-8 bg-gradient-to-br from-emerald-400 to-green-500 rounded-full flex items-center justify-center shadow-lg">
+                    <Plus className="h-4 w-4 text-white" />
+                  </div>
+                </div>
+                <h3 className="text-xl font-bold text-slate-800 mb-3">No Submissions Found</h3>
+                <p className="text-slate-600 mb-8 max-w-md mx-auto text-base leading-relaxed">
+                  {profile.role === 'manager' 
+                    ? "No checklist submissions have been made yet. Team members can start submitting compliance checklists to track organizational progress."
+                    : "You haven't submitted any checklists yet. Start by completing your first compliance checklist to track your progress."
+                  }
+                </p>
+                <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                  <Link
+                    href="/protected/compliance"
+                    className="inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 px-6 py-3 text-sm font-medium text-white hover:from-sky-600 hover:to-blue-700 transition-all duration-200 shadow-lg hover:shadow-xl"
+                  >
+                    <Shield size={16} className="mr-2" />
+                    View Available Checklists
+                  </Link>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
     </DashboardLayout>
   );

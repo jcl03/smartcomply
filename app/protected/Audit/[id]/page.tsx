@@ -6,13 +6,14 @@ import DashboardLayout from "@/components/dashboard/dashboard-layout";
 import AuditDetailView from "../../../../components/audit/audit-detail-view";
 
 interface AuditDetailPageProps {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 }
 
 export default async function AuditDetailPage({ params }: AuditDetailPageProps) {
   try {
+    const { id } = await params;
     const supabase = await createClient();
 
   const {
@@ -49,7 +50,7 @@ export default async function AuditDetailPage({ params }: AuditDetailPageProps) 
       title,
       audit_data
     `)
-    .eq('id', params.id)
+    .eq('id', id)
     .single();
 
   const { data: audit, error } = await auditQuery;

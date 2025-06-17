@@ -99,10 +99,9 @@ export default async function DocumentViewPage({ params }: { params: Promise<{ i
       text: 'Failed'
     }
   };
-
   const currentStatus = response.status === 'completed' && response.result === 'pass' 
     ? 'completed' 
-    : response.result === 'fail' 
+    : response.result === 'failed' 
     ? 'failed' 
     : 'pending';
 
@@ -168,13 +167,12 @@ export default async function DocumentViewPage({ params }: { params: Promise<{ i
                     className={statusConfig[currentStatus as keyof typeof statusConfig].color}
                   >
                     {statusConfig[currentStatus as keyof typeof statusConfig].text}
-                  </Badge>
-                  <span className={`font-medium ${response.result === 'pass' ? 'text-green-600' : 'text-red-600'}`}>
-                    Result: {response.result === 'pass' ? 'Pass' : 'Fail'}
+                  </Badge>                  <span className={`font-medium ${response.result === 'pass' ? 'text-green-600' : 'text-red-600'}`}>
+                    Result: {response.result === 'pass' ? 'Pass' : 'Failed'}
                   </span>
                 </div>
                 
-                {response.result === 'fail' && (
+                {response.result === 'failed' && (
                   <div className="bg-red-50 border border-red-200 p-4 rounded-lg">
                     <div className="flex items-center gap-2 text-red-800">
                       <AlertTriangle className="h-4 w-4" />

@@ -118,7 +118,7 @@ export default async function DocumentsPage() {
   // Calculate summary statistics
   const totalSubmissions = submissions.length;
   const completedSubmissions = submissions.filter(s => s.status === 'completed' && s.result === 'pass').length;
-  const pendingSubmissions = submissions.filter(s => s.status === 'pending' || s.result === 'fail' || s.status === 'draft').length;
+  const pendingSubmissions = submissions.filter(s => s.status === 'pending' || s.result === 'failed' || s.status === 'draft').length;
   const recentSubmissions = submissions.filter(s => {
     const submissionDate = new Date(s.last_edit_at);
     const weekAgo = new Date();
@@ -295,16 +295,14 @@ export default async function DocumentsPage() {
                       icon: XCircle,
                       text: 'Failed'
                     }
-                  };
-
-                  const resultConfig = {
+                  };                  const resultConfig = {
                     pass: { color: 'text-green-600', text: 'Pass' },
-                    fail: { color: 'text-red-600', text: 'Fail' }
+                    failed: { color: 'text-red-600', text: 'Failed' }
                   };
 
                   const currentStatus = submission.status === 'completed' && submission.result === 'pass' 
                     ? 'completed' 
-                    : submission.result === 'fail' 
+                    : submission.result === 'failed' 
                     ? 'failed' 
                     : 'pending';
 
