@@ -8,7 +8,6 @@ import {
   Users, 
   Shield, 
   FileText, 
-  Settings, 
   User,
   LogOut,
   ChevronDown,
@@ -36,9 +35,8 @@ const navigation = [
   { name: "User Management", href: "/protected/user-management", icon: Users, adminOnly: true },
   { name: "Compliance", href: "/protected/compliance", icon: Shield },
   { name: "Documents", href: "/protected/documents", icon: Folder, excludeForAdmin: true },
-  { name: "Audit History", href: "/protected/Audit", icon: CheckCircle, excludeForAdmin: true },
+  { name: "Audit History", href: "/protected/Audit", icon: CheckCircle, excludeForAdmin: true, excludeForAdmin: true },
   { name: "Reports", href: "/protected/reports", icon: FileText },
-  { name: "Settings", href: "/protected/settings", icon: Settings },
 ];
 
 export default function DashboardLayout({ children, userProfile }: DashboardLayoutProps) {  const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -51,10 +49,13 @@ export default function DashboardLayout({ children, userProfile }: DashboardLayo
     await supabase.auth.signOut();
     window.location.href = '/sign-in';
   };
-
-  const filteredNavigation = navigation.filter(item => 
-    !item.adminOnly || (item.adminOnly && isAdmin)
-  );
+  const filteredNavigation = navigation.filter(item => {
+    // Show admin-only items only to admins
+    if (item.adminOnly && !isAdmin) return false;
+    // Hide excludeForAdmin items from admins
+    if (item.excludeForAdmin && isAdmin) return false;
+    return true;
+  });
   return (
     <div className="min-h-screen bg-gradient-to-br from-sky-50 via-blue-50 to-indigo-50 relative overflow-hidden">
       {/* Background Pattern */}
@@ -97,18 +98,12 @@ export default function DashboardLayout({ children, userProfile }: DashboardLayo
                   <p className="text-xs text-sky-600">{userProfile?.role || 'Member'}</p>
                 </div>
                 <ChevronDown className="h-4 w-4" />
-              </button>
-
-              {/* User Dropdown */}
+              </button>              {/* User Dropdown */}
               {userDropdownOpen && (
                 <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-sky-200 py-1 z-50">
                   <Link href="/protected/profile" className="flex items-center gap-2 px-4 py-2 text-sm text-sky-700 hover:bg-sky-50">
                     <User className="h-4 w-4" />
                     Profile
-                  </Link>
-                  <Link href="/protected/settings" className="flex items-center gap-2 px-4 py-2 text-sm text-sky-700 hover:bg-sky-50">
-                    <Settings className="h-4 w-4" />
-                    Settings
                   </Link>
                   <hr className="my-1 border-sky-200" />                  <button 
                     onClick={handleSignOut}
