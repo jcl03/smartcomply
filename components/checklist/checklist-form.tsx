@@ -129,7 +129,7 @@ export function ChecklistFillForm({ complianceId, checklistId }: Props) {
 
       toast({
         title: "Success",
-        description: "Checklist responses saved successfully",
+        description: "Checklist form saved successfully",
       });
 
       // Redirect back to compliance view

@@ -154,9 +154,9 @@ export default async function ChecklistResponsesPage() {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-sky-900">Checklist Responses</h1>
+            <h1 className="text-3xl font-bold text-sky-900">Checklists</h1>
             <p className="text-sky-600 mt-1">
-              View all checklist responses submitted by users and managers
+              View all checklists submitted by users and managers
             </p>
           </div>
           <div className="flex items-center gap-2 text-sm text-sky-600">
@@ -170,7 +170,7 @@ export default async function ChecklistResponsesPage() {
             <CardContent className="pt-6">
               <div className="flex items-center gap-2 text-red-700">
                 <XCircle className="h-5 w-5" />
-                <p>Error loading checklist responses. Please try again.</p>
+                <p>Error loading checklist. Please try again.</p>
               </div>
             </CardContent>
           </Card>
@@ -178,9 +178,9 @@ export default async function ChecklistResponsesPage() {
           <Card className="text-center py-12">
             <CardContent>
               <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No checklist responses found</h3>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No checklists found</h3>
               <p className="text-gray-600">
-                No checklist responses have been submitted yet.
+                No checklist have been submitted yet.
               </p>
             </CardContent>
           </Card>

@@ -68,7 +68,7 @@ export default async function DocumentsPage() {
     .order('last_edit_at', { ascending: false });
 
   if (responsesError) {
-    console.error("Error fetching checklist responses:", responsesError);
+    console.error("Error fetching checklists:", responsesError);
   }
 
   // Fetch all audits for the current user
