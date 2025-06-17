@@ -14,7 +14,8 @@ import {
   ArrowUpDown,
   ArrowUp,
   ArrowDown,
-  ChevronRight
+  ChevronRight,
+  Download
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -142,12 +143,114 @@ export default function AuditHistoryComponent({ audits, isManager, currentUserId
       return <Badge className="bg-gradient-to-r from-amber-100 to-yellow-100 text-amber-800 border-amber-200/60 font-semibold px-2 py-1 text-xs shadow-sm">PENDING</Badge>;
     }
   };
-
   const getPercentageColor = (percentage: number) => {
     if (percentage >= 80) return "text-green-600";
     if (percentage >= 60) return "text-amber-600";
     return "text-red-600";
-  };  return (
+  };
+
+  const downloadAuditReport = (format: 'csv' | 'pdf') => {
+    const data = sortedAudits.map(audit => ({
+      'Audit ID': audit.id,
+      'Title': audit.title || `Audit #${audit.id}`,
+      'User': audit.user_profile?.full_name || 'Unknown',
+      'Email': audit.user_profile?.email || '',
+      'Status': audit.status,
+      'Result': audit.result || 'Pending',
+      'Score': `${audit.percentage}%`,
+      'Marks': audit.marks,
+      'Created Date': format === 'csv' ? audit.created_at : new Date(audit.created_at).toLocaleDateString(),
+      'Last Modified': format === 'csv' ? audit.last_edit_at : new Date(audit.last_edit_at).toLocaleDateString(),
+      'Comments': audit.comments
+    }));
+
+    if (format === 'csv') {
+      const headers = Object.keys(data[0] || {});
+      const csvContent = [
+        headers.join(','),
+        ...data.map(row => headers.map(header => `"${row[header as keyof typeof row]}"`).join(','))
+      ].join('\n');
+
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', `audit-report-${new Date().toISOString().split('T')[0]}.csv`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } else if (format === 'pdf') {
+      // For PDF generation, we'll create a formatted HTML that can be printed
+      const printWindow = window.open('', '_blank');
+      if (printWindow) {
+        const htmlContent = `
+          <html>
+            <head>
+              <title>Audit Report</title>
+              <style>
+                body { font-family: Arial, sans-serif; margin: 20px; }
+                h1 { color: #334155; border-bottom: 2px solid #0ea5e9; padding-bottom: 10px; }
+                .meta { margin-bottom: 20px; color: #64748b; }
+                table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+                th, td { border: 1px solid #e2e8f0; padding: 8px; text-align: left; }
+                th { background-color: #f8fafc; font-weight: bold; }
+                .status-completed { color: #059669; font-weight: bold; }
+                .status-pending { color: #d97706; font-weight: bold; }
+                .status-draft { color: #6366f1; font-weight: bold; }
+                .result-pass { color: #059669; font-weight: bold; }
+                .result-failed { color: #dc2626; font-weight: bold; }
+                .result-pending { color: #d97706; font-weight: bold; }
+                @media print {
+                  body { margin: 0; }
+                  .no-print { display: none; }
+                }
+              </style>
+            </head>
+            <body>
+              <h1>Audit Report</h1>
+              <div class="meta">
+                <p><strong>Generated:</strong> ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}</p>
+                <p><strong>Total Records:</strong> ${data.length}</p>
+                <p><strong>Report Type:</strong> ${isManager ? 'Organization-wide' : 'Personal'} Audit History</p>
+              </div>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Audit ID</th>
+                    <th>Title</th>
+                    ${isManager ? '<th>User</th>' : ''}
+                    <th>Status</th>
+                    <th>Result</th>
+                    <th>Score</th>
+                    <th>Created Date</th>
+                    <th>Comments</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${data.map(audit => `
+                    <tr>
+                      <td>${audit['Audit ID']}</td>
+                      <td>${audit['Title']}</td>
+                      ${isManager ? `<td>${audit['User']}</td>` : ''}
+                      <td class="status-${audit['Status']}">${audit['Status'].toUpperCase()}</td>
+                      <td class="result-${audit['Result'].toLowerCase()}">${audit['Result'].toUpperCase()}</td>
+                      <td>${audit['Score']}</td>
+                      <td>${new Date(audit['Created Date']).toLocaleDateString()}</td>
+                      <td>${audit['Comments'].substring(0, 100)}${audit['Comments'].length > 100 ? '...' : ''}</td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </body>
+          </html>
+        `;
+        printWindow.document.write(htmlContent);
+        printWindow.document.close();
+        printWindow.print();
+      }
+    }
+  };return (
     <div className="space-y-6">
       {/* Audit Summary Section */}
       {sortedAudits.length > 0 && (
@@ -367,8 +470,7 @@ export default function AuditHistoryComponent({ audits, isManager, currentUserId
         </Card>
       )}
 
-      <div className="space-y-6">
-        {/* Modern Filter Controls */}
+      <div className="space-y-6">        {/* Modern Filter Controls */}
         <div className="flex justify-between items-center mb-6">
           <div className="flex items-center gap-2">
             <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
@@ -377,28 +479,50 @@ export default function AuditHistoryComponent({ audits, isManager, currentUserId
             </span>
           </div>
           
-          <Card className="p-4 bg-white/90 backdrop-blur-sm border border-slate-200/60 shadow-lg rounded-xl">
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2">
-                <Filter className="h-4 w-4 text-slate-500" />
-                <span className="text-sm font-medium text-slate-700">Filters</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <div>
-                  <select
-                    value={statusFilter}
-                    onChange={(e) => setStatusFilter(e.target.value)}
-                    className="px-3 py-1.5 text-sm border border-slate-200 rounded-lg bg-white hover:border-sky-300 focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition-colors"
-                  >
-                    <option value="all">All Status</option>
-                    <option value="pending">Pending</option>
-                    <option value="completed">Completed</option>
-                    <option value="draft">Draft</option>
-                  </select>
+          <div className="flex items-center gap-4">
+            {/* Download Report Buttons */}
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => downloadAuditReport('csv')}
+                className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-lg hover:from-emerald-600 hover:to-green-700 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 text-sm font-medium"
+                disabled={sortedAudits.length === 0}
+              >
+                <Download className="h-4 w-4" />
+                <span>CSV</span>
+              </button>
+              <button
+                onClick={() => downloadAuditReport('pdf')}
+                className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-lg hover:from-blue-600 hover:to-indigo-700 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 text-sm font-medium"
+                disabled={sortedAudits.length === 0}
+              >
+                <Download className="h-4 w-4" />
+                <span>PDF</span>
+              </button>
+            </div>
+
+            <Card className="p-4 bg-white/90 backdrop-blur-sm border border-slate-200/60 shadow-lg rounded-xl">
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <Filter className="h-4 w-4 text-slate-500" />
+                  <span className="text-sm font-medium text-slate-700">Filters</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div>
+                    <select
+                      value={statusFilter}
+                      onChange={(e) => setStatusFilter(e.target.value)}
+                      className="px-3 py-1.5 text-sm border border-slate-200 rounded-lg bg-white hover:border-sky-300 focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition-colors"
+                    >
+                      <option value="all">All Status</option>
+                      <option value="pending">Pending</option>
+                      <option value="completed">Completed</option>
+                      <option value="draft">Draft</option>
+                    </select>
+                  </div>
                 </div>
               </div>
-            </div>
-          </Card>
+            </Card>
+          </div>
         </div>
 
         {/* Audit Table */}

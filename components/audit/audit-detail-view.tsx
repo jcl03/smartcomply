@@ -137,13 +137,81 @@ export default function AuditDetailView({ audit, isManager, currentUserId }: Aud
                   <Badge variant="outline" className="text-xs">
                     {field.type || 'text'}
                   </Badge>
-                </div>
-
-                <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+                </div>                <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
                   <div className="text-sm text-slate-600 mb-1">Response:</div>
                   <div className="text-slate-900">
                     {response ? (
-                      typeof response === 'object' ? JSON.stringify(response, null, 2) : String(response)
+                      (() => {
+                        const responseStr = typeof response === 'object' ? JSON.stringify(response, null, 2) : String(response);
+                        
+                        // Check if response is an image URL
+                        if (field.type === 'image' || field.type === 'file' || 
+                            (typeof response === 'string' && 
+                             (response.includes('supabase.co/storage') || 
+                              response.match(/\.(jpeg|jpg|gif|png|webp)$/i) ||
+                              response.startsWith('data:image/') ||
+                              response.startsWith('blob:') ||
+                              response.startsWith('http') && response.includes('image')))) {
+                          return (
+                            <div className="space-y-3">
+                              <div className="relative group">
+                                <img 
+                                  src={response}
+                                  alt={field.label || 'Uploaded image'}
+                                  className="max-w-full h-auto max-h-96 rounded-lg border border-slate-200 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+                                  onError={(e) => {
+                                    const target = e.target as HTMLImageElement;
+                                    target.style.display = 'none';
+                                    const fallback = target.nextSibling as HTMLElement;
+                                    if (fallback) fallback.style.display = 'block';
+                                  }}
+                                  onClick={() => window.open(response, '_blank')}
+                                />
+                                <div className="hidden bg-red-50 border border-red-200 rounded-lg p-3">
+                                  <div className="text-red-600 text-sm mb-2">Failed to load image</div>
+                                  <div className="text-slate-600 text-xs font-mono break-all">
+                                    {response}
+                                  </div>
+                                </div>
+                                {/* Overlay with download/view buttons */}
+                                <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all duration-200 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100">
+                                  <div className="flex gap-2">
+                                    <button 
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        window.open(response, '_blank');
+                                      }}
+                                      className="bg-white bg-opacity-90 hover:bg-opacity-100 rounded-full p-2 shadow-lg transition-all"
+                                      title="View full size"
+                                    >
+                                      <Eye className="h-4 w-4 text-slate-700" />
+                                    </button>
+                                    <button 
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        const link = document.createElement('a');
+                                        link.href = response;
+                                        link.download = `${field.label || 'image'}.jpg`;
+                                        link.click();
+                                      }}
+                                      className="bg-white bg-opacity-90 hover:bg-opacity-100 rounded-full p-2 shadow-lg transition-all"
+                                      title="Download image"
+                                    >
+                                      <Download className="h-4 w-4 text-slate-700" />
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="text-xs text-slate-500 font-mono break-all bg-slate-100 p-2 rounded border">
+                                {response}
+                              </div>
+                            </div>
+                          );
+                        }
+                        
+                        // For non-image responses, display as before
+                        return responseStr;
+                      })()
                     ) : (
                       <span className="text-slate-400 italic">No response provided</span>
                     )}
