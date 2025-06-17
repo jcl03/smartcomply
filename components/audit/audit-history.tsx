@@ -52,14 +52,12 @@ interface AuditHistoryProps {
 
 export default function AuditHistoryComponent({ audits, isManager, currentUserId }: AuditHistoryProps) {
   const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [resultFilter, setResultFilter] = useState<string>("all");
 
-  // Filter audits based on filters only (removed search)
+  // Filter audits based on status filter only
   const filteredAudits = audits.filter(audit => {
     const matchesStatus = statusFilter === "all" || audit.status === statusFilter;
-    const matchesResult = resultFilter === "all" || audit.result === resultFilter;
     
-    return matchesStatus && matchesResult;
+    return matchesStatus;
   });
 
   const getResultIcon = (result: string | null) => {
@@ -103,8 +101,7 @@ export default function AuditHistoryComponent({ audits, isManager, currentUserId
                   <Filter className="h-4 w-4 text-slate-500" />
                   <span className="text-sm font-medium text-slate-700">Filters</span>
                 </div>
-                
-                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-3">
                   <div>
                     <select
                       value={statusFilter}
@@ -115,18 +112,6 @@ export default function AuditHistoryComponent({ audits, isManager, currentUserId
                       <option value="pending">Pending</option>
                       <option value="completed">Completed</option>
                       <option value="draft">Draft</option>
-                    </select>
-                  </div>
-                  
-                  <div>
-                    <select
-                      value={resultFilter}
-                      onChange={(e) => setResultFilter(e.target.value)}
-                      className="px-3 py-1.5 text-sm border border-slate-200 rounded-lg bg-white hover:border-sky-300 focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition-colors"
-                    >
-                      <option value="all">All Results</option>
-                      <option value="pass">Pass</option>
-                      <option value="failed">Failed</option>
                     </select>
                   </div>
                 </div>
@@ -147,18 +132,16 @@ export default function AuditHistoryComponent({ audits, isManager, currentUserId
                     <div className="w-2 h-2 bg-amber-400 rounded-full"></div>
                   </div>
                 </div>
-                <h3 className="text-2xl font-bold text-slate-900 mb-3">No audits found</h3>
-                <p className="text-slate-600 leading-relaxed">
-                  {statusFilter !== "all" || resultFilter !== "all" 
+                <h3 className="text-2xl font-bold text-slate-900 mb-3">No audits found</h3>                <p className="text-slate-600 leading-relaxed">
+                  {statusFilter !== "all"
                     ? "Try adjusting your filter criteria to see more results, or clear all filters to view the complete audit history."
                     : "No audits have been created yet. Start your compliance journey by creating your first audit to track and monitor your organization's performance."
                   }
                 </p>
-                {(statusFilter !== "all" || resultFilter !== "all") && (
+                {statusFilter !== "all" && (
                   <button
                     onClick={() => {
                       setStatusFilter("all");
-                      setResultFilter("all");
                     }}
                     className="mt-4 px-4 py-2 bg-sky-100 text-sky-700 rounded-lg hover:bg-sky-200 transition-colors text-sm font-medium"
                   >
@@ -167,123 +150,187 @@ export default function AuditHistoryComponent({ audits, isManager, currentUserId
                 )}
               </div>
             </div>
-          </Card>
-        ) : (
-          <div className="grid gap-6">
-            {filteredAudits.map((audit) => {
-              const form = Array.isArray(audit.form) ? audit.form[0] : audit.form;
-              const compliance = Array.isArray(form?.compliance) ? form?.compliance[0] : form?.compliance;
-                return (
-                <Card key={audit.id} className="group relative overflow-hidden bg-white border border-slate-200/60 shadow-sm hover:shadow-lg hover:shadow-slate-200/50 transition-all duration-300 hover:border-slate-300/60 rounded-2xl">
-                  {/* Subtle background pattern */}
-                  <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-sky-50/50 to-blue-50/50 rounded-full -translate-y-12 translate-x-12 group-hover:scale-110 transition-transform duration-500"></div>
-                  
-                  <div className="relative p-6 lg:p-8">
-                    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-                      {/* Left section - Audit Info */}
-                      <div className="flex-1 space-y-4">
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-4 mb-4">
-                              <div className="relative">
-                                <div className="p-3 bg-gradient-to-br from-slate-100 to-slate-200 rounded-xl border border-slate-200 group-hover:from-sky-50 group-hover:to-blue-50 group-hover:border-sky-200 transition-all duration-300">
-                                  <FileText className="h-6 w-6 text-slate-600 group-hover:text-sky-600 transition-colors duration-300" />
+          </Card>        ) : (
+          <Card className="overflow-hidden bg-white border border-slate-200/60 shadow-lg rounded-2xl">            <div className="overflow-x-auto">
+              <table className="w-full min-w-[800px]">
+                <thead>
+                  <tr className="bg-gradient-to-r from-slate-50 to-slate-100 border-b border-slate-200">
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider min-w-[300px]">
+                      Audit Details
+                    </th>
+                    {isManager && (
+                      <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider min-w-[150px] hidden lg:table-cell">
+                        Auditor
+                      </th>
+                    )}
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider hidden md:table-cell">
+                      Status
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                      Result
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider hidden sm:table-cell">
+                      Score
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider hidden lg:table-cell">
+                      Date
+                    </th>
+                    <th className="px-6 py-4 text-right text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-200">
+                  {filteredAudits.map((audit, index) => {
+                    const form = Array.isArray(audit.form) ? audit.form[0] : audit.form;
+                    const compliance = Array.isArray(form?.compliance) ? form?.compliance[0] : form?.compliance;
+                    
+                    return (
+                      <tr 
+                        key={audit.id}                        className={`group hover:bg-slate-50 transition-colors duration-200 ${
+                          index % 2 === 0 ? 'bg-white' : 'bg-slate-50/30'
+                        }`}
+                      >                        {/* Audit Details */}
+                        <td className="px-6 py-4">
+                          <div className="flex items-start gap-3">
+                            <div className="p-2 bg-gradient-to-br from-slate-100 to-slate-200 rounded-lg border border-slate-200 group-hover:from-sky-50 group-hover:to-blue-50 group-hover:border-sky-200 transition-all duration-300 flex-shrink-0">
+                              <FileText className="h-4 w-4 text-slate-600 group-hover:text-sky-600 transition-colors duration-300" />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <h3 className="font-semibold text-slate-900 text-sm lg:text-base truncate">
+                                {audit.title || `Audit #${audit.id}`}
+                              </h3>
+                              <p className="text-xs text-slate-500 mt-1">
+                                {compliance?.name || `Form #${audit.form_id}` || 'General Audit'}
+                              </p>
+                              
+                              {/* Mobile-only information */}
+                              <div className="mt-2 space-y-1 md:hidden">
+                                <div className="flex items-center gap-2">
+                                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                                    audit.status === 'completed' 
+                                      ? 'bg-green-100 text-green-800' 
+                                      : audit.status === 'draft'
+                                      ? 'bg-amber-100 text-amber-800'
+                                      : 'bg-blue-100 text-blue-800'
+                                  }`}>
+                                    {audit.status}
+                                  </span>
                                 </div>
-                                <div className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-400 rounded-full border-2 border-white animate-pulse"></div>
+                                <div className="text-xs text-slate-500">
+                                  {format(new Date(audit.created_at), 'MMM d, yyyy')} • {formatDistanceToNow(new Date(audit.created_at), { addSuffix: true })}
+                                </div>
+                                {isManager && audit.user_profile && (
+                                  <div className="text-xs text-slate-600">
+                                    By: {audit.user_profile.full_name}
+                                  </div>
+                                )}
+                                {audit.result && audit.percentage > 0 && (
+                                  <div className="sm:hidden">
+                                    <span className={`text-sm font-bold ${getPercentageColor(audit.percentage)}`}>
+                                      {audit.percentage.toFixed(1)}%
+                                    </span>
+                                  </div>
+                                )}
                               </div>
-                              <div className="flex-1">
-                                <div className="flex items-center gap-3 mb-1">
-                                  <h3 className="font-bold text-slate-900 text-xl lg:text-2xl">
-                                    {audit.title || `Audit #${audit.id}`}
-                                  </h3>
-                                  {getResultBadge(audit.result, audit.percentage)}
-                                </div>
-                                <p className="text-sm text-slate-500 font-medium">
-                                  {compliance?.name || `Form #${audit.form_id}` || 'General Audit'}
+                                {audit.comments && (
+                                <p className="text-xs text-slate-600 mt-2 truncate">
+                                  {audit.comments}
                                 </p>
-                              </div>
-                            </div>
-                            
-                            <div className="flex flex-wrap items-center gap-4 lg:gap-6 text-sm text-slate-600 mb-4">
-                              <div className="flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-lg">
-                                <Calendar className="h-4 w-4 text-slate-400" />
-                                <span className="font-medium">{formatDistanceToNow(new Date(audit.created_at), { addSuffix: true })}</span>
-                              </div>
-                              {isManager && audit.user_profile && (
-                                <div className="flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-lg">
-                                  <User className="h-4 w-4 text-slate-400" />
-                                  <span className="font-medium">By: {audit.user_profile.full_name}</span>
-                                </div>
                               )}
-                              <div className="flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-lg">
-                                <Clock className="h-4 w-4 text-slate-400" />
-                                <span className="font-medium">{format(new Date(audit.created_at), 'MMM d, yyyy')}</span>
-                              </div>
                             </div>
-
-                            {/* Enhanced Comments Preview */}
-                            {audit.comments && (
-                              <div className="relative bg-gradient-to-br from-slate-50 to-slate-100/50 rounded-xl p-4 border border-slate-200/60">
-                                <div className="flex items-start gap-3">
-                                  <div className="p-1.5 bg-white rounded-lg shadow-sm">
-                                    <MessageSquare className="h-4 w-4 text-slate-400" />
-                                  </div>
-                                  <div className="flex-1">
-                                    <p className="text-sm text-slate-700 line-clamp-2 leading-relaxed">
-                                      {audit.comments}
-                                    </p>
-                                  </div>
+                          </div>
+                        </td>{/* Auditor (only for managers) */}
+                        {isManager && (
+                          <td className="px-6 py-4 hidden lg:table-cell">
+                            {audit.user_profile ? (
+                              <div>
+                                <div className="font-medium text-slate-900 text-sm">
+                                  {audit.user_profile.full_name}
+                                </div>
+                                <div className="text-xs text-slate-500">
+                                  {audit.user_profile.email}
                                 </div>
                               </div>
+                            ) : (
+                              <span className="text-xs text-slate-400">Unknown</span>
                             )}
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Right section - Score and Actions */}
-                      <div className="flex flex-col items-center lg:items-end gap-4 lg:w-56">
-                        {/* Enhanced Score Display */}
-                        {audit.result && (
-                          <div className="text-center lg:text-right">
-                            <div className="flex items-center justify-center lg:justify-end gap-3 mb-3">
-                              <div className="p-2 bg-white rounded-lg shadow-sm border border-slate-100">
-                                {getResultIcon(audit.result)}
-                              </div>
-                              <span className={`text-3xl lg:text-4xl font-bold ${getPercentageColor(audit.percentage)}`}>
-                                {audit.percentage.toFixed(1)}%
-                              </span>
-                            </div>
-                            <div className="text-sm text-slate-600 mb-4 font-medium">
-                              Score: {audit.marks} points
-                            </div>
-                            <div className="w-36 bg-slate-200 rounded-full h-3 shadow-inner">
-                              <div 
-                                className={`h-3 rounded-full transition-all duration-700 shadow-sm ${
-                                  audit.percentage >= 80 ? 'bg-gradient-to-r from-emerald-400 to-green-500' : 
-                                  audit.percentage >= 60 ? 'bg-gradient-to-r from-amber-400 to-orange-500' : 
-                                  'bg-gradient-to-r from-red-400 to-rose-500'
-                                }`}
-                                style={{ width: `${Math.min(audit.percentage, 100)}%` }}
-                              />
-                            </div>
-                          </div>
+                          </td>
                         )}
 
-                        {/* Enhanced Action Button */}
-                        <Link 
-                          href={`/protected/Audit/${audit.id}`}
-                          className="group/btn flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-sky-500 to-blue-600 text-white rounded-xl hover:from-sky-600 hover:to-blue-700 transition-all duration-300 text-sm font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-1 hover:scale-105"
-                        >
-                          <Eye className="h-4 w-4 group-hover/btn:scale-110 transition-transform duration-200" />
-                          View Details
-                        </Link>
-                      </div>
-                    </div>
-                  </div>
-                </Card>
-              );
-            })}
-          </div>
+                        {/* Status */}
+                        <td className="px-6 py-4 hidden md:table-cell">
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                            audit.status === 'completed' 
+                              ? 'bg-green-100 text-green-800' 
+                              : audit.status === 'draft'
+                              ? 'bg-amber-100 text-amber-800'
+                              : 'bg-blue-100 text-blue-800'
+                          }`}>
+                            {audit.status}
+                          </span>
+                        </td>
+
+                        {/* Result */}
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-2">
+                            {getResultIcon(audit.result)}
+                            <div className="hidden sm:block">
+                              {getResultBadge(audit.result, audit.percentage)}
+                            </div>
+                          </div>
+                        </td>
+
+                        {/* Score */}
+                        <td className="px-6 py-4 hidden sm:table-cell">
+                          {audit.result && audit.percentage > 0 ? (
+                            <div className="flex items-center gap-3">
+                              <span className={`text-lg font-bold ${getPercentageColor(audit.percentage)}`}>
+                                {audit.percentage.toFixed(1)}%
+                              </span>
+                              <div className="w-16 bg-slate-200 rounded-full h-2">
+                                <div 
+                                  className={`h-2 rounded-full transition-all duration-300 ${
+                                    audit.percentage >= 80 ? 'bg-gradient-to-r from-emerald-400 to-green-500' : 
+                                    audit.percentage >= 60 ? 'bg-gradient-to-r from-amber-400 to-orange-500' : 
+                                    'bg-gradient-to-r from-red-400 to-rose-500'
+                                  }`}
+                                  style={{ width: `${Math.min(audit.percentage, 100)}%` }}
+                                />
+                              </div>
+                            </div>
+                          ) : (
+                            <span className="text-sm text-slate-400">-</span>
+                          )}
+                        </td>
+
+                        {/* Date */}
+                        <td className="px-6 py-4 hidden lg:table-cell">
+                          <div className="text-sm text-slate-900">
+                            {format(new Date(audit.created_at), 'MMM d, yyyy')}
+                          </div>
+                          <div className="text-xs text-slate-500">
+                            {formatDistanceToNow(new Date(audit.created_at), { addSuffix: true })}
+                          </div>
+                        </td>
+
+                        {/* Actions */}
+                        <td className="px-6 py-4 text-right">
+                          <Link 
+                            href={`/protected/Audit/${audit.id}`}
+                            className="inline-flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-sky-500 to-blue-600 text-white rounded-lg hover:from-sky-600 hover:to-blue-700 transition-all duration-200 text-xs font-medium shadow-sm hover:shadow-md transform hover:-translate-y-0.5"
+                          >
+                            <Eye className="h-3 w-3" />
+                            View
+                          </Link>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </Card>
         )}
       </div>      {/* Enhanced Performance Overview */}
       {filteredAudits.length > 0 && (
