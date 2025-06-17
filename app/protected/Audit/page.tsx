@@ -7,13 +7,8 @@ import { Card } from "@/components/ui/card";
 import { 
   Activity,
   Calendar,
-  Shield,
   FileText,
-  CheckCircle,
   XCircle,
-  Clock,
-  BarChart3,
-  TrendingUp,
   Users
 } from "lucide-react";
 
@@ -147,16 +142,6 @@ export default async function AuditPage() {
       }));
     }
   }
-  // Calculate metrics
-  const totalAudits = auditsWithProfiles?.length || 0;
-  const completedAudits = auditsWithProfiles?.filter(audit => audit.result && audit.result !== null).length || 0;
-  const passedAudits = auditsWithProfiles?.filter(audit => audit.result === 'pass').length || 0;
-  const failedAudits = auditsWithProfiles?.filter(audit => audit.result === 'failed').length || 0;
-  const pendingAudits = auditsWithProfiles?.filter(audit => !audit.result || audit.result === null).length || 0;
-  
-  // Calculate average score
-  const auditScores = auditsWithProfiles?.filter(audit => audit.percentage > 0).map(audit => audit.percentage) || [];
-  const avgScore = auditScores.length > 0 ? Math.round(auditScores.reduce((a, b) => a + b, 0) / auditScores.length) : 0;
 
   return (
     <DashboardLayout userProfile={userProfile}>
@@ -203,7 +188,7 @@ export default async function AuditPage() {
                   </div>
                   <div className="flex items-center gap-2 text-sm text-slate-500">
                     <FileText className="h-4 w-4" />
-                    <span>{totalAudits} Total Audits</span>
+                    <span>{auditsWithProfiles?.length || 0} Total Audits</span>
                   </div>
                 </div>
               </div>
@@ -221,90 +206,7 @@ export default async function AuditPage() {
               </div>
             </div>
           </div>
-        </div>
-
-        {/* Key Metrics Dashboard */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {/* Total Audits */}
-          <Card className="group relative overflow-hidden bg-gradient-to-br from-emerald-50 to-green-50 border-emerald-200/50 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-500 hover:-translate-y-1">
-            <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-emerald-400/20 to-green-500/20 rounded-full -translate-y-10 translate-x-10"></div>
-            <div className="relative z-10">
-              <div className="flex items-center justify-between mb-4">
-                <div className="bg-emerald-100 p-3 rounded-xl shadow-sm group-hover:shadow-md transition-all duration-300">
-                  <FileText className="h-6 w-6 text-emerald-600" />
-                </div>
-                <div className="text-right">
-                  <p className="text-2xl lg:text-3xl font-bold text-emerald-900">{totalAudits}</p>
-                </div>
-              </div>
-              <h3 className="text-sm font-semibold text-emerald-700 uppercase tracking-wider mb-1">Total Audits</h3>
-              <p className="text-emerald-600 text-sm flex items-center gap-1">
-                <TrendingUp className="h-4 w-4" />
-                {totalAudits > 0 ? `${totalAudits} completed` : 'Start auditing'}
-              </p>
-            </div>
-          </Card>
-
-          {/* Passed Audits */}
-          <Card className="group relative overflow-hidden bg-gradient-to-br from-blue-50 to-sky-50 border-blue-200/50 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-500 hover:-translate-y-1">
-            <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-blue-400/20 to-sky-500/20 rounded-full -translate-y-10 translate-x-10"></div>
-            <div className="relative z-10">
-              <div className="flex items-center justify-between mb-4">
-                <div className="bg-blue-100 p-3 rounded-xl shadow-sm group-hover:shadow-md transition-all duration-300">
-                  <CheckCircle className="h-6 w-6 text-blue-600" />
-                </div>
-                <div className="text-right">
-                  <p className="text-2xl lg:text-3xl font-bold text-blue-900">{passedAudits}</p>
-                </div>
-              </div>
-              <h3 className="text-sm font-semibold text-blue-700 uppercase tracking-wider mb-1">Passed</h3>
-              <p className="text-blue-600 text-sm flex items-center gap-1">
-                <CheckCircle className="h-4 w-4" />
-                Successful audits
-              </p>
-            </div>
-          </Card>
-
-          {/* Average Score */}
-          <Card className="group relative overflow-hidden bg-gradient-to-br from-purple-50 to-indigo-50 border-purple-200/50 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-500 hover:-translate-y-1">
-            <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-purple-400/20 to-indigo-500/20 rounded-full -translate-y-10 translate-x-10"></div>
-            <div className="relative z-10">
-              <div className="flex items-center justify-between mb-4">
-                <div className="bg-purple-100 p-3 rounded-xl shadow-sm group-hover:shadow-md transition-all duration-300">
-                  <BarChart3 className="h-6 w-6 text-purple-600" />
-                </div>
-                <div className="text-right">
-                  <p className="text-2xl lg:text-3xl font-bold text-purple-900">{avgScore}%</p>
-                </div>
-              </div>
-              <h3 className="text-sm font-semibold text-purple-700 uppercase tracking-wider mb-1">Average Score</h3>
-              <p className="text-purple-600 text-sm flex items-center gap-1">
-                <BarChart3 className="h-4 w-4" />
-                Overall performance
-              </p>
-            </div>
-          </Card>
-
-          {/* Pending Audits */}
-          <Card className="group relative overflow-hidden bg-gradient-to-br from-orange-50 to-yellow-50 border-orange-200/50 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-500 hover:-translate-y-1">
-            <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-orange-400/20 to-yellow-500/20 rounded-full -translate-y-10 translate-x-10"></div>
-            <div className="relative z-10">
-              <div className="flex items-center justify-between mb-4">
-                <div className="bg-orange-100 p-3 rounded-xl shadow-sm group-hover:shadow-md transition-all duration-300">
-                  <Clock className="h-6 w-6 text-orange-600" />
-                </div>
-                <div className="text-right">
-                  <p className="text-2xl lg:text-3xl font-bold text-orange-900">{pendingAudits}</p>
-                </div>
-              </div>
-              <h3 className="text-sm font-semibold text-orange-700 uppercase tracking-wider mb-1">Pending</h3>
-              <p className="text-orange-600 text-sm flex items-center gap-1">
-                <Clock className="h-4 w-4" />
-                Awaiting completion
-              </p>
-            </div>
-          </Card>
-        </div>        {/* Audit History Section */}
+        </div>{/* Audit History Section */}
         <Card className="bg-white/95 backdrop-blur-md border-slate-200/60 rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-500 overflow-hidden">
           <div className="bg-gradient-to-r from-slate-800 via-slate-700 to-slate-800 text-white p-6 lg:p-8 relative overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-r from-blue-600/10 via-sky-500/10 to-indigo-600/10"></div>
@@ -326,7 +228,7 @@ export default async function AuditPage() {
                 </div>
               </div>
               <div className="bg-white/10 backdrop-blur-sm px-4 py-2 rounded-xl text-sm font-semibold border border-white/20">
-                {totalAudits} Records
+                {auditsWithProfiles?.length || 0} Records
               </div>
             </div>
           </div>
