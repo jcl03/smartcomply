@@ -12,7 +12,8 @@ import {
   User,
   LogOut,
   ChevronDown,
-  CheckCircle
+  CheckCircle,
+  Folder
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -34,7 +35,8 @@ const navigation = [
   { name: "Dashboard", href: "/protected", icon: Home },
   { name: "User Management", href: "/protected/user-management", icon: Users, adminOnly: true },
   { name: "Compliance", href: "/protected/compliance", icon: Shield },
-  { name: "Audit History", href: "/protected/Audit", icon: CheckCircle },
+  { name: "Documents", href: "/protected/documents", icon: Folder, excludeForAdmin: true },
+  { name: "Audit History", href: "/protected/Audit", icon: CheckCircle, excludeForAdmin: true },
   { name: "Reports", href: "/protected/reports", icon: FileText },
   { name: "Settings", href: "/protected/settings", icon: Settings },
 ];
