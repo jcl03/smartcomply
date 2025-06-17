@@ -39,11 +39,9 @@ interface AuditDetailData {
     form_schema: any;
     compliance_id: number;
     status: string;
-    date_created: string;
-    compliance?: {
+    date_created: string;    compliance?: {
       id: number;
       name: string;
-      description: string;
     } | null;
   } | null;user_profile?: {
     full_name: string;
@@ -256,17 +254,19 @@ export default function AuditDetailView({ audit, isManager, currentUserId }: Aud
                   {audit.title || `Audit #${audit.id}`}
                 </h1>
                 {getResultBadge(audit.result)}
-              </div>
-              
-              <div className="flex items-center gap-6 text-slate-600">
+              </div>              <div className="flex items-center gap-6 text-slate-600">
                 <div className="flex items-center gap-2">
                   <FileText className="h-5 w-5" />
-                  <span className="font-medium">{compliance?.name || 'Unknown Form'}</span>
+                  <span className="font-medium">
+                    {compliance?.name || (form?.id ? `Form #${form?.id}` : 'Unknown Form')}
+                  </span>
                 </div>
                 {isManager && (
                   <div className="flex items-center gap-2">
                     <User className="h-5 w-5" />
-                    <span>Audited by: {audit.user_profile?.full_name || 'Unknown User'}</span>
+                    <span>
+                      Audited by: {audit.user_profile?.full_name || audit.user_profile?.email || 'Loading...'}
+                    </span>
                   </div>
                 )}
               </div>
@@ -381,17 +381,10 @@ export default function AuditDetailView({ audit, isManager, currentUserId }: Aud
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Form Information */}
             <Card className="p-6 bg-white border-slate-200">
-              <h3 className="text-lg font-semibold text-slate-900 mb-4">Form Information</h3>
-              <div className="space-y-3">
+              <h3 className="text-lg font-semibold text-slate-900 mb-4">Form Information</h3>              <div className="space-y-3">
                 <div>
                   <span className="text-sm text-slate-600">Compliance Type:</span>                  <p className="font-medium text-slate-900">{compliance?.name || 'N/A'}</p>
                 </div>
-                {compliance?.description && (
-                  <div>
-                    <span className="text-sm text-slate-600">Description:</span>
-                    <p className="text-slate-900">{compliance.description}</p>
-                  </div>
-                )}
                 <div>
                   <span className="text-sm text-slate-600">Form Status:</span>
                   <Badge variant="outline" className="ml-2">

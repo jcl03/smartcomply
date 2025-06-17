@@ -24,13 +24,11 @@ export type Audit = {
   form?: {
     id: number;
     form_schema: any;
-    compliance_id: number;
-    status: string;
+    compliance_id: number;    status: string;
     date_created: string;
     compliance?: {
       id: number;
       name: string;
-      description: string;
     };
   };
   user_profile?: {
@@ -42,13 +40,11 @@ export type Audit = {
 export type Form = {
   id: number;
   form_schema: any;
-  compliance_id: number;
-  status: 'active' | 'archive' | 'draft';
+  compliance_id: number;  status: 'active' | 'archive' | 'draft';
   date_created: string;
   compliance?: {
     id: number;
     name: string;
-    description: string;
   };
 };
 
