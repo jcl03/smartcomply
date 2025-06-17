@@ -34,19 +34,18 @@ interface AuditDetailData {
   percentage: number;
   comments: string;
   title: string;
-  audit_data: any;
-  form: {
+  audit_data: any;  form?: {
     id: number;
     form_schema: any;
     compliance_id: number;
     status: string;
     date_created: string;
-    compliance: {
+    compliance?: {
       id: number;
       name: string;
       description: string;
-    }[];
-  }[];  user_profile?: {
+    } | null;
+  } | null;user_profile?: {
     full_name: string;
     email: string;
   } | null;
@@ -60,11 +59,10 @@ interface AuditDetailViewProps {
 
 export default function AuditDetailView({ audit, isManager, currentUserId }: AuditDetailViewProps) {
   const [activeTab, setActiveTab] = useState<'overview' | 'responses' | 'comments'>('overview');
-
   // Helper function to get form and compliance data
   const getFormData = () => {
-    const form = Array.isArray(audit.form) ? audit.form[0] : audit.form;
-    const compliance = Array.isArray(form?.compliance) ? form?.compliance[0] : form?.compliance;
+    const form = audit.form;
+    const compliance = form?.compliance;
     return { form, compliance };
   };
 

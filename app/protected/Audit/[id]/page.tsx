@@ -28,9 +28,9 @@ export default async function AuditDetailPage({ params }: AuditDetailPageProps) 
   if (!userProfile) {
     return redirect("/sign-in");
   }
-
   // Check if user is admin/manager
   const isManager = userProfile?.role === 'admin' || userProfile?.role === 'manager';
+  
   // Fetch the specific audit
   let auditQuery = supabase
     .from('audit')
@@ -46,29 +46,45 @@ export default async function AuditDetailPage({ params }: AuditDetailPageProps) 
       percentage,
       comments,
       title,
-      audit_data,
-      form:form_id (
-        id,
-        form_schema,
-        compliance_id,
-        status,
-        date_created,
-        compliance:compliance_id (
-          id,
-          name,
-          description
-        )
-      )
+      audit_data
     `)
     .eq('id', params.id)
     .single();
+
   const { data: audit, error } = await auditQuery;
+  
   if (error || !audit) {
     console.error("Error fetching audit:", error);
-    console.error("Error details:", JSON.stringify(error, null, 2));
-    console.error("Audit ID:", params.id);
     return notFound();
   }
+
+  // Fetch form data separately
+  const { data: formData } = await supabase
+    .from('form')
+    .select(`
+      id,
+      form_schema,
+      compliance_id,
+      status,
+      date_created
+    `)
+    .eq('id', audit.form_id)
+    .single();
+  // Fetch compliance data separately
+  let complianceData = null;
+  if (formData?.compliance_id) {
+    const { data } = await supabase
+      .from('compliance')
+      .select(`
+        id,
+        name,
+        description
+      `)
+      .eq('id', formData.compliance_id)
+      .single();
+    complianceData = data;
+  }
+
   // Fetch user profile for the audit
   const { data: auditUserProfile } = await supabase
     .from('view_user_profiles')
@@ -78,6 +94,10 @@ export default async function AuditDetailPage({ params }: AuditDetailPageProps) 
 
   const auditWithProfile = {
     ...audit,
+    form: formData ? {
+      ...formData,
+      compliance: complianceData
+    } : null,
     user_profile: auditUserProfile || null
   };
   // Check if user has permission to view this audit
@@ -94,10 +114,8 @@ export default async function AuditDetailPage({ params }: AuditDetailPageProps) 
         />
       </div>
     </DashboardLayout>
-  );
-  } catch (err) {
+  );  } catch (err) {
     console.error("Unexpected error in audit detail page:", err);
-    console.error("Audit ID:", params.id);
     return notFound();
   }
 }
