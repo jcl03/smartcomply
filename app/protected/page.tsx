@@ -440,43 +440,6 @@ export default async function ProtectedPage() {
             </Card>
           </div>
         </div>
-
-        {/* Bottom Section - Only visible to admins */}
-        {isAdmin && (
-          <Card className="bg-white/80 backdrop-blur-sm border-sky-200 rounded-xl shadow-md p-4 lg:p-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
-              <h3 className="text-lg lg:text-xl font-semibold text-sky-900 flex items-center gap-2">
-                <Users className="h-5 w-5" />
-                Team Overview
-              </h3>
-              <Link href="/protected/user-management" className="text-sm text-sky-600 hover:text-sky-800 font-medium">
-                Manage Team
-              </Link>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {/*
-                { name: "Alex Johnson", role: "Security Officer", status: "active" },
-                { name: "Sam Wilson", role: "Compliance Manager", status: "active" },
-                { name: "Robin Chen", role: "Risk Analyst", status: "away" },
-                { name: "Taylor Morgan", role: "Auditor", status: "inactive" }
-              */}
-              {Array.from({ length: 4 }).map((_, index) => (
-                <div key={index} className="p-3 lg:p-4 rounded-lg bg-sky-50/30 border border-sky-100">
-                  <div className="flex items-center gap-3">
-                    <div className={`w-2 h-2 rounded-full ${
-                      index % 2 === 0 ? 'bg-green-500' :
-                      index % 3 === 0 ? 'bg-amber-500' : 'bg-gray-400'
-                    }`}></div>
-                    <div>
-                      <p className="text-sm font-medium text-sky-900">Member Name</p>
-                      <p className="text-xs text-sky-600">Member Role</p>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </Card>
-        )}
       </div>
     </DashboardLayout>
   );
