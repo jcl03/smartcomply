@@ -19,6 +19,15 @@ import { usePathname } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { createClient } from "@/utils/supabase/client";
 
+interface NavigationItem {
+  name: string;
+  href: string;
+  icon: any;
+  adminOnly?: boolean;
+  managerOnly?: boolean;
+  excludeForAdmin?: boolean;
+}
+
 interface DashboardLayoutProps {
   children: React.ReactNode;
   userProfile?: {
@@ -35,23 +44,25 @@ const navigation = [
   { name: "User Management", href: "/protected/user-management", icon: Users, adminOnly: true },
   { name: "Compliance", href: "/protected/compliance", icon: Shield },
   { name: "Documents", href: "/protected/documents", icon: Folder, excludeForAdmin: true },
+  { name: "Checklist Responses", href: "/protected/checklist-responses", icon: FileText, managerOnly: true },
   { name: "Audit History", href: "/protected/Audit", icon: CheckCircle, excludeForAdmin: true },
   { name: "Reports", href: "/protected/reports", icon: FileText, excludeForAdmin: true },
 ];
 
 export default function DashboardLayout({ children, userProfile }: DashboardLayoutProps) {  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [userDropdownOpen, setUserDropdownOpen] = useState(false);
-  const pathname = usePathname();
+  const [userDropdownOpen, setUserDropdownOpen] = useState(false);  const pathname = usePathname();
   const isAdmin = userProfile?.role === 'admin';
+  const isManager = userProfile?.role === 'manager';
 
   const handleSignOut = async () => {
     const supabase = createClient();
     await supabase.auth.signOut();
     window.location.href = '/sign-in';
-  };
-  const filteredNavigation = navigation.filter(item => {
+  };  const filteredNavigation = navigation.filter(item => {
     // Show admin-only items only to admins
     if (item.adminOnly && !isAdmin) return false;
+    // Show manager-only items only to managers
+    if (item.managerOnly && !isManager) return false;
     // Hide excludeForAdmin items from admins
     if (item.excludeForAdmin && isAdmin) return false;
     return true;
