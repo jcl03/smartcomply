@@ -21,6 +21,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 import Link from "next/link";
+import BreadcrumbWrapper from "./BreadcrumbWrapper";
 
 export default async function DocumentViewPage({ params }: { params: Promise<{ id: string }> }) {
   const supabase = await createClient();
