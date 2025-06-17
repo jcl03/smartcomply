@@ -5,6 +5,7 @@ import { Shield, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { addComplianceFramework } from "../actions";
 import AddComplianceForm from "./AddComplianceForm";
+import BreadcrumbWrapper from "./BreadcrumbWrapper";
 import DashboardLayout from "@/components/dashboard/dashboard-layout";
 import { getUserProfile } from "@/lib/api";
 
@@ -31,10 +32,10 @@ export default async function AddCompliancePage() {
   // If not admin, redirect to protected page
   if (!profile || profile.role !== 'admin') {
     return redirect("/protected");
-  }
-    return (
+  }    return (
     <DashboardLayout userProfile={currentUserProfile}>
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
+      <BreadcrumbWrapper>
+        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
         <div className="space-y-8 p-6">
           {/* Enhanced Header Section */}
           <div className="relative overflow-hidden bg-gradient-to-r from-blue-600 via-indigo-700 to-purple-800 rounded-2xl shadow-2xl">
@@ -99,8 +100,8 @@ export default async function AddCompliancePage() {
               </Card>
             </div>
           </div>
-        </div>
-      </div>
+        </div>        </div>
+      </BreadcrumbWrapper>
     </DashboardLayout>
   );
 }
