@@ -17,6 +17,8 @@ import {
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Card } from "@/components/ui/card";
+import { Breadcrumb } from "@/components/ui/breadcrumb";
+import { BreadcrumbProvider } from "@/components/ui/breadcrumb-context";
 import { createClient } from "@/utils/supabase/client";
 
 interface DashboardLayoutProps {
@@ -55,15 +57,15 @@ export default function DashboardLayout({ children, userProfile }: DashboardLayo
     // Hide excludeForAdmin items from admins
     if (item.excludeForAdmin && isAdmin) return false;
     return true;
-  });
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-sky-50 via-blue-50 to-indigo-50 relative overflow-hidden">
+  });  return (
+    <BreadcrumbProvider>
+      <div className="h-screen bg-gradient-to-br from-sky-50 via-blue-50 to-indigo-50 relative overflow-hidden">
       {/* Background Pattern */}
       <div className="absolute inset-0 bg-white/20"></div>
-      <div className="relative z-10">
-        {/* Header */}
-        <header className="bg-white/90 backdrop-blur-md border-b border-sky-200 shadow-sm sticky top-0 z-50">
-          <div className="flex items-center justify-between h-16 px-4 lg:px-6">
+      
+      {/* Header - Fixed at top */}
+      <header className="bg-white/90 backdrop-blur-md border-b border-sky-200 shadow-sm fixed top-0 left-0 right-0 z-50 h-16">
+        <div className="flex items-center justify-between h-full px-4 lg:px-6">
           {/* Mobile menu button */}
           <button
             type="button"
@@ -81,9 +83,10 @@ export default function DashboardLayout({ children, userProfile }: DashboardLayo
               </div>
               <span className="text-xl font-bold text-sky-900 hidden sm:block">SmartComply</span>
             </Link>
-          </div>          {/* Right side */}
-          <div className="flex items-center gap-4">
+          </div>
 
+          {/* Right side */}
+          <div className="flex items-center gap-4">
             {/* User Menu */}
             <div className="relative">
               <button
@@ -98,14 +101,17 @@ export default function DashboardLayout({ children, userProfile }: DashboardLayo
                   <p className="text-xs text-sky-600">{userProfile?.role || 'Member'}</p>
                 </div>
                 <ChevronDown className="h-4 w-4" />
-              </button>              {/* User Dropdown */}
+              </button>
+
+              {/* User Dropdown */}
               {userDropdownOpen && (
                 <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-sky-200 py-1 z-50">
                   <Link href="/protected/profile" className="flex items-center gap-2 px-4 py-2 text-sm text-sky-700 hover:bg-sky-50">
                     <User className="h-4 w-4" />
                     Profile
                   </Link>
-                  <hr className="my-1 border-sky-200" />                  <button 
+                  <hr className="my-1 border-sky-200" />
+                  <button 
                     onClick={handleSignOut}
                     className="flex items-center gap-2 w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50"
                   >
@@ -117,16 +123,18 @@ export default function DashboardLayout({ children, userProfile }: DashboardLayo
             </div>
           </div>
         </div>
-      </header>      <div className="flex min-h-screen">
-        {/* Sidebar */}
+      </header>
+
+      {/* Main Layout Container - Account for fixed header */}
+      <div className="flex h-full pt-16">        {/* Sidebar - Fixed position */}
         <aside className={`
-          fixed lg:static inset-y-0 left-0 z-40 w-64 bg-white/90 backdrop-blur-md border-r border-sky-200 shadow-lg
-          transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:flex-shrink-0
-          ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
+          fixed top-16 bottom-0 left-0 z-40 w-64 bg-white/90 backdrop-blur-md border-r border-sky-200 shadow-lg
+          transform transition-transform duration-300 ease-in-out
+          ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
         `}>
-          <div className="flex flex-col h-full pt-6">
+          <div className="flex flex-col h-full">
             {/* Navigation */}
-            <nav className="flex-1 px-4 space-y-2">
+            <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
               {filteredNavigation.map((item) => {
                 const isActive = pathname === item.href;
                 return (
@@ -146,28 +154,33 @@ export default function DashboardLayout({ children, userProfile }: DashboardLayo
                     {item.name}
                   </Link>
                 );
-              })}            </nav>
-
-            {/* Sidebar Footer - Removed upgrade section */}
+              })}
+            </nav>
           </div>
-        </aside>
-
-        {/* Overlay for mobile */}
+        </aside>        {/* Overlay for mobile */}
         {sidebarOpen && (
           <div 
             className="fixed inset-0 bg-black/20 backdrop-blur-sm z-30 lg:hidden"
+            style={{ top: '4rem' }}
             onClick={() => setSidebarOpen(false)}
           />
-        )}
-
-        {/* Main Content */}
-        <main className="flex-1 lg:ml-0 min-w-0">
-          <div className="p-6">
-            {children}
-          </div>
-        </main>
-      </div>
+        )}        {/* Main Content - Scrollable area */}
+        <main className="flex-1 lg:ml-64 min-w-0 relative">
+          <div className="h-full overflow-y-auto">
+            <div className="p-6">
+              {/* Breadcrumb */}
+              <div className="mb-6 border-b border-sky-100 pb-4">
+                <Breadcrumb className="hidden sm:flex" />
+                {/* Mobile breadcrumb - simplified */}
+                <div className="sm:hidden">
+                  <Breadcrumb className="overflow-x-auto scrollbar-hide" />
+                </div>
+              </div>
+              {children}
+            </div>
+          </div>        </main>
       </div>
     </div>
+    </BreadcrumbProvider>
   );
 }
