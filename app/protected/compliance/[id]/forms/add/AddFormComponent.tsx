@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import Link from "next/link";
 import { useFormStatus } from "react-dom";
-import { Plus, Minus, Eye, Sparkles, AlertCircle, CheckCircle, FileText, Shield, ArrowLeft, Save } from "lucide-react";
+import { Plus, Minus, Eye, Sparkles, AlertCircle, CheckCircle, FileText, Shield, ArrowLeft, Save, Heading2 } from "lucide-react";
 import type { ActionResult } from "@/lib/types";
 import { addFormDraft } from "../../../actions";
 
@@ -84,6 +84,7 @@ type FormField = {
   enhancedOptions?: FormFieldOption[]; // New enhanced options
   weightage?: number;
   autoFail?: boolean;
+  isSection?: boolean; // New field to identify section headers
 };
 
 type ServerAction = (formData: FormData) => Promise<ActionResult>;
@@ -174,6 +175,17 @@ export default function AddFormComponent({ action, complianceId }: { action: Ser
     return (field.weightage !== undefined && field.weightage > 0) || field.autoFail;
   };
   
+  const addSection = () => {
+    const newField: FormField = {
+      id: `section_${Date.now()}`,
+      type: "section",
+      label: "",
+      required: false,
+      isSection: true
+    };
+    setFields([...fields, newField]);
+  };
+  
   async function clientAction(formData: FormData) {
     setErrorMessage("");
     setSuccessMessage("");
@@ -226,116 +238,144 @@ export default function AddFormComponent({ action, complianceId }: { action: Ser
             {formTitle && <h3 className="text-lg font-semibold text-gray-900">{formTitle}</h3>}
             {formDescription && <p className="text-gray-700">{formDescription}</p>}
             
-            {fields.map((field, index) => (              <div key={field.id} className="space-y-2 p-4 bg-gray-50 rounded-lg border border-gray-200">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <Label className="text-gray-800 font-medium">
-                    {field.label} {field.required && <span className="text-red-500">*</span>}
-                  </Label>
-                  {field.weightage && (
-                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                      Weight: {field.weightage}
-                    </span>
-                  )}
-                  {field.autoFail && (
-                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                      Auto-fail
-                    </span>
-                  )}
-                </div>
-                
-                {field.type === "text" && (
-                  <Input placeholder={field.placeholder} disabled className="border-gray-200 text-gray-700 bg-white" />
-                )}
-                
-                {field.type === "textarea" && (
-                  <textarea 
-                    className="w-full p-3 border border-gray-200 rounded-lg text-gray-700 bg-white" 
-                    placeholder={field.placeholder}
-                    disabled
-                    rows={3}
-                  />
-                )}                  {field.type === "select" && (
-                  <select className="w-full p-3 border border-gray-200 rounded-lg text-gray-700 bg-white" disabled>
-                    <option>Select an option...</option>
-                    {shouldUseEnhancedOptions(field) ? (
-                      field.enhancedOptions?.map((option, optIndex) => (
-                        <option key={optIndex} value={option.value}>
-                          {option.value}
-                          {field.weightage && option.points !== undefined ? ` (${option.points} pts)` : ''}
-                          {field.autoFail && option.isFailOption ? ' ❌' : ''}
-                        </option>
-                      ))
-                    ) : (
-                      field.options?.map((option, optIndex) => (
-                        <option key={optIndex} value={option}>{option}</option>
-                      ))
+            {fields.map((field, index) => (
+              <div key={field.id} className={`space-y-2 ${field.isSection ? 'mt-8 mb-4' : ''}`}>
+                {field.isSection ? (
+                  <div className="bg-gradient-to-r from-indigo-50 via-purple-50 to-pink-50 rounded-lg border border-indigo-100 shadow-sm">
+                    <div className="p-6">
+                      <h3 className="text-2xl font-semibold text-indigo-900">{field.label}</h3>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <Label className="text-gray-800 font-medium">
+                        {field.label} {field.required && <span className="text-red-500">*</span>}
+                      </Label>
+                      {field.weightage && (
+                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                          Weight: {field.weightage}
+                        </span>
+                      )}
+                      {field.autoFail && (
+                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                          Auto-fail
+                        </span>
+                      )}
+                    </div>
+                    
+                    {field.type === "text" && (
+                      <Input placeholder={field.placeholder} disabled className="border-gray-200 text-gray-700 bg-white" />
                     )}
-                  </select>
-                )}
-                  {field.type === "checkbox" && (
-                  <div className="flex items-center gap-2">
-                    <div className="h-4 w-4 rounded border-2 bg-white border-gray-300 flex items-center justify-center opacity-60">
-                      {/* Disabled checkbox appearance */}
-                    </div>
-                    <span className="text-gray-800">{field.label}</span>
-                  </div>
-                )}
-                
-                {field.type === "radio" && (
-                  <div className="space-y-2">                    {shouldUseEnhancedOptions(field) ? (
-                      field.enhancedOptions?.map((option, optIndex) => (
-                        <div key={optIndex} className="flex items-center gap-2">
-                          <input type="radio" name={field.id} disabled className="w-4 h-4 text-blue-600 border-gray-300" />
-                          <span className="flex items-center gap-2">
-                            <span className="text-gray-800">{option.value}</span>
-                            {field.weightage && option.points !== undefined && (
-                              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
-                                {option.points} pts
-                              </span>
-                            )}
-                            {field.autoFail && option.isFailOption && (
-                              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800">
-                                Auto-fail
-                              </span>
-                            )}
-                          </span>
+                    
+                    {field.type === "textarea" && (
+                      <textarea 
+                        className="w-full p-3 border border-gray-200 rounded-lg text-gray-700 bg-white" 
+                        placeholder={field.placeholder}
+                        disabled
+                        rows={3}
+                      />
+                    )}
+                    
+                    {field.type === "select" && (
+                      <select className="w-full p-3 border border-gray-200 rounded-lg text-gray-700 bg-white" disabled>
+                        <option>Select an option...</option>
+                        {shouldUseEnhancedOptions(field) ? (
+                          field.enhancedOptions?.map((option, optIndex) => (
+                            <option key={optIndex} value={option.value}>
+                              {option.value}
+                              {field.weightage && option.points !== undefined ? ` (${option.points} pts)` : ''}
+                              {field.autoFail && option.isFailOption ? ' ❌' : ''}
+                            </option>
+                          ))
+                        ) : (
+                          field.options?.map((option, optIndex) => (
+                            <option key={optIndex} value={option}>{option}</option>
+                          ))
+                        )}
+                      </select>
+                    )}
+                    
+                    {field.type === "checkbox" && (
+                      <div className="flex items-center gap-2">
+                        <div className="h-4 w-4 rounded border-2 bg-white border-gray-300 flex items-center justify-center opacity-60">
+                          {/* Disabled checkbox appearance for preview */}
                         </div>
-                      ))
-                    ) : (
-                      field.options?.map((option, optIndex) => (
-                        <div key={optIndex} className="flex items-center gap-2">
-                          <input type="radio" name={field.id} disabled className="w-4 h-4 text-blue-600 border-gray-300" />
-                          <span className="text-gray-800">{option}</span>
-                        </div>
-                      ))                    )}
-                  </div>
-                )}                {field.type === "email" && (
-                  <Input type="email" placeholder={field.placeholder} disabled className="border-gray-200 text-gray-700 bg-white" />
-                )}
-
-                {field.type === "number" && (
-                  <Input type="number" placeholder={field.placeholder} disabled className="border-gray-200 text-gray-700 bg-white" />
-                )}
-
-                {field.type === "date" && (
-                  <Input type="date" disabled className="border-gray-200 text-gray-700 bg-white" />
-                )}
-
-                {field.type === "image" && (
-                  <div className="space-y-2">
-                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center bg-gray-50">
-                      <div className="flex flex-col items-center gap-2">
-                        <div className="bg-blue-100 p-3 rounded-full">
-                          <svg className="h-6 w-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                          </svg>
-                        </div>
-                        <p className="text-gray-700 font-medium">Click to upload image</p>
-                        <p className="text-gray-500 text-sm">or drag and drop</p>
-                        <p className="text-gray-400 text-xs">PNG, JPG, GIF up to 10MB</p>
+                        <span className="text-gray-900">{field.label}</span>
                       </div>
-                    </div>
-                  </div>
+                    )}
+                    
+                    {field.type === "radio" && (
+                      <div className="space-y-2">
+                        {shouldUseEnhancedOptions(field) ? (
+                          field.enhancedOptions?.map((option, optIndex) => (
+                            <div key={optIndex} className="flex items-center gap-2">
+                              <input 
+                                type="radio" 
+                                name={field.id} 
+                                disabled 
+                                className="h-4 w-4 border-2 border-gray-300 text-blue-600 bg-white focus:ring-2 focus:ring-blue-200 focus:ring-offset-0 checked:bg-blue-600 checked:border-blue-600"
+                              />
+                              <span className="flex items-center gap-2 text-gray-900">
+                                {option.value}
+                                {field.weightage && option.points !== undefined && (
+                                  <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                                    {option.points} pts
+                                  </span>
+                                )}
+                                {field.autoFail && option.isFailOption && (
+                                  <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800">
+                                    Auto-fail
+                                  </span>
+                                )}
+                              </span>
+                            </div>
+                          ))
+                        ) : (
+                          field.options?.map((option, optIndex) => (
+                            <div key={optIndex} className="flex items-center gap-2">
+                              <input 
+                                type="radio" 
+                                name={field.id} 
+                                disabled 
+                                className="h-4 w-4 border-2 border-gray-300 text-blue-600 bg-white focus:ring-2 focus:ring-blue-200 focus:ring-offset-0 checked:bg-blue-600 checked:border-blue-600"
+                              />
+                              <span className="text-gray-900">{option}</span>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    )}
+
+                    {field.type === "email" && (
+                      <Input type="email" placeholder={field.placeholder} disabled className="border-gray-200 text-gray-700 bg-white" />
+                    )}
+
+                    {field.type === "number" && (
+                      <Input type="number" placeholder={field.placeholder} disabled className="border-gray-200 text-gray-700 bg-white" />
+                    )}
+
+                    {field.type === "date" && (
+                      <Input type="date" disabled className="border-gray-200 text-gray-700 bg-white" />
+                    )}
+
+                    {field.type === "image" && (
+                      <div className="space-y-2">
+                        <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center bg-gray-50">
+                          <div className="flex flex-col items-center gap-2">
+                            <div className="bg-blue-100 p-3 rounded-full">
+                              <svg className="h-6 w-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                              </svg>
+                            </div>
+                            <p className="text-gray-700 font-medium">Click to upload image</p>
+                            <p className="text-gray-500 text-sm">or drag and drop</p>
+                            <p className="text-gray-400 text-xs">PNG, JPG, GIF up to 10MB</p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
             ))}
@@ -473,14 +513,24 @@ export default function AddFormComponent({ action, complianceId }: { action: Ser
               </div>
               Form Fields
             </h3>
-            <div className="flex gap-2">              <Button 
+            <div className="flex gap-2">
+              <Button 
                 type="button" 
                 onClick={() => setShowPreview(!showPreview)} 
                 variant="outline"
                 className="border-gray-200 text-gray-700 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-800 bg-white font-medium"
               >
-                <Eye size={16} className="mr-2 text-blue-600" />
+                <Eye size={16} className="mr-2" />
                 {showPreview ? "Hide" : "Show"} Preview
+              </Button>
+              <Button 
+                type="button" 
+                onClick={addSection}
+                variant="outline"
+                className="border-dashed border-gray-300 text-gray-700 hover:bg-gray-50 hover:border-gray-400 hover:text-gray-800 bg-white/50 font-medium"
+              >
+                <Heading2 size={16} className="mr-2" />
+                Add Section
               </Button>
               <Button 
                 type="button" 
@@ -491,56 +541,88 @@ export default function AddFormComponent({ action, complianceId }: { action: Ser
                 Add Field
               </Button>
             </div>
-          </div>          {fields.map((field, index) => (
-            <Card key={field.id} className="border-gray-200 bg-white shadow-md hover:shadow-lg transition-all duration-300">
+          </div>
+          {fields.map((field, index) => (
+            <Card key={field.id} className={`border-gray-200 bg-white shadow-md hover:shadow-lg transition-all duration-300 ${field.isSection ? 'border-dashed' : ''}`}>
               <div className="p-4 space-y-4">
-                <div className="flex items-center justify-between bg-gray-50 rounded-lg p-3 border border-gray-200">
-                  <h4 className="font-semibold text-gray-900">Field {index + 1}</h4>                  <Button 
-                    type="button" 
-                    onClick={() => removeField(index)}
-                    variant="outline"
-                    size="sm"
-                    className="border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300 hover:text-red-700 bg-white font-medium"
-                  >
-                    <Minus size={16} className="text-red-500" />
-                  </Button>
+                {field.isSection ? (
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1">
+                      <Input 
+                        value={field.label}
+                        onChange={(e) => updateField(index, { label: e.target.value })}
+                        placeholder="Enter section title"
+                        className="text-lg font-semibold border-none bg-transparent p-0 focus-visible:ring-0 focus-visible:ring-offset-0 text-gray-900 placeholder:text-gray-400"
+                      />
+                    </div>
+                    <Button 
+                      type="button" 
+                      onClick={() => removeField(index)}
+                      variant="ghost"
+                      size="sm"
+                      className="text-gray-600 hover:text-gray-700 hover:bg-gray-50"
+                    >
+                      <Minus size={16} />
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h4 className="font-medium">Field {index + 1}</h4>
+                      <Button 
+                        type="button" 
+                        onClick={() => removeField(index)}
+                        variant="outline"
+                        size="sm"
+                      >
+                        <Minus size={16} />
+                      </Button>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label>Field Type</Label>
+                      <select 
+                        value={field.type}
+                        onChange={(e) => updateField(index, { type: e.target.value })}
+                        className="w-full p-2 border rounded-md"
+                      >
+                        <option value="text">Text Input</option>
+                        <option value="textarea">Text Area</option>
+                        <option value="select">Dropdown</option>
+                        <option value="checkbox">Checkbox</option>
+                        <option value="radio">Radio Buttons</option>
+                        <option value="email">Email</option>
+                        <option value="number">Number</option>
+                        <option value="date">Date</option>
+                        <option value="image">Image</option>
+                      </select>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label className="text-gray-800 font-medium">Field Label</Label>
+                      <Input 
+                        value={field.label}
+                        onChange={(e) => updateField(index, { label: e.target.value })}
+                        placeholder="Field label"
+                        className="border-gray-200 focus:border-blue-400 focus:ring-blue-200 bg-white text-gray-900"
+                      />
+                    </div>
+                  </div>
+                )}
+                
+                <div className="space-y-2">
+                  <Label className="text-gray-800 font-medium">Placeholder Text</Label>
+                  <Input 
+                    value={field.placeholder || ""}
+                    onChange={(e) => updateField(index, { placeholder: e.target.value })}
+                    placeholder="Placeholder text"
+                    className="border-gray-200 focus:border-blue-400 focus:ring-blue-200 bg-white text-gray-900"
+                  />
                 </div>
                 
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label className="text-gray-800 font-medium">Field Type</Label>                    <select 
-                      value={field.type}
-                      onChange={(e) => updateField(index, { type: e.target.value })}
-                      className="w-full p-3 border border-gray-200 rounded-lg focus:border-blue-400 focus:ring-1 focus:ring-blue-200 transition-colors bg-white text-gray-900"
-                    ><option value="text">Text Input</option>
-                      <option value="textarea">Text Area</option>
-                      <option value="select">Dropdown</option>
-                      <option value="checkbox">Checkbox</option>
-                      <option value="radio">Radio Buttons</option>
-                      <option value="email">Email</option>
-                      <option value="number">Number</option>
-                      <option value="date">Date</option>
-                      <option value="image">Image</option>
-                    </select>
-                  </div>
-                    <div className="space-y-2">
-                    <Label className="text-gray-800 font-medium">Field Label</Label>                    <Input 
-                      value={field.label}
-                      onChange={(e) => updateField(index, { label: e.target.value })}
-                      placeholder="Field label"
-                      className="border-gray-200 focus:border-blue-400 focus:ring-blue-200 bg-white text-gray-900"
-                    />
-                  </div>
-                </div>                  <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label className="text-gray-800 font-medium">Placeholder Text</Label>                    <Input 
-                      value={field.placeholder || ""}
-                      onChange={(e) => updateField(index, { placeholder: e.target.value })}
-                      placeholder="Placeholder text"
-                      className="border-gray-200 focus:border-blue-400 focus:ring-blue-200 bg-white text-gray-900"
-                    />
-                  </div>
-                    <div className="flex items-center gap-2 pt-6">
+                <div className="space-y-2">
+                  <Label className="text-gray-800 font-medium">Required Field</Label>
+                  <div className="flex items-center gap-2">
                     <div 
                       onClick={() => updateField(index, { required: !field.required })}
                       className={`h-4 w-4 rounded border-2 cursor-pointer transition-all duration-200 flex items-center justify-center ${
@@ -569,7 +651,8 @@ export default function AddFormComponent({ action, complianceId }: { action: Ser
                   </h5>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label className="text-gray-800 font-medium">Weightage (optional)</Label>                      <Input 
+                      <Label className="text-gray-800 font-medium">Weightage (optional)</Label>
+                      <Input 
                         type="number"
                         min="0"
                         step="0.1"
@@ -580,7 +663,7 @@ export default function AddFormComponent({ action, complianceId }: { action: Ser
                       />
                       <p className="text-xs text-gray-600">Numerical weight for scoring</p>
                     </div>
-                      <div className="flex items-center gap-2 pt-6">
+                    <div className="flex items-center gap-2 pt-6">
                       <div 
                         onClick={() => updateField(index, { autoFail: !field.autoFail })}
                         className={`h-4 w-4 rounded border-2 cursor-pointer transition-all duration-200 flex items-center justify-center ${
@@ -601,7 +684,9 @@ export default function AddFormComponent({ action, complianceId }: { action: Ser
                       </div>
                     </div>
                   </div>
-                </div>                  {(field.type === "select" || field.type === "radio") && (
+                </div>
+                
+                {(field.type === "select" || field.type === "radio") && (
                   <div className="space-y-3 bg-gray-50 rounded-lg p-3 border border-gray-200">
                     <div className="flex items-center justify-between">
                       <Label className="text-gray-800 font-medium">
@@ -609,7 +694,8 @@ export default function AddFormComponent({ action, complianceId }: { action: Ser
                         {shouldUseEnhancedOptions(field) && (
                           <span className="text-xs text-blue-600 ml-2 bg-blue-100 px-2 py-1 rounded-full">(Enhanced)</span>
                         )}
-                      </Label>                      <Button 
+                      </Label>
+                      <Button 
                         type="button" 
                         onClick={() => shouldUseEnhancedOptions(field) ? addEnhancedOption(index) : addOption(index)}
                         variant="outline"
@@ -625,12 +711,14 @@ export default function AddFormComponent({ action, complianceId }: { action: Ser
                       // Enhanced options with scoring and pass/fail
                       field.enhancedOptions?.map((option, optIndex) => (
                         <div key={optIndex} className="border border-gray-200 rounded-lg p-3 space-y-2 bg-white">
-                          <div className="flex gap-2">                            <Input 
+                          <div className="flex gap-2">
+                            <Input 
                               value={option.value}
                               onChange={(e) => updateEnhancedOption(index, optIndex, { value: e.target.value })}
                               placeholder={`Option ${optIndex + 1}`}
                               className="flex-1 border-gray-200 focus:border-blue-400 focus:ring-blue-200 bg-white text-gray-900"
-                            />                            <Button 
+                            />
+                            <Button 
                               type="button" 
                               onClick={() => removeEnhancedOption(index, optIndex)}
                               variant="outline"
@@ -644,7 +732,8 @@ export default function AddFormComponent({ action, complianceId }: { action: Ser
                           {field.weightage !== undefined && field.weightage > 0 && (
                             <div className="grid grid-cols-2 gap-2">
                               <div>
-                                <Label className="text-xs text-gray-700 font-medium">Points</Label>                                <Input 
+                                <Label className="text-xs text-gray-700 font-medium">Points</Label>
+                                <Input 
                                   type="number"
                                   value={option.points || ""}
                                   onChange={(e) => updateEnhancedOption(index, optIndex, { 
@@ -682,12 +771,14 @@ export default function AddFormComponent({ action, complianceId }: { action: Ser
                     ) : (
                       // Simple options (backward compatibility)
                       field.options?.map((option, optIndex) => (
-                        <div key={optIndex} className="flex gap-2">                          <Input 
+                        <div key={optIndex} className="flex gap-2">
+                          <Input 
                             value={option}
                             onChange={(e) => updateOption(index, optIndex, e.target.value)}
                             placeholder={`Option ${optIndex + 1}`}
                             className="border-gray-200 focus:border-blue-400 focus:ring-blue-200 bg-white text-gray-900"
-                          />                          <Button 
+                          />
+                          <Button 
                             type="button" 
                             onClick={() => removeOption(index, optIndex)}
                             variant="outline"
@@ -700,7 +791,8 @@ export default function AddFormComponent({ action, complianceId }: { action: Ser
                       ))
                     )}
                   </div>
-                )}</div>
+                )}
+              </div>
             </Card>
           ))}
             {fields.length === 0 && (
