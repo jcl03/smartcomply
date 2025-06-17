@@ -1,4 +1,4 @@
-import { getUserProfile } from "@/lib/api";
+import { getUserProfile, getUserProfiles } from "@/lib/api";
 import { createClient } from "@/utils/supabase/server";
 import { redirect } from "next/navigation";
 import DashboardLayout from "@/components/dashboard/dashboard-layout";
@@ -32,13 +32,25 @@ export default async function AuditPage() {
 
   // Check if user is admin/manager
   const isManager = userProfile?.role === 'admin' || userProfile?.role === 'manager';  try {
-    // Check if audit table exists first
-    const { data: tableCheck } = await supabase
+    // Check if audit table exists first with better error handling
+    const { data: tableCheck, error: tableError } = await supabase
       .from('audit')
       .select('id')
       .limit(1);
 
-    // Fetch audits based on user role
+    if (tableError) {
+      console.log("Audit table check failed:", tableError);
+      console.log("Table error details:", {
+        message: tableError.message,
+        details: tableError.details,
+        hint: tableError.hint,
+        code: tableError.code
+      });
+      // Table doesn't exist or has issues, use sample data
+      throw new Error("Audit table not accessible");
+    }
+
+    // Use simple query without JOIN to avoid issues
     let auditsQuery = supabase
       .from('audit')
       .select(`
@@ -59,89 +71,122 @@ export default async function AuditPage() {
     // If not manager, only show user's own audits
     if (!isManager) {
       auditsQuery = auditsQuery.eq('user_id', user.id);
-    }    
+    }
+    
     const { data: audits, error } = await auditsQuery;
-  
-  let auditsWithProfiles: any[] = [];
 
-  if (error || !audits) {
-    console.error("Error fetching audits:", error);
-    console.error("Error details:", JSON.stringify(error, null, 2));
-    
-    // If table doesn't exist, provide sample data for UI demonstration
-    const sampleAudits = [
-      {
-        id: 1,
-        form_id: 1,
-        user_id: user.id,
-        status: 'completed',
-        created_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-        last_edit_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-        result: 'pass' as const,
-        marks: 85,
-        percentage: 85,
-        comments: 'All security protocols are functioning correctly. Minor recommendations for improvement.',
-        title: 'Security Compliance Audit - Q4 2024',
-        user_profile: {
-          full_name: userProfile?.full_name || 'Current User',
-          email: userProfile?.email || user.email || 'user@example.com'
+    if (error) {
+      console.error("Error fetching audits:", error);
+      console.error("Detailed error information:", {
+        message: error.message || 'No message',
+        details: error.details || 'No details',
+        hint: error.hint || 'No hint',
+        code: error.code || 'No code',
+        fullError: JSON.stringify(error, null, 2)
+      });
+      throw error;
+    }
+
+    console.log(`Successfully fetched ${audits?.length || 0} audits`);
+  
+    let auditsWithProfiles: any[] = [];
+
+    if (!audits || audits.length === 0) {
+      console.log("No audits found, using sample data for demonstration");
+      
+      // If table doesn't exist, provide sample data for UI demonstration
+      const sampleAudits = [
+        {
+          id: 1,
+          form_id: 1,
+          user_id: user.id,
+          status: 'completed',
+          created_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+          last_edit_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+          result: 'pass' as const,
+          marks: 85,
+          percentage: 85,
+          comments: 'All security protocols are functioning correctly. Minor recommendations for improvement.',
+          title: 'Security Compliance Audit - Q4 2024',
+          user_profile: {
+            full_name: userProfile?.full_name || 'Current User',
+            email: userProfile?.email || user.email || 'user@example.com'
+          }
+        },
+        {
+          id: 2,
+          form_id: 2,
+          user_id: user.id,
+          status: 'completed',
+          created_at: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+          last_edit_at: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+          result: 'failed' as const,
+          marks: 45,
+          percentage: 45,
+          comments: 'Several critical issues found. Immediate action required on data encryption.',
+          title: 'Data Protection Audit - Q3 2024',
+          user_profile: {
+            full_name: userProfile?.full_name || 'Current User',
+            email: userProfile?.email || user.email || 'user@example.com'
+          }
+        },
+        {
+          id: 3,
+          form_id: 3,
+          user_id: user.id,
+          status: 'draft',
+          created_at: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
+          last_edit_at: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
+          result: null,
+          marks: 0,
+          percentage: 0,
+          comments: 'Audit in progress. Scheduled for completion by end of week.',
+          title: 'Network Security Assessment - In Progress',
+          user_profile: {
+            full_name: userProfile?.full_name || 'Current User',
+            email: userProfile?.email || user.email || 'user@example.com'
+          }
         }
-      },
-      {
-        id: 2,
-        form_id: 2,
-        user_id: user.id,
-        status: 'completed',
-        created_at: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-        last_edit_at: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-        result: 'failed' as const,
-        marks: 45,
-        percentage: 45,
-        comments: 'Several critical issues found. Immediate action required on data encryption.',
-        title: 'Data Protection Audit - Q3 2024',
-        user_profile: {
-          full_name: userProfile?.full_name || 'Current User',
-          email: userProfile?.email || user.email || 'user@example.com'
-        }
-      },
-      {
-        id: 3,
-        form_id: 3,
-        user_id: user.id,
-        status: 'draft',
-        created_at: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
-        last_edit_at: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
-        result: null,
-        marks: 0,
-        percentage: 0,
-        comments: 'Audit in progress. Scheduled for completion by end of week.',
-        title: 'Network Security Assessment - In Progress',
-        user_profile: {
-          full_name: userProfile?.full_name || 'Current User',
-          email: userProfile?.email || user.email || 'user@example.com'
-        }
-      }
-    ];
-    
-    // Use sample data for demonstration
-    auditsWithProfiles = sampleAudits;
-  } else {
-    // Fetch user profiles for the audits
-    auditsWithProfiles = audits || [];
-    if (audits && audits.length > 0) {
+      ];
+      
+      // Use sample data for demonstration
+      auditsWithProfiles = sampleAudits;
+    } else {
+      // Process real audits with user profiles
+      console.log(`Processing ${audits.length} real audit records`);
+      
+      // Use the new API function to fetch profiles
       const userIds = Array.from(new Set(audits.map(audit => audit.user_id)));
-      const { data: profiles } = await supabase
-        .from('view_user_profiles')
-        .select('id, full_name, email')
-        .in('id', userIds);
+      console.log("Fetching profiles for user IDs:", userIds);
+      
+      const profiles = await getUserProfiles(userIds);
+      console.log(`Retrieved ${profiles.length} user profiles`);
 
       // Merge profiles with audits
-      auditsWithProfiles = audits.map(audit => ({
-        ...audit,
-        user_profile: profiles?.find(profile => profile.id === audit.user_id) || null
-      }));
+      auditsWithProfiles = audits.map(audit => {
+        const matchedProfile = profiles?.find(profile => profile.id === audit.user_id);
+        
+        return {
+          ...audit,
+          user_profile: matchedProfile || {
+            id: audit.user_id,
+            full_name: audit.user_id === user.id ? 
+              (userProfile?.full_name || user.email?.split('@')[0] || 'You') : 
+              `User ${audit.user_id?.slice(-6) || 'Unknown'}`,
+            email: audit.user_id === user.id ? 
+              (user.email || userProfile?.email || '') : 
+              ''
+          }
+        };
+      });
+      
+      console.log("Final audits with profiles:", auditsWithProfiles.map(a => ({ 
+        id: a.id, 
+        user_id: a.user_id, 
+        user_name: a.user_profile?.full_name,
+        user_email: a.user_profile?.email
+      })));
     }
-  }
 
   return (
     <DashboardLayout userProfile={userProfile}>

@@ -194,3 +194,94 @@ export async function getAllAudits() {
 
   return data;
 }
+
+export async function getUserProfiles(userIds: string[]) {
+  const supabase = await createClient();
+  
+  if (!userIds || userIds.length === 0) {
+    return [];
+  }
+  
+  // Try multiple approaches to get user profiles
+  let profiles: any[] = [];
+  
+  // First try: view_user_profiles
+  try {
+    const { data: viewProfiles, error: viewError } = await supabase
+      .from('view_user_profiles')
+      .select('id, full_name, email, role')
+      .in('id', userIds);
+    
+    if (viewProfiles && viewProfiles.length > 0) {
+      profiles = viewProfiles;
+      console.log(`Got ${profiles.length} profiles from view_user_profiles`);
+      return profiles;
+    } else {
+      console.log("view_user_profiles failed or empty:", viewError);
+    }
+  } catch (err) {
+    console.log("view_user_profiles query failed:", err);
+  }
+  
+  // Second try: profiles table
+  try {
+    const { data: directProfiles, error: directError } = await supabase
+      .from('profiles')
+      .select('id, full_name, email')
+      .in('id', userIds);
+    
+    if (directProfiles && directProfiles.length > 0) {
+      profiles = directProfiles;
+      console.log(`Got ${profiles.length} profiles from profiles table`);
+      return profiles;
+    } else {
+      console.log("profiles table failed or empty:", directError);
+    }
+  } catch (err) {
+    console.log("profiles table query failed:", err);
+  }
+  
+  // Third try: user_profiles table
+  try {
+    const { data: userProfiles, error: userError } = await supabase
+      .from('user_profiles')
+      .select('id, full_name, email')
+      .in('id', userIds);
+    
+    if (userProfiles && userProfiles.length > 0) {
+      profiles = userProfiles;
+      console.log(`Got ${profiles.length} profiles from user_profiles table`);
+      return profiles;
+    } else {
+      console.log("user_profiles table failed or empty:", userError);
+    }
+  } catch (err) {
+    console.log("user_profiles table query failed:", err);
+  }
+  
+  // Fourth try: admin auth users (if available)
+  try {
+    const adminSupabase = createAdminClient();
+    const { data: authUsers, error: authError } = await adminSupabase.auth.admin.listUsers();
+    
+    if (authUsers?.users) {
+      profiles = authUsers.users
+        .filter(authUser => userIds.includes(authUser.id))
+        .map(authUser => ({
+          id: authUser.id,
+          full_name: authUser.user_metadata?.full_name || 
+                    authUser.user_metadata?.name || 
+                    authUser.email?.split('@')[0] || 'User',
+          email: authUser.email || '',
+          role: authUser.user_metadata?.role || 'user'
+        }));
+      
+      console.log(`Got ${profiles.length} profiles from auth.admin.listUsers`);
+      return profiles;
+    }
+  } catch (err) {
+    console.log("admin auth users query failed:", err);
+  }
+  
+  return profiles;
+}

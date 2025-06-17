@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { 
   Calendar,
   User,
@@ -15,7 +15,8 @@ import {
   ArrowUp,
   ArrowDown,
   ChevronRight,
-  Download
+  Download,
+  Search
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -59,13 +60,29 @@ type SortDirection = 'asc' | 'desc';
 
 export default function AuditHistoryComponent({ audits, isManager, currentUserId }: AuditHistoryProps) {
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [searchQuery, setSearchQuery] = useState<string>("");
   const [sortField, setSortField] = useState<SortField>('created_at');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
+  // Debug: Log audit data to see what user profiles we have
+  useEffect(() => {
+    console.log("Audit History Debug - Received audits:", audits.map(a => ({
+      id: a.id,
+      title: a.title,
+      user_id: a.user_id,
+      user_profile: a.user_profile
+    })));
+  }, [audits]);
 
-  // Filter audits based on status filter only
+  // Filter audits based on status filter and search query
   const filteredAudits = audits.filter(audit => {
     const matchesStatus = statusFilter === "all" || audit.status === statusFilter;
-    return matchesStatus;
+    const auditTitle = audit.title || `Audit #${audit.id}`;
+    const matchesSearch = searchQuery === "" || 
+      auditTitle.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      audit.comments.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (audit.user_profile?.full_name || '').toLowerCase().includes(searchQuery.toLowerCase());
+    
+    return matchesStatus && matchesSearch;
   });
 
   // Sort audits
@@ -148,21 +165,35 @@ export default function AuditHistoryComponent({ audits, isManager, currentUserId
     if (percentage >= 60) return "text-amber-600";
     return "text-red-600";
   };
-
   const downloadAuditReport = (format: 'csv' | 'pdf') => {
-    const data = sortedAudits.map(audit => ({
-      'Audit ID': audit.id,
-      'Title': audit.title || `Audit #${audit.id}`,
-      'User': audit.user_profile?.full_name || 'Unknown',
-      'Email': audit.user_profile?.email || '',
-      'Status': audit.status,
-      'Result': audit.result || 'Pending',
-      'Score': `${audit.percentage}%`,
-      'Marks': audit.marks,
-      'Created Date': format === 'csv' ? audit.created_at : new Date(audit.created_at).toLocaleDateString(),
-      'Last Modified': format === 'csv' ? audit.last_edit_at : new Date(audit.last_edit_at).toLocaleDateString(),
-      'Comments': audit.comments
-    }));
+    const data = sortedAudits.map(audit => {
+      const getUserName = () => {
+        if (audit.user_profile?.full_name) {
+          return audit.user_profile.full_name;
+        }
+        if (audit.user_profile?.email) {
+          return audit.user_profile.email.split('@')[0];
+        }
+        if (audit.user_id === currentUserId) {
+          return 'You';
+        }
+        return `User ${audit.user_id ? audit.user_id.slice(-4) : 'Unknown'}`;
+      };
+
+      return {
+        'Audit ID': audit.id,
+        'Title': audit.title || `Audit #${audit.id}`,
+        'User': getUserName(),
+        'Email': audit.user_profile?.email || '',
+        'Status': audit.status,
+        'Result': audit.result || 'Pending',
+        'Score': `${audit.percentage}%`,
+        'Marks': audit.marks,
+        'Created Date': format === 'csv' ? audit.created_at : new Date(audit.created_at).toLocaleDateString(),
+        'Last Modified': format === 'csv' ? audit.last_edit_at : new Date(audit.last_edit_at).toLocaleDateString(),
+        'Comments': audit.comments
+      };
+    });
 
     if (format === 'csv') {
       const headers = Object.keys(data[0] || {});
@@ -471,15 +502,42 @@ export default function AuditHistoryComponent({ audits, isManager, currentUserId
       )}
 
       <div className="space-y-6">        {/* Modern Filter Controls */}
-        <div className="flex justify-between items-center mb-6">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6">
           <div className="flex items-center gap-2">
             <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
             <span className="text-sm font-medium text-slate-700">
               {sortedAudits.length} {sortedAudits.length === 1 ? 'Record' : 'Records'}
             </span>
+            {searchQuery && (
+              <span className="text-xs text-slate-500">
+                (filtered from {audits.length} total)
+              </span>
+            )}
           </div>
           
-          <div className="flex items-center gap-4">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
+            {/* Search Bar */}
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <Search className="h-4 w-4 text-slate-400" />
+              </div>
+              <input
+                type="text"
+                placeholder="Search audits by title, comments, or user..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10 pr-4 py-2 w-full sm:w-80 text-sm border border-slate-200 rounded-lg bg-white hover:border-sky-300 focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition-colors placeholder-slate-400"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery("")}
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600"
+                >
+                  <XCircle className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+
             {/* Download Report Buttons */}
             <div className="flex items-center gap-2">
               <button
@@ -723,21 +781,45 @@ export default function AuditHistoryComponent({ audits, isManager, currentUserId
                                 )}
                               </div>
                             </div>
-                          </div>
-                          
-                          {/* User (Manager only) */}
+                          </div>                          {/* User (Manager only) */}
                           {isManager && (
                             <div className="col-span-2">
-                              {audit.user_profile ? (
-                                <div className="flex items-center gap-2">
-                                  <User className="h-4 w-4 text-slate-400" />
+                              <div className="flex items-center gap-2">
+                                <User className="h-4 w-4 text-slate-400" />
+                                <div className="flex flex-col min-w-0 flex-1">
                                   <span className="text-sm text-slate-700 truncate">
-                                    {audit.user_profile.full_name}
+                                    {(() => {
+                                      if (audit.user_profile?.full_name && 
+                                          !audit.user_profile.full_name.startsWith('User ') && 
+                                          audit.user_profile.full_name !== 'You') {
+                                        return audit.user_profile.full_name;
+                                      }
+                                      if (audit.user_profile?.email && 
+                                          audit.user_profile.email !== '' && 
+                                          !audit.user_profile.email.includes('unknown')) {
+                                        return audit.user_profile.email.split('@')[0];
+                                      }
+                                      if (audit.user_id === currentUserId) {
+                                        return 'You';
+                                      }
+                                      return `User ${audit.user_id ? audit.user_id.slice(-4) : 'Unknown'}`;
+                                    })()}
                                   </span>
+                                  {audit.user_profile?.email && 
+                                   !audit.user_profile.email.includes('unknown') && 
+                                   audit.user_profile.email !== '' && (
+                                    <span className="text-xs text-slate-400 truncate">
+                                      {audit.user_profile.email}
+                                    </span>
+                                  )}
+                                  {/* Debug indicator */}
+                                  {audit.user_profile?.full_name && 
+                                   !audit.user_profile.full_name.startsWith('User ') && 
+                                   audit.user_profile.full_name !== 'You' && (
+                                    <div className="w-1 h-1 bg-green-500 rounded-full" title="Real user profile loaded"></div>
+                                  )}
                                 </div>
-                              ) : (
-                                <span className="text-sm text-slate-400">Unknown</span>
-                              )}
+                              </div>
                             </div>
                           )}
                           
