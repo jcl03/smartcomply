@@ -23,6 +23,7 @@ import { Button } from "@/components/ui/button";
 import { format, formatDistanceToNow } from "date-fns";
 import Link from "next/link";
 import { generatePDF } from "@/utils/pdf-utils";
+import { generatePDF } from "@/utils/pdf-utils";
 
 interface AuditDetailData {
   id: number;
@@ -36,19 +37,16 @@ interface AuditDetailData {
   percentage: number;
   comments: string;
   title: string;
-  audit_data: any;  
-  form?: {
+  audit_data: any;  form?: {
     id: number;
     form_schema: any;
     compliance_id: number;
     status: string;
-    date_created: string;    
-    compliance?: {
+    date_created: string;    compliance?: {
       id: number;
       name: string;
     } | null;
-  } | null;
-  user_profile?: {
+  } | null;user_profile?: {
     full_name: string;
     email: string;
   } | null;
@@ -64,7 +62,8 @@ export default function AuditDetailView({ audit, isManager, currentUserId }: Aud
   const [activeTab, setActiveTab] = useState<'overview' | 'responses' | 'comments'>('overview');
   const pdfRef = useRef<HTMLDivElement>(null);
   const [isPdfGenerating, setIsPdfGenerating] = useState<boolean>(false);
-    // Function to handle PDF download
+  
+  // Function to handle PDF download
   const handleDownloadPDF = useCallback(async () => {
     if (!pdfRef.current) return;
     
@@ -74,7 +73,7 @@ export default function AuditDetailView({ audit, isManager, currentUserId }: Aud
       // Generate filename based on audit title or ID
       const filename = `${audit.title || `Audit_${audit.id}`}_${format(new Date(), 'yyyy-MM-dd')}.pdf`;
       
-      // Create complete PDF content with all tabs
+      // Add some custom styling for PDF
       const pdfContainer = document.createElement('div');
       pdfContainer.innerHTML = pdfRef.current.innerHTML;
       pdfContainer.classList.add('pdf-container');
@@ -127,6 +126,47 @@ export default function AuditDetailView({ audit, isManager, currentUserId }: Aud
       setIsPdfGenerating(false);
     }
   }, [pdfRef, audit]);
+  const pdfRef = useRef<HTMLDivElement | null>(null);
+  const [isPdfGenerating, setIsPdfGenerating] = useState<boolean>(false);
+  
+  // Function to handle PDF download
+  const handleDownloadPDF = useCallback(async () => {
+    if (!pdfRef.current) return;
+    
+    try {
+      setIsPdfGenerating(true);
+      
+      // Temporarily display all sections for PDF generation
+      const originalTab = activeTab;
+      setActiveTab('overview');
+      
+      // Allow time for the state to update and render
+      setTimeout(async () => {
+        // Generate filename based on audit title or ID
+        const filename = `${audit.title || `Audit_${audit.id}`}_${format(new Date(), 'yyyy-MM-dd')}.pdf`;
+        
+        // Element to be converted to PDF
+        const element = pdfRef.current;
+        
+        // Generate PDF with appropriate options
+        await generatePDF(element, filename, {
+          margin: { top: 10, right: 10, bottom: 15, left: 10 },
+          format: 'a4',
+          orientation: 'portrait',
+          scale: 1.5,
+          quality: 2,
+          pagebreak: true
+        });
+        
+        // Reset to original tab
+        setActiveTab(originalTab);
+        setIsPdfGenerating(false);
+      }, 100);
+    } catch (error) {
+      console.error("Failed to generate PDF:", error);
+      setIsPdfGenerating(false);
+    }
+  }, [pdfRef, audit, activeTab]);
   
   // Helper function to get form and compliance data
   const getFormData = () => {
@@ -206,9 +246,7 @@ export default function AuditDetailView({ audit, isManager, currentUserId }: Aud
                   <Badge variant="outline" className="text-xs">
                     {field.type || 'text'}
                   </Badge>
-                </div>
-                
-                <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+                </div>                <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
                   <div className="text-sm text-slate-600 mb-1">Response:</div>
                   <div className="text-slate-900">
                     {response ? (
@@ -302,7 +340,6 @@ export default function AuditDetailView({ audit, isManager, currentUserId }: Aud
       </div>
     );
   };
-
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -343,9 +380,7 @@ export default function AuditDetailView({ audit, isManager, currentUserId }: Aud
                   {audit.title || `Audit #${audit.id}`}
                 </h1>
                 {getResultBadge(audit.result)}
-              </div>
-              
-              <div className="flex items-center gap-6 text-slate-600">
+              </div>              <div className="flex items-center gap-6 text-slate-600">
                 <div className="flex items-center gap-2">
                   <FileText className="h-5 w-5" />
                   <span className="font-medium">
@@ -465,16 +500,14 @@ export default function AuditDetailView({ audit, isManager, currentUserId }: Aud
           </button>
         </nav>
       </div>      {/* Tab Content */}
-      <div className="space-y-6">
+      <div ref={pdfRef} className="space-y-6">
         {activeTab === 'overview' && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Form Information */}
             <Card className="p-6 bg-white border-slate-200">
-              <h3 className="text-lg font-semibold text-slate-900 mb-4">Form Information</h3>
-              <div className="space-y-3">
+              <h3 className="text-lg font-semibold text-slate-900 mb-4">Form Information</h3>              <div className="space-y-3">
                 <div>
-                  <span className="text-sm text-slate-600">Compliance Type:</span>
-                  <p className="font-medium text-slate-900">{compliance?.name || 'N/A'}</p>
+                  <span className="text-sm text-slate-600">Compliance Type:</span>                  <p className="font-medium text-slate-900">{compliance?.name || 'N/A'}</p>
                 </div>
                 <div>
                   <span className="text-sm text-slate-600">Form Status:</span>
@@ -484,8 +517,7 @@ export default function AuditDetailView({ audit, isManager, currentUserId }: Aud
                 </div>
                 <div>
                   <span className="text-sm text-slate-600">Form Created:</span>
-                  <p className="text-slate-900">
-                    {form?.date_created 
+                  <p className="text-slate-900">                    {form?.date_created 
                       ? format(new Date(form.date_created), 'MMM d, yyyy')
                       : 'N/A'
                     }
@@ -556,288 +588,123 @@ export default function AuditDetailView({ audit, isManager, currentUserId }: Aud
             )}
           </Card>
         )}
-      </div>      {/* Hidden content for PDF generation - includes ALL tabs */}
+      </div>
+
+      {/* PDF Download Button - Always visible */}
+      <div className="fixed bottom-4 right-4 z-50">
+        <Button 
+          onClick={handleDownloadPDF}
+          className="flex items-center gap-2"
+          variant="outline"
+          size="lg"
+          disabled={isPdfGenerating}
+        >
+          {isPdfGenerating ? (
+            <span className="animate-spin">
+              <Download className="h-5 w-5" />
+            </span>
+          ) : (
+            <FileDown className="h-5 w-5" />
+          )}
+          {isPdfGenerating ? 'Generating PDF...' : 'Download PDF Report'}
+        </Button>
+      </div>
+
+      {/* Hidden div for PDF generation - This will be converted to PDF */}
       <div ref={pdfRef} className="hidden">
-        {/* PDF Header with Professional Layout */}
-        <div style={{ textAlign: 'center', marginBottom: '30px', borderBottom: '2px solid #334155', paddingBottom: '20px' }}>
-          <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#1e293b', marginBottom: '8px' }}>
-            SmartComply Audit Report
+        {/* PDF Content - Repeat the structure of the audit detail view */}
+        <div className="p-6">
+          <h1 className="text-2xl font-bold mb-4">{audit.title || `Audit #${audit.id}`}</h1>
+          <div className="mb-4">
+            <span className="text-sm text-slate-600">Compliance Type:</span>            <p className="font-medium text-slate-900">{compliance?.name || 'N/A'}</p>
           </div>
-          <div style={{ fontSize: '16px', fontWeight: '600', color: '#334155', marginBottom: '15px' }}>
-            {audit.title || `Audit Report #${audit.id}`}
+          <div className="mb-4">
+            <span className="text-sm text-slate-600">Form Status:</span>
+            <Badge variant="outline" className="ml-2">
+              {form?.status || 'N/A'}
+            </Badge>
           </div>
-          
-          {/* Header Information Table */}
-          <div style={{ border: '1px solid #cbd5e1', borderRadius: '8px', overflow: 'hidden', marginTop: '15px' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', backgroundColor: '#f8fafc' }}>
-              <div style={{ padding: '10px', borderRight: '1px solid #cbd5e1', fontSize: '14px', fontWeight: 'bold', color: '#475569' }}>Date:</div>
-              <div style={{ padding: '10px', borderRight: '1px solid #cbd5e1', fontSize: '14px', fontWeight: 'bold', color: '#475569' }}>Day:</div>
-              <div style={{ padding: '10px', fontSize: '14px', fontWeight: 'bold', color: '#475569' }}>Time:</div>
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', backgroundColor: 'white' }}>
-              <div style={{ padding: '10px', borderRight: '1px solid #cbd5e1', fontSize: '13px' }}>
-                {format(new Date(audit.created_at), 'MMMM dd, yyyy')}
+          <div className="mb-4">
+            <span className="text-sm text-slate-600">Form Created:</span>
+            <p className="text-slate-900">              {form?.date_created 
+                ? format(new Date(form.date_created), 'MMM d, yyyy')
+                : 'N/A'
+              }
+            </p>
+          </div>
+
+          {/* Audit Metadata */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 text-sm">
+                <Calendar className="h-4 w-4 text-slate-400" />
+                <span className="text-slate-600">Created:</span>
+                <span className="font-medium text-slate-900">
+                  {format(new Date(audit.created_at), 'MMM d, yyyy h:mm a')}
+                </span>
               </div>
-              <div style={{ padding: '10px', borderRight: '1px solid #cbd5e1', fontSize: '13px' }}>
-                {format(new Date(audit.created_at), 'EEEE')}
-              </div>
-              <div style={{ padding: '10px', fontSize: '13px' }}>
-                {format(new Date(audit.created_at), 'HH:mm')}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Objective Section */}
-        <div style={{ marginBottom: '25px' }}>
-          <div style={{ display: 'flex', gap: '10px', marginBottom: '8px' }}>
-            <span style={{ fontWeight: 'bold', fontSize: '14px', color: '#1e293b', minWidth: '100px' }}>OBJECTIVE</span>
-            <span style={{ fontSize: '14px', color: '#334155' }}>:</span>
-            <span style={{ fontSize: '14px', color: '#334155', lineHeight: '1.5' }}>
-              To monitor and assess compliance standards through systematic audit procedures. 
-              This audit ensures that all requirements are met according to the specified compliance framework: {compliance?.name || 'N/A'}.
-            </span>
-          </div>
-        </div>
-
-        {/* Method Section */}
-        <div style={{ marginBottom: '25px' }}>
-          <div style={{ display: 'flex', gap: '10px', marginBottom: '8px' }}>
-            <span style={{ fontWeight: 'bold', fontSize: '14px', color: '#1e293b', minWidth: '100px' }}>METHOD</span>
-            <span style={{ fontSize: '14px', color: '#334155' }}>:</span>
-            <span style={{ fontSize: '14px', color: '#334155', lineHeight: '1.5' }}>
-              The audit was conducted using a structured assessment form with standardized evaluation criteria. 
-              Performance score calculation was completed at the end of the audit process.
-            </span>
-          </div>
-        </div>
-
-        {/* Scale Section */}
-        <div style={{ marginBottom: '25px', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '15px', backgroundColor: '#f8fafc' }}>
-          <div style={{ fontWeight: 'bold', fontSize: '14px', color: '#1e293b', marginBottom: '10px' }}>SCALE:</div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '8px', fontSize: '12px' }}>
-            <div><strong>5 = Excellent</strong> : Exceeds all standards</div>
-            <div><strong>4 = Good</strong> : Meets all standards</div>
-            <div><strong>3 = Fair</strong> : Minor improvements needed</div>
-            <div><strong>2 = Poor</strong> : Standards not met</div>
-            <div><strong>1 = Very poor</strong> : Significant deficiencies</div>
-          </div>
-        </div>
-
-        {/* Audit Information Grid */}
-        <div style={{ marginBottom: '25px' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-            <div>
-              <div style={{ fontWeight: 'bold', fontSize: '14px', color: '#1e293b', marginBottom: '8px' }}>Audit Information</div>
-              <div style={{ fontSize: '13px', color: '#334155', lineHeight: '1.6' }}>
-                <div style={{ marginBottom: '4px' }}><strong>Compliance Type:</strong> {compliance?.name || 'N/A'}</div>
-                <div style={{ marginBottom: '4px' }}><strong>Form Status:</strong> {form?.status || 'N/A'}</div>
-                <div style={{ marginBottom: '4px' }}><strong>Created:</strong> {format(new Date(audit.created_at), 'MMM d, yyyy h:mm a')}</div>
-                <div><strong>Last Modified:</strong> {format(new Date(audit.last_edit_at), 'MMM d, yyyy h:mm a')}</div>
+              <div className="flex items-center gap-2 text-sm">
+                <Clock className="h-4 w-4 text-slate-400" />
+                <span className="text-slate-600">Last Modified:</span>
+                <span className="font-medium text-slate-900">
+                  {formatDistanceToNow(new Date(audit.last_edit_at), { addSuffix: true })}
+                </span>
               </div>
             </div>
-
-            <div>
-              <div style={{ fontWeight: 'bold', fontSize: '14px', color: '#1e293b', marginBottom: '8px' }}>Audit Results</div>
-              <div style={{ fontSize: '13px', color: '#334155', lineHeight: '1.6' }}>
-                {audit.result && (
-                  <>
-                    <div style={{ marginBottom: '4px' }}><strong>Final Result:</strong> <span style={{ textTransform: 'uppercase', fontWeight: 'bold', color: audit.result === 'pass' ? '#059669' : '#dc2626' }}>{audit.result}</span></div>
-                    <div style={{ marginBottom: '4px' }}><strong>Score:</strong> {audit.marks} points</div>
-                    <div style={{ marginBottom: '4px' }}><strong>Percentage:</strong> {audit.percentage.toFixed(1)}%</div>
-                  </>
-                )}
-                <div style={{ marginBottom: '4px' }}><strong>Audited by:</strong> {audit.user_profile?.full_name || audit.user_profile?.email || 'Unknown'}</div>
-                <div><strong>Status:</strong> {audit.status}</div>
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 text-sm">
+                <Info className="h-4 w-4 text-slate-400" />
+                <span className="text-slate-600">Status:</span>
+                <Badge variant="outline" className="text-xs">
+                  {audit.status}
+                </Badge>
+              </div>
+              <div className="flex items-center gap-2 text-sm">
+                <BarChart3 className="h-4 w-4 text-slate-400" />
+                <span className="text-slate-600">Form Type:</span>
+                <span className="font-medium text-slate-900">
+                  {compliance?.name || 'N/A'}
+                </span>
               </div>
             </div>
           </div>
-        </div>{/* Form Responses Section */}
-        <div className="mb-8">
-          <h2 className="text-2xl font-bold text-slate-900 mb-4 border-b pb-2">Form Responses</h2>
-          {(() => {
-            if (!audit.audit_data) {
-              return (
-                <div className="text-center py-8">
-                  <p className="text-slate-600">No response data available</p>
-                </div>
-              );
-            }
 
-            const responses = audit.audit_data.responses || audit.audit_data;
-            const formSchema = form?.form_schema;
-
-            if (!formSchema || !formSchema.fields) {
-              return (
-                <div className="text-center py-8">
-                  <p className="text-slate-600">Form schema not available</p>
-                </div>
-              );
-            }
-
-            return (
-              <div style={{ width: '100%', border: '1px solid #cbd5e1', borderRadius: '8px', overflow: 'hidden' }}>                {/* Table Header */}
-                <div style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #cbd5e1', padding: '12px' }}>
-                  <div style={{ display: 'grid', gridTemplateColumns: '50px 1fr 1fr 120px 200px', gap: '16px', fontWeight: 'bold', fontSize: '14px', color: '#334155' }}>
-                    <div style={{ textAlign: 'center' }}>No</div>
-                    <div>Item</div>
-                    <div>Response</div>
-                    <div style={{ textAlign: 'center' }}>Marks Received</div>
-                    <div style={{ textAlign: 'center' }}>Remark / Action Required</div>
-                  </div>
-                </div>
-
-                {/* Table Body */}
-                <div>
-                  {formSchema.fields.map((field: any, index: number) => {
-                    const response = responses[field.id] || responses[index];
-                    const responseStr = response ? (typeof response === 'object' ? JSON.stringify(response) : String(response)) : 'No response provided';
-                    
-                    // Calculate marks based on field type and response
-                    let marks = '';
-                    if (field.type === 'radio' || field.type === 'select') {
-                      if (field.enhancedOptions) {
-                        const selectedOption = field.enhancedOptions.find((opt: any) => opt.value === response);
-                        marks = selectedOption ? selectedOption.points.toString() : '0';
-                      } else {
-                        marks = response ? '1' : '0';
-                      }
-                    } else if (field.weightage) {
-                      marks = response ? field.weightage.toString() : '0';
-                    } else {
-                      marks = response ? '1' : '0';
-                    }
-
-                    // Determine status based on response
-                    let status = '';
-                    if (field.type === 'yesno') {
-                      status = response === 'yes' ? 'Satisfactory' : response === 'no' ? 'Non-compliant' : 'Not assessed';
-                    } else if (response) {
-                      status = 'Completed';
-                    } else {
-                      status = 'Pending';
-                    }
-
-                    return (
-                      <div key={field.id || index} style={{ borderBottom: index < formSchema.fields.length - 1 ? '1px solid #e2e8f0' : 'none' }}>
-                        <div style={{ display: 'grid', gridTemplateColumns: '50px 1fr 1fr 120px 200px', gap: '16px', padding: '12px', fontSize: '13px', alignItems: 'flex-start' }}>
-                          {/* Row Number */}
-                          <div style={{ textAlign: 'center', fontWeight: 'bold', color: '#475569' }}>
-                            {index + 1}
-                          </div>
-
-                          {/* Item/Question */}
-                          <div style={{ color: '#334155' }}>
-                            <div style={{ fontWeight: '600', marginBottom: '4px' }}>
-                              {field.label || field.question || `Question ${index + 1}`}
-                            </div>
-                            {field.description && (
-                              <div style={{ fontSize: '12px', color: '#64748b', fontStyle: 'italic' }}>
-                                {field.description}
-                              </div>
-                            )}
-                            {field.type && (
-                              <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '2px' }}>
-                                Type: {field.type}
-                              </div>
-                            )}
-                          </div>                          {/* Standard/Response */}
-                          <div style={{ color: '#334155' }}>
-                            <div style={{ backgroundColor: '#f1f5f9', padding: '8px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
-                              <div style={{ wordWrap: 'break-word', fontSize: '12px' }}>
-                                {field.type === 'image' && response && (response.includes('supabase.co/storage') || response.includes('image') || response.match(/\.(jpeg|jpg|gif|png|webp)$/i)) ? (
-                                  <div>
-                                    <img 
-                                      src={response}
-                                      alt={field.label || 'Uploaded image'}
-                                      style={{ 
-                                        maxWidth: '200px', 
-                                        maxHeight: '150px', 
-                                        objectFit: 'contain',
-                                        border: '1px solid #e2e8f0',
-                                        borderRadius: '4px',
-                                        display: 'block'
-                                      }}
-                                      onError={(e) => {
-                                        const target = e.target as HTMLImageElement;
-                                        target.style.display = 'none';
-                                        const fallback = target.nextSibling as HTMLElement;
-                                        if (fallback) fallback.style.display = 'block';
-                                      }}
-                                    />
-                                    <div style={{ fontSize: '11px', color: '#059669', marginTop: '4px', display: 'none' }}>
-                                      Image could not be loaded
-                                    </div>
-                                  </div>
-                                ) : (
-                                  responseStr.length > 100 ? responseStr.substring(0, 100) + '...' : responseStr
-                                )}
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Marks */}
-                          <div style={{ textAlign: 'center', fontWeight: 'bold', color: marks === '0' ? '#dc2626' : '#059669' }}>
-                            {marks}
-                          </div>
-
-                          {/* Status/Remark */}
-                          <div style={{ textAlign: 'center' }}>
-                            <div style={{ 
-                              padding: '4px 8px', 
-                              borderRadius: '4px', 
-                              fontSize: '11px', 
-                              fontWeight: '600',
-                              backgroundColor: status === 'Satisfactory' || status === 'Completed' ? '#dcfce7' : 
-                                              status === 'Non-compliant' ? '#fecaca' : '#fef3c7',
-                              color: status === 'Satisfactory' || status === 'Completed' ? '#166534' : 
-                                     status === 'Non-compliant' ? '#991b1b' : '#92400e'
-                            }}>
-                              {status}
-                            </div>
-                            {field.required && !response && (
-                              <div style={{ fontSize: '10px', color: '#dc2626', marginTop: '4px' }}>
-                                Required
-                              </div>
-                            )}
-                            {field.autoFail && response && (field.type === 'yesno' ? response === 'no' : !response) && (
-                              <div style={{ fontSize: '10px', color: '#dc2626', marginTop: '4px', fontWeight: 'bold' }}>
-                                AUTO-FAIL
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-
-                {/* Table Footer Summary */}
-                <div style={{ backgroundColor: '#f8fafc', borderTop: '1px solid #cbd5e1', padding: '12px' }}>
-                  <div style={{ display: 'grid', gridTemplateColumns: '50px 1fr 1fr 120px 200px', gap: '16px', fontWeight: 'bold', fontSize: '14px', color: '#334155' }}>
-                    <div></div>
-                    <div>TOTAL</div>
-                    <div></div>
-                    <div style={{ textAlign: 'center', color: '#059669' }}>
-                      {audit.marks}
-                    </div>
-                    <div style={{ textAlign: 'center', color: audit.result === 'pass' ? '#059669' : '#dc2626' }}>
-                      {audit.result === 'pass' ? 'PASS' : audit.result === 'failed' ? 'FAILED' : 'PENDING'}
-                    </div>
-                  </div>
+          {/* Audit Statistics */}
+          {audit.result && (
+            <div className="mb-6">
+              <div className="flex items-center justify-between mb-4">
+                <span className="text-slate-600">Final Result:</span>
+                <div className="flex items-center gap-2">
+                  {getResultIcon(audit.result)}
+                  <span className="font-medium text-slate-900 capitalize">{audit.result}</span>
                 </div>
               </div>
-            );
-          })()}
-        </div>
+              <div className="flex items-center justify-between mb-4">
+                <span className="text-slate-600">Score:</span>
+                <span className="font-medium text-slate-900">{audit.marks} points</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-slate-600">Percentage:</span>
+                <span className={`font-medium ${getPercentageColor(audit.percentage)}`}>
+                  {audit.percentage.toFixed(1)}%
+                </span>
+              </div>
+            </div>
+          )}
 
-        {/* Comments Section */}
-        <div className="mb-8">
-          <h2 className="text-2xl font-bold text-slate-900 mb-4 border-b pb-2">Comments & Notes</h2>
-          <div className="p-4 bg-white border border-slate-200 rounded-lg">
+          {/* Form Responses - Repeat the rendering logic for responses */}
+          <div className="mb-6">
+            <h3 className="text-lg font-semibold text-slate-900 mb-4">Form Responses</h3>
+            {renderFormResponses()}
+          </div>
+
+          {/* Comments Section */}
+          <div>
+            <h3 className="text-lg font-semibold text-slate-900 mb-4">Comments & Notes</h3>
             {audit.comments ? (
-              <div className="bg-slate-50 rounded-lg p-6 border border-slate-200">
+              <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
                 <div className="flex items-start gap-3">
+                  <MessageSquare className="h-5 w-5 text-slate-400 mt-1 flex-shrink-0" />
                   <div className="flex-1">
                     <div className="text-sm text-slate-600 mb-2">Audit Comments:</div>
                     <p className="text-slate-900 whitespace-pre-wrap">{audit.comments}</p>
@@ -845,13 +712,13 @@ export default function AuditDetailView({ audit, isManager, currentUserId }: Aud
                 </div>
               </div>
             ) : (
-              <div className="text-center py-8">
+              <div className="text-center py-4">
+                <MessageSquare className="h-12 w-12 text-slate-400 mx-auto mb-2" />
                 <p className="text-slate-600">No comments available for this audit</p>
               </div>
             )}
           </div>
         </div>
       </div>
-    </div>
-  );
-}
+    );
+  }

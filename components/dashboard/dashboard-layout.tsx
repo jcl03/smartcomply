@@ -41,7 +41,8 @@ interface DashboardLayoutProps {
   } | null;
 }
 
-const navigation = [  { name: "Dashboard", href: "/protected", icon: Home },
+const navigation = [
+  { name: "Dashboard", href: "/protected", icon: Home },
   { name: "User Management", href: "/protected/user-management", icon: Users, adminOnly: true },
   { name: "Compliance", href: "/protected/compliance", icon: Shield },
   { name: "Documents", href: "/protected/documents", icon: Folder, managerOnly: true },
@@ -184,8 +185,7 @@ export default function DashboardLayout({ children, userProfile }: DashboardLayo
               </div>
               {children}
             </div>
-          </div>
-        </main>
+          </div>        </main>
       </div>
     </div>
     </BreadcrumbProvider>
