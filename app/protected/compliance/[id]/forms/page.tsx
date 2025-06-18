@@ -91,13 +91,15 @@ export default async function ComplianceFormsPage({ params }: { params: Promise<
               </div>
             </div>
             <div className="flex gap-3">
-              <Link 
-                href={`/protected/compliance/${id}/forms/archive`}
-                className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-sky-100 text-sky-700 hover:bg-sky-200 border border-sky-200 transition-all duration-200 font-medium"
-              >
-                <Archive className="h-4 w-4" />
-                View Archived
-              </Link>
+              {isAdmin && (
+                <Link 
+                  href={`/protected/compliance/${id}/forms/archive`}
+                  className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-sky-100 text-sky-700 hover:bg-sky-200 border border-sky-200 transition-all duration-200 font-medium"
+                >
+                  <Archive className="h-4 w-4" />
+                  View Archived
+                </Link>
+              )}
               <Link 
                 href={`/protected/compliance/${id}/forms/add`}
                 className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-gradient-to-r from-sky-500 to-blue-600 text-white hover:from-sky-600 hover:to-blue-700 transition-all duration-200 shadow-md hover:shadow-lg font-medium"
@@ -179,16 +181,18 @@ export default async function ComplianceFormsPage({ params }: { params: Promise<
                                   >
                                     Preview
                                   </Link>
-                                  <form action={handleActivateForm} className="inline">
-                                    <input type="hidden" name="id" value={form.id} />
-                                    <button
-                                      type="submit"
-                                      className="px-3 py-1.5 text-xs bg-emerald-100 text-emerald-700 rounded-lg hover:bg-emerald-200 transition-colors flex items-center gap-1 font-medium border border-emerald-200"
-                                    >
-                                      <RotateCcw className="h-3 w-3" />
-                                      Activate
-                                    </button>
-                                  </form>
+                                  {isAdmin && (
+                                    <form action={handleActivateForm} className="inline">
+                                      <input type="hidden" name="id" value={form.id} />
+                                      <button
+                                        type="submit"
+                                        className="px-3 py-1.5 text-xs bg-emerald-100 text-emerald-700 rounded-lg hover:bg-emerald-200 transition-colors flex items-center gap-1 font-medium border border-emerald-200"
+                                      >
+                                        <RotateCcw className="h-3 w-3" />
+                                        Activate
+                                      </button>
+                                    </form>
+                                  )}
                                 </>
                               ) : (
                                 <>
@@ -206,16 +210,18 @@ export default async function ComplianceFormsPage({ params }: { params: Promise<
                                   >
                                     Preview
                                   </Link>
-                                  <form action={handleArchiveForm} className="inline">
-                                    <input type="hidden" name="id" value={form.id} />
-                                    <button
-                                      type="submit"
-                                      className="px-3 py-1.5 text-xs bg-orange-100 text-orange-700 rounded-lg hover:bg-orange-200 transition-colors flex items-center gap-1 font-medium border border-orange-200"
-                                    >
-                                      <Archive className="h-3 w-3" />
-                                      Archive
-                                    </button>
-                                  </form>
+                                  {isAdmin && (
+                                    <form action={handleArchiveForm} className="inline">
+                                      <input type="hidden" name="id" value={form.id} />
+                                      <button
+                                        type="submit"
+                                        className="px-3 py-1.5 text-xs bg-orange-100 text-orange-700 rounded-lg hover:bg-orange-200 transition-colors flex items-center gap-1 font-medium border border-orange-200"
+                                      >
+                                        <Archive className="h-3 w-3" />
+                                        Archive
+                                      </button>
+                                    </form>
+                                  )}
                                 </>
                               )}
                             </div>
