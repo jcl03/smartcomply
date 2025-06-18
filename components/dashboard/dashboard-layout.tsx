@@ -41,12 +41,13 @@ interface DashboardLayoutProps {
   } | null;
 }
 
-const navigation = [  { name: "Dashboard", href: "/protected", icon: Home },
+const navigation = [
+  { name: "Dashboard", href: "/protected", icon: Home },
   { name: "User Management", href: "/protected/user-management", icon: Users, adminOnly: true },
   { name: "Compliance", href: "/protected/compliance", icon: Shield },
   { name: "Documents", href: "/protected/documents", icon: Folder, managerOnly: true },
-  { name: "Checklists", href: "/protected/checklist", icon: FileText, managerOnly: true },
-  { name: "Audits", href: "/protected/Audit", icon: CheckCircle, excludeForAdmin: true },
+  { name: "Checklist Responses", href: "/protected/checklist-responses", icon: FileText, managerOnly: true },
+  { name: "Audit History", href: "/protected/Audit", icon: CheckCircle, excludeForAdmin: true },
   { name: "Reports", href: "/protected/reports", icon: FileText, excludeForAdmin: true },
 ];
 
@@ -178,10 +179,17 @@ export default function DashboardLayout({ children, userProfile }: DashboardLayo
         <main className="flex-1 lg:ml-64 min-w-0 relative">
           <div className="h-full overflow-y-auto">
             <div className="p-6">
+              {/* Breadcrumb */}
+              <div className="mb-6 border-b border-sky-100 pb-4">
+                <Breadcrumb className="hidden sm:flex" />
+                {/* Mobile breadcrumb - simplified */}
+                <div className="sm:hidden">
+                  <Breadcrumb className="overflow-x-auto scrollbar-hide" />
+                </div>
+              </div>
               {children}
             </div>
-          </div>
-        </main>
+          </div>        </main>
       </div>
     </div>
     </BreadcrumbProvider>
