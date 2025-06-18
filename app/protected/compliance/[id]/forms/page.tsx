@@ -66,6 +66,8 @@ export default async function ComplianceFormsPage({ params }: { params: Promise<
     await activateForm(formId);
     redirect(`/protected/compliance/${id}/forms`);
   }
+  // Determine if user is admin
+  const isAdmin = profile && profile.role === 'admin';
   return (
     <DashboardLayout userProfile={currentUserProfile}>
       <div className="space-y-6">
@@ -163,12 +165,14 @@ export default async function ComplianceFormsPage({ params }: { params: Promise<
                             <div className="flex gap-2">
                               {form.status === 'draft' ? (
                                 <>
-                                  <Link 
-                                    href={`/protected/compliance/${id}/forms/${form.id}/edit`}
-                                    className="px-3 py-1.5 text-xs bg-sky-100 text-sky-700 rounded-lg hover:bg-sky-200 transition-colors font-medium border border-sky-200"
-                                  >
-                                    Edit
-                                  </Link>
+                                  {isAdmin && (
+                                    <Link 
+                                      href={`/protected/compliance/${id}/forms/${form.id}/edit`}
+                                      className="px-3 py-1.5 text-xs bg-sky-100 text-sky-700 rounded-lg hover:bg-sky-200 transition-colors font-medium border border-sky-200"
+                                    >
+                                      Edit
+                                    </Link>
+                                  )}
                                   <Link 
                                     href={`/protected/compliance/${id}/forms/${form.id}/preview`}
                                     className="px-3 py-1.5 text-xs bg-gradient-to-r from-sky-500 to-blue-600 text-white rounded-lg hover:from-sky-600 hover:to-blue-700 transition-colors font-medium shadow-sm"
@@ -188,12 +192,14 @@ export default async function ComplianceFormsPage({ params }: { params: Promise<
                                 </>
                               ) : (
                                 <>
-                                  <Link 
-                                    href={`/protected/compliance/${id}/forms/${form.id}/edit`}
-                                    className="px-3 py-1.5 text-xs bg-sky-100 text-sky-700 rounded-lg hover:bg-sky-200 transition-colors font-medium border border-sky-200"
-                                  >
-                                    Edit
-                                  </Link>
+                                  {isAdmin && (
+                                    <Link 
+                                      href={`/protected/compliance/${id}/forms/${form.id}/edit`}
+                                      className="px-3 py-1.5 text-xs bg-sky-100 text-sky-700 rounded-lg hover:bg-sky-200 transition-colors font-medium border border-sky-200"
+                                    >
+                                      Edit
+                                    </Link>
+                                  )}
                                   <Link 
                                     href={`/protected/compliance/${id}/forms/${form.id}/preview`}
                                     className="px-3 py-1.5 text-xs bg-gradient-to-r from-sky-500 to-blue-600 text-white rounded-lg hover:from-sky-600 hover:to-blue-700 transition-colors font-medium shadow-sm"
