@@ -676,13 +676,12 @@ export default function AuditDetailView({ audit, isManager, currentUserId }: Aud
             }
 
             return (
-              <div style={{ width: '100%', border: '1px solid #cbd5e1', borderRadius: '8px', overflow: 'hidden' }}>
-                {/* Table Header */}
+              <div style={{ width: '100%', border: '1px solid #cbd5e1', borderRadius: '8px', overflow: 'hidden' }}>                {/* Table Header */}
                 <div style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #cbd5e1', padding: '12px' }}>
                   <div style={{ display: 'grid', gridTemplateColumns: '50px 1fr 1fr 120px 200px', gap: '16px', fontWeight: 'bold', fontSize: '14px', color: '#334155' }}>
                     <div style={{ textAlign: 'center' }}>No</div>
                     <div>Item</div>
-                    <div>Standard</div>
+                    <div>Response</div>
                     <div style={{ textAlign: 'center' }}>Marks Received</div>
                     <div style={{ textAlign: 'center' }}>Remark / Action Required</div>
                   </div>
@@ -742,18 +741,32 @@ export default function AuditDetailView({ audit, isManager, currentUserId }: Aud
                                 Type: {field.type}
                               </div>
                             )}
-                          </div>
-
-                          {/* Standard/Response */}
+                          </div>                          {/* Standard/Response */}
                           <div style={{ color: '#334155' }}>
                             <div style={{ backgroundColor: '#f1f5f9', padding: '8px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
-                              <div style={{ fontSize: '11px', color: '#64748b', marginBottom: '4px' }}>Response:</div>
                               <div style={{ wordWrap: 'break-word', fontSize: '12px' }}>
-                                {field.type === 'image' && response && (response.includes('supabase.co/storage') || response.includes('image')) ? (
+                                {field.type === 'image' && response && (response.includes('supabase.co/storage') || response.includes('image') || response.match(/\.(jpeg|jpg|gif|png|webp)$/i)) ? (
                                   <div>
-                                    <div style={{ fontSize: '11px', color: '#059669' }}>✓ Image uploaded</div>
-                                    <div style={{ fontSize: '10px', color: '#6b7280', marginTop: '2px', wordBreak: 'break-all' }}>
-                                      {response}
+                                    <img 
+                                      src={response}
+                                      alt={field.label || 'Uploaded image'}
+                                      style={{ 
+                                        maxWidth: '200px', 
+                                        maxHeight: '150px', 
+                                        objectFit: 'contain',
+                                        border: '1px solid #e2e8f0',
+                                        borderRadius: '4px',
+                                        display: 'block'
+                                      }}
+                                      onError={(e) => {
+                                        const target = e.target as HTMLImageElement;
+                                        target.style.display = 'none';
+                                        const fallback = target.nextSibling as HTMLElement;
+                                        if (fallback) fallback.style.display = 'block';
+                                      }}
+                                    />
+                                    <div style={{ fontSize: '11px', color: '#059669', marginTop: '4px', display: 'none' }}>
+                                      Image could not be loaded
                                     </div>
                                   </div>
                                 ) : (

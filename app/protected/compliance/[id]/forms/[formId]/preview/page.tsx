@@ -38,8 +38,8 @@ export default async function PreviewFormPage({
     .eq('email', user.email)
     .single();
     
-  // If not admin, redirect to protected page
-  if (!profile || profile.role !== 'admin') {
+  // If not admin or manager, redirect to protected page
+  if (!profile || (profile.role !== 'admin' && profile.role !== 'manager')) {
     return redirect("/protected");
   }
   // Fetch compliance framework (only active ones)
@@ -250,6 +250,9 @@ export default async function PreviewFormPage({
     );
   };
 
+  // Determine if user is admin
+  const isAdmin = profile && profile.role === 'admin';
+
   return (
     <DashboardLayout userProfile={currentUserProfile}>
       <div className="space-y-8">
@@ -284,13 +287,16 @@ export default async function PreviewFormPage({
                 <ArrowLeft size={16} className="mr-2" />
                 Back to Forms
               </Link>
-              <Link 
-                href={`/protected/compliance/${id}/forms/${formId}/edit`}
-                className="inline-flex items-center justify-center rounded-lg bg-gradient-to-r from-sky-500 to-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:from-sky-600 hover:to-blue-700 transition-all duration-200 shadow-md hover:shadow-lg"
-              >
-                <Edit size={16} className="mr-2" />
-                Edit Form
-              </Link>
+              {/* Only show Edit button for admin */}
+              {isAdmin && (
+                <Link 
+                  href={`/protected/compliance/${id}/forms/${formId}/edit`}
+                  className="inline-flex items-center justify-center rounded-lg bg-gradient-to-r from-sky-500 to-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:from-sky-600 hover:to-blue-700 transition-all duration-200 shadow-md hover:shadow-lg"
+                >
+                  <Edit size={16} className="mr-2" />
+                  Edit Form
+                </Link>
+              )}
             </div>
           </div>
         </div>

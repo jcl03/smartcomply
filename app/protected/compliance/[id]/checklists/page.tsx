@@ -96,13 +96,15 @@ export default async function ComplianceChecklistsPage({ params }: { params: Pro
                 <ArrowLeft size={16} className="mr-2" />
                 Back
               </Link>
-              <Link 
-                href={`/protected/compliance/${id}/checklists/archive`}
-                className="inline-flex items-center justify-center rounded-lg bg-sky-50 px-4 py-2.5 text-sm font-medium text-sky-700 hover:bg-sky-100 transition-all duration-200 border border-sky-200 shadow-sm"
-              >
-                <Archive size={16} className="mr-2" />
-                View Archived
-              </Link>
+              {isAdmin && (
+                <Link 
+                  href={`/protected/compliance/${id}/checklists/archive`}
+                  className="inline-flex items-center justify-center rounded-lg bg-sky-100 px-4 py-2.5 text-sm font-medium text-sky-700 hover:bg-sky-200 border border-sky-200 transition-all duration-200 shadow-sm"
+                >
+                  <Archive size={16} className="mr-2" />
+                  View Archived
+                </Link>
+              )}
               {isAdmin && (
                 <Link 
                   href={`/protected/compliance/${id}/checklists/add`}
