@@ -17,13 +17,27 @@ import {
   Activity,
   BarChart3,
   Plus,
-  ClipboardList
+  ClipboardList,
+  Filter
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { getUserProfile } from "@/lib/api";
+import ComplianceFilter from "@/components/checklist/basic-filter";
+import FilterIndicator from "@/components/checklist/filter-indicator";
+import FilterByCompliance from "@/components/checklist/filter-by-compliance";
+import FilteredIndicator from "@/components/checklist/filtered-indicator";
 
-export default async function ChecklistResponsesPage() {
+// Add this function to handle server-side filtering based on search params
+export default async function ChecklistResponsesPage({
+  searchParams,
+}: {
+  searchParams: { [key: string]: string | string[] | undefined };
+}) {
   const supabase = await createClient();
+    // Get the compliance filter from URL search params
+  const complianceFilter = typeof searchParams.compliance === 'string' && searchParams.compliance !== '' 
+    ? searchParams.compliance.trim() 
+    : undefined;
   
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) {
@@ -41,12 +55,19 @@ export default async function ChecklistResponsesPage() {
   }  // Debug logging
   console.log('User profile:', profile);
   console.log('Current user ID:', user.id);
+  console.log('Active compliance filter:', complianceFilter);
+
+  // Fetch all active compliance frameworks for filtering
+  const { data: complianceFrameworks } = await supabase
+    .from('compliance')
+    .select('id, name')
+    .eq('status', 'active')
+    .order('name');
 
   // Fetch checklist responses based on user role
-  let responses, error;
-  if (profile.role === 'manager') {
+  let responses, error;  if (profile.role === 'manager') {
     // Managers can view all checklist responses
-    const result = await supabase
+    let query = supabase
       .from('checklist_responses')
       .select(`
         id,
@@ -58,13 +79,37 @@ export default async function ChecklistResponsesPage() {
         created_at,
         user_id,
         response_data
-      `)
-      .order('created_at', { ascending: false });
+      `);
+
+    // Apply compliance filter if needed through checklists
+    if (complianceFilter) {
+      console.log('Manager: Applying filter for compliance ID:', complianceFilter);
+      // First fetch checklists that match the compliance ID if filter is active
+      const { data: filteredChecklistIds, error: filterError } = await supabase
+        .from('checklist')
+        .select('id')
+        .eq('compliance_id', complianceFilter);
+      
+      if (filterError) {
+        console.error('Error fetching checklists for compliance filter:', filterError);
+      }
+      
+      if (filteredChecklistIds && filteredChecklistIds.length > 0) {
+        const checklistIds = filteredChecklistIds.map(c => c.id);
+        console.log('Found checklist IDs for filter:', checklistIds);
+        query = query.in('checklist_id', checklistIds);
+      } else {
+        console.log('No checklists found for compliance ID:', complianceFilter);
+        // If no checklists match the filter, add an impossible condition to return no results
+        query = query.eq('id', -1);
+      }
+    }
+
+    const result = await query.order('created_at', { ascending: false });
     responses = result.data;
-    error = result.error;
-  } else {
+    error = result.error;  } else {
     // Regular users can only view their own checklist responses
-    const result = await supabase
+    let query = supabase
       .from('checklist_responses')
       .select(`
         id,
@@ -77,8 +122,33 @@ export default async function ChecklistResponsesPage() {
         user_id,
         response_data
       `)
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false });
+      .eq('user_id', user.id);
+    
+    // Apply compliance filter if needed through checklists
+    if (complianceFilter) {
+      console.log('User: Applying filter for compliance ID:', complianceFilter);
+      // First fetch checklists that match the compliance ID if filter is active
+      const { data: filteredChecklistIds, error: filterError } = await supabase
+        .from('checklist')
+        .select('id')
+        .eq('compliance_id', complianceFilter);
+      
+      if (filterError) {
+        console.error('Error fetching checklists for compliance filter:', filterError);
+      }
+      
+      if (filteredChecklistIds && filteredChecklistIds.length > 0) {
+        const checklistIds = filteredChecklistIds.map(c => c.id);
+        console.log('Found checklist IDs for filter:', checklistIds);
+        query = query.in('checklist_id', checklistIds);
+      } else {
+        console.log('No checklists found for compliance ID:', complianceFilter);
+        // If no checklists match the filter, add an impossible condition to return no results
+        query = query.eq('id', -1);
+      }
+    }
+
+    const result = await query.order('created_at', { ascending: false });
     responses = result.data;
     error = result.error;
   }
@@ -266,7 +336,10 @@ export default async function ChecklistResponsesPage() {
                   <div className="flex items-center gap-2 text-sm text-slate-500">
                     {profile.role === 'manager' ? <Shield className="h-4 w-4" /> : <User className="h-4 w-4" />}
                     <span>{profile.role === 'manager' ? 'Manager Access' : 'User Access'}</span>
-                  </div>
+                  </div>                  <FilterIndicator 
+                    complianceFilter={complianceFilter} 
+                    frameworkName={complianceFrameworks?.find(f => f.id.toString() === complianceFilter)?.name} 
+                  />
                 </div>
               </div>
               
@@ -294,9 +367,9 @@ export default async function ChecklistResponsesPage() {
               <div className="flex items-center justify-between mb-4">
                 <div className="bg-blue-100 p-3 rounded-xl shadow-sm group-hover:shadow-md transition-all duration-300">
                   <FileText className="h-6 w-6 text-blue-600" />
-                </div>
-                <div className="text-right">
+                </div>                <div className="text-right">
                   <p className="text-2xl lg:text-3xl font-bold text-blue-900">{responses?.length || 0}</p>
+                  <FilteredIndicator isFiltered={!!complianceFilter} />
                 </div>
               </div>
               <h3 className="text-sm font-semibold text-blue-700 uppercase tracking-wider mb-1">
@@ -388,28 +461,20 @@ export default async function ChecklistResponsesPage() {
           </Card>
         )}
 
-        {/* Submissions Overview */}
-        <Card className="bg-white/90 backdrop-blur-md border-slate-200/50 rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-500 overflow-hidden">
-          <div className="bg-gradient-to-r from-slate-800 via-slate-700 to-slate-800 text-white p-6 relative overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-r from-blue-600/10 via-sky-500/10 to-indigo-600/10"></div>
-            <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-white/5 to-transparent rounded-full -translate-y-16 translate-x-16"></div>
-            
-            <div className="relative z-10 flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="bg-white/20 backdrop-blur-sm p-3 rounded-xl border border-white/30">
-                  <ClipboardList className="h-6 w-6" />
-                </div>
-                <div>
-                  <h3 className="text-xl font-bold">
-                    {profile.role === 'manager' ? 'All Checklist Submissions' : 'My Checklist Submissions'}
-                  </h3>
-                  <p className="text-slate-300 text-sm">
-                    {profile.role === 'manager' ? 'Monitor team compliance progress' : 'Track your compliance status'}
-                  </p>
-                </div>
+        {/* Submissions Overview */}        <Card className="bg-white/90 border-slate-200/50 rounded-2xl shadow-xl overflow-hidden">
+          <div className="bg-slate-800 text-white p-5 relative">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <ComplianceFilter 
+                  complianceFrameworks={complianceFrameworks || []} 
+                  activeFilterId={complianceFilter}
+                />
               </div>
-              <div className="bg-white/10 px-3 py-1 rounded-lg text-sm font-medium">
-                {responses?.length || 0} {responses?.length === 1 ? 'Submission' : 'Submissions'}
+              <div className="flex items-center">
+                <div className="bg-indigo-600/60 text-white px-5 py-2 rounded-full text-sm font-medium flex items-center">
+                  <span className="font-bold mr-2">{responses?.length || 0}</span>
+                  <span>{responses?.length === 1 ? 'Submission' : 'Submissions'}</span>
+                </div>
               </div>
             </div>
           </div>
@@ -481,11 +546,12 @@ export default async function ChecklistResponsesPage() {
                               </div>
                             );
                           })()}
-                        </td>
-                        <td className="p-4">
-                          <p className="font-medium text-slate-700">
-                            {checklistInfo[response.checklist_id]?.compliance?.name || 'Unknown Framework'}
-                          </p>
+                        </td>                        <td className="p-4">
+                          <FilterByCompliance
+                            complianceId={checklistInfo[response.checklist_id]?.compliance?.id}
+                            isFiltered={!!complianceFilter && checklistInfo[response.checklist_id]?.compliance?.id.toString() === complianceFilter}
+                            frameworkName={checklistInfo[response.checklist_id]?.compliance?.name || 'Unknown Framework'}
+                          />
                         </td>
                         {profile.role === 'manager' && (
                           <td className="p-4">
