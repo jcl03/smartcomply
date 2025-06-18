@@ -163,7 +163,6 @@ export default function AuditDetailView({ audit, isManager, currentUserId }: Aud
     if (percentage >= 60) return "text-yellow-600";
     return "text-red-600";
   };
-
   const renderFormResponses = () => {
     if (!audit.audit_data) {
       return (
@@ -184,128 +183,293 @@ export default function AuditDetailView({ audit, isManager, currentUserId }: Aud
           <p className="text-slate-600">Form schema not available</p>
         </div>
       );
-    }
-
-    return (
-      <div className="space-y-6">
-        {formSchema.fields.map((field: any, index: number) => {
-          const response = responses[field.id] || responses[index];
-          
-          return (
-            <Card key={field.id || index} className="p-6 bg-white border-slate-200">
-              <div className="space-y-3">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <h4 className="font-semibold text-slate-900 text-lg">
-                      {field.label || field.question || `Question ${index + 1}`}
-                    </h4>
-                    {field.description && (
-                      <p className="text-slate-600 text-sm mt-1">{field.description}</p>
-                    )}
-                  </div>
-                  <Badge variant="outline" className="text-xs">
-                    {field.type || 'text'}
-                  </Badge>
-                </div>
-                
-                <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
-                  <div className="text-sm text-slate-600 mb-1">Response:</div>
-                  <div className="text-slate-900">
-                    {response ? (
-                      (() => {
-                        const responseStr = typeof response === 'object' ? JSON.stringify(response, null, 2) : String(response);
-                        
-                        // Check if response is an image URL
-                        if (field.type === 'image' || field.type === 'file' || 
-                            (typeof response === 'string' && 
-                             (response.includes('supabase.co/storage') || 
-                              response.match(/\.(jpeg|jpg|gif|png|webp)$/i) ||
-                              response.startsWith('data:image/') ||
-                              response.startsWith('blob:') ||
-                              response.startsWith('http') && response.includes('image')))) {
-                          return (
-                            <div className="space-y-3">
-                              <div className="relative group">
-                                <img 
-                                  src={response}
-                                  alt={field.label || 'Uploaded image'}
-                                  className="max-w-full h-auto max-h-96 rounded-lg border border-slate-200 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
-                                  onError={(e) => {
-                                    const target = e.target as HTMLImageElement;
-                                    target.style.display = 'none';
-                                    const fallback = target.nextSibling as HTMLElement;
-                                    if (fallback) fallback.style.display = 'block';
-                                  }}
-                                  onClick={() => window.open(response, '_blank')}
-                                />
-                                <div className="hidden bg-red-50 border border-red-200 rounded-lg p-3">
-                                  <div className="text-red-600 text-sm mb-2">Failed to load image</div>
-                                  <div className="text-slate-600 text-xs font-mono break-all">
-                                    {response}
-                                  </div>
-                                </div>
-                                {/* Overlay with download/view buttons */}
-                                <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all duration-200 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100">
-                                  <div className="flex gap-2">
-                                    <button 
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        window.open(response, '_blank');
-                                      }}
-                                      className="bg-white bg-opacity-90 hover:bg-opacity-100 rounded-full p-2 shadow-lg transition-all"
-                                      title="View full size"
-                                    >
-                                      <Eye className="h-4 w-4 text-slate-700" />
-                                    </button>
-                                    <button 
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        const link = document.createElement('a');
-                                        link.href = response;
-                                        link.download = `${field.label || 'image'}.jpg`;
-                                        link.click();
-                                      }}
-                                      className="bg-white bg-opacity-90 hover:bg-opacity-100 rounded-full p-2 shadow-lg transition-all"
-                                      title="Download image"
-                                    >
-                                      <Download className="h-4 w-4 text-slate-700" />
-                                    </button>
-                                  </div>
-                                </div>
-                              </div>
-                              <div className="text-xs text-slate-500 font-mono break-all bg-slate-100 p-2 rounded border">
+    }    // Group fields by section structure
+    const groupedFields = formSchema.fields.reduce((acc: any, field: any, index: number) => {
+      const fieldLabel = field.label || field.question || `Question ${index + 1}`;
+      
+      // Group all kitchen-related fields under "Kitchen Clean Level"
+      if (fieldLabel.toLowerCase().includes('kitchen')) {
+        if (!acc['Kitchen Clean Level']) {
+          acc['Kitchen Clean Level'] = { subsections: [] };
+        }
+        
+        // Don't show "Kitchen Clean Level" as a subsection since it's the section title
+        if (!fieldLabel.toLowerCase().includes('clean level')) {
+          acc['Kitchen Clean Level'].subsections.push({ ...field, index });
+        }
+      } 
+      // Group floor-related fields and "Question 4" under "Floor Cleanliness"
+      else if (fieldLabel.toLowerCase().includes('floor') || fieldLabel === 'Question 4') {
+        if (!acc['Floor Cleanliness']) {
+          acc['Floor Cleanliness'] = { subsections: [] };
+        }
+        
+        // Don't show "Floor Cleanliness" as a subsection since it's the section title
+        if (!fieldLabel.toLowerCase().includes('cleanliness')) {
+          acc['Floor Cleanliness'].subsections.push({ ...field, index });
+        }
+      } else {
+        // For other fields, treat as individual sections
+        acc[fieldLabel] = { main: { ...field, index }, subsections: [] };
+      }
+      
+      return acc;
+    }, {});    const renderField = (field: any, isSubsection = false) => {
+      const response = responses[field.id] || responses[field.index];
+        return (
+        <div key={field.id || field.index} className={isSubsection ? 'ml-4 relative group' : 'group'}>
+          {isSubsection && (
+            <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-blue-200 to-blue-300 rounded-full group-hover:from-blue-300 group-hover:to-blue-400 transition-all duration-200"></div>
+          )}
+          <div className={`space-y-3 transition-all duration-200 ${isSubsection 
+            ? 'ml-6 p-4 bg-blue-50/30 hover:bg-blue-50/50 rounded-lg border border-blue-100 hover:border-blue-200 hover:shadow-sm' 
+            : 'hover:bg-slate-50/50 rounded-lg p-2 -m-2'
+          }`}>
+            <div className="flex items-start justify-between">
+              <div className="flex-1">
+                <h4 className={isSubsection 
+                  ? 'font-semibold text-slate-800 text-base flex items-center gap-2' 
+                  : 'font-semibold text-slate-900 text-lg'
+                }>
+                  {isSubsection && <span className="text-blue-500">▸</span>}
+                  {field.label || field.question || `Question ${field.index + 1}`}
+                </h4>
+                {field.description && (
+                  <p className="text-slate-600 text-sm mt-1">{field.description}</p>
+                )}
+              </div>
+              <Badge 
+                variant="outline" 
+                className={`text-xs ${isSubsection ? 'bg-blue-50 border-blue-200 text-blue-700' : ''}`}
+              >
+                {field.type || 'text'}
+              </Badge>
+            </div>
+            
+            <div className={`rounded-lg p-4 border ${isSubsection 
+              ? 'bg-white border-blue-200 shadow-sm' 
+              : 'bg-slate-50 border-slate-200'
+            }`}>
+              <div className="text-sm font-medium text-slate-700 mb-2 flex items-center gap-2">
+                <MessageSquare className="h-4 w-4 text-slate-500" />
+                Response:
+              </div>
+              <div className="text-slate-900">
+                {response ? (
+                  (() => {
+                    const responseStr = typeof response === 'object' ? JSON.stringify(response, null, 2) : String(response);
+                    
+                    // Check if response is an image URL
+                    if (field.type === 'image' || field.type === 'file' || 
+                        (typeof response === 'string' && 
+                         (response.includes('supabase.co/storage') || 
+                          response.match(/\.(jpeg|jpg|gif|png|webp)$/i) ||
+                          response.startsWith('data:image/') ||
+                          response.startsWith('blob:') ||
+                          response.startsWith('http') && response.includes('image')))) {
+                      return (
+                        <div className="space-y-3">
+                          <div className="relative group">
+                            <img 
+                              src={response}
+                              alt={field.label || 'Uploaded image'}
+                              className="max-w-full h-auto max-h-96 rounded-lg border border-slate-200 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+                              onError={(e) => {
+                                const target = e.target as HTMLImageElement;
+                                target.style.display = 'none';
+                                const fallback = target.nextSibling as HTMLElement;
+                                if (fallback) fallback.style.display = 'block';
+                              }}
+                              onClick={() => window.open(response, '_blank')}
+                            />
+                            <div className="hidden bg-red-50 border border-red-200 rounded-lg p-3">
+                              <div className="text-red-600 text-sm mb-2">Failed to load image</div>
+                              <div className="text-slate-600 text-xs font-mono break-all">
                                 {response}
                               </div>
                             </div>
-                          );
-                        }
-                        
-                        // For non-image responses, display as before
-                        return responseStr;
-                      })()
-                    ) : (
-                      <span className="text-slate-400 italic">No response provided</span>
-                    )}
-                  </div>
-                </div>
-
-                {field.required && !response && (
-                  <div className="flex items-center gap-2 text-red-600 text-sm">
-                    <XCircle className="h-4 w-4" />
-                    <span>Required field not completed</span>
+                            <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all duration-200 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100">
+                              <div className="flex gap-2">
+                                <button 
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    window.open(response, '_blank');
+                                  }}
+                                  className="bg-white bg-opacity-90 hover:bg-opacity-100 rounded-full p-2 shadow-lg transition-all"
+                                  title="View full size"
+                                >
+                                  <Eye className="h-4 w-4 text-slate-700" />
+                                </button>
+                                <button 
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    const link = document.createElement('a');
+                                    link.href = response;
+                                    link.download = `${field.label || 'image'}.jpg`;
+                                    link.click();
+                                  }}
+                                  className="bg-white bg-opacity-90 hover:bg-opacity-100 rounded-full p-2 shadow-lg transition-all"
+                                  title="Download image"
+                                >
+                                  <Download className="h-4 w-4 text-slate-700" />
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="text-xs text-slate-500 font-mono break-all bg-slate-100 p-2 rounded border">
+                            {response}
+                          </div>
+                        </div>
+                      );
+                    }
+                    
+                    return responseStr;
+                  })()                ) : (
+                  <div className="flex items-center gap-2 text-slate-400">
+                    <div className="w-2 h-2 bg-slate-300 rounded-full"></div>
+                    <span className="italic">No response provided</span>
                   </div>
                 )}
               </div>
-            </Card>
-          );
-        })}
+            </div>
+
+            {field.required && !response && (
+              <div className="flex items-center gap-2 text-red-600 text-sm">
+                <XCircle className="h-4 w-4" />
+                <span>Required field not completed</span>
+              </div>
+            )}
+          </div>
+        </div>
+      );    };
+
+    // Helper function to check if a section has any responses
+    const hasResponse = (section: any) => {
+      // Check main field response
+      if (section.main) {
+        const mainResponse = responses[section.main.id] || responses[section.main.index];
+        if (mainResponse && mainResponse !== '') return true;
+      }
+      
+      // Check subsection responses
+      if (section.subsections && section.subsections.length > 0) {
+        return section.subsections.some((field: any) => {
+          const response = responses[field.id] || responses[field.index];
+          return response && response !== '';
+        });
+      }
+      
+      return false;
+    };
+
+    return (
+      <div className="space-y-6">
+        {Object.entries(groupedFields)
+          .filter(([sectionName, section]: [string, any]) => hasResponse(section))
+          .map(([sectionName, section]: [string, any]) => (
+          <Card key={sectionName} className="p-6 bg-white border-slate-200 shadow-sm hover:shadow-md transition-shadow">
+            <div className="space-y-4">
+              <div className="border-b border-gradient-to-r from-slate-200 to-slate-100 pb-4">
+                <h3 className="text-xl font-bold text-slate-900 flex items-center gap-3">
+                  <div className="w-1 h-6 bg-gradient-to-b from-blue-500 to-blue-600 rounded-full"></div>
+                  {sectionName}
+                  <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-700 border-blue-200">
+                    section
+                  </Badge>
+                </h3>
+              </div>
+                {section.main && section.subsections.length > 0 && renderField(section.main)}
+              
+              {section.subsections.length > 0 && (
+                <div className="space-y-4 mt-6">
+                  <div className="text-sm font-medium text-slate-600 mb-3 pl-4 border-l-2 border-blue-200">
+                    Subsections ({section.subsections.length})
+                  </div>
+                  {section.subsections.map((field: any) => renderField(field, true))}
+                </div>
+              )}
+              
+              {/* For sections without subsections, show the main field content directly */}
+              {section.main && section.subsections.length === 0 && (
+                <div className="mt-4">
+                  {(() => {
+                    const field = section.main;
+                    const response = responses[field.id] || responses[field.index];
+                    return (
+                      <div className="space-y-3">
+                        <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+                          <div className="text-sm font-medium text-slate-700 mb-2 flex items-center gap-2">
+                            <MessageSquare className="h-4 w-4 text-slate-500" />
+                            Response:
+                          </div>                          <div className="text-slate-900">
+                            {response ? (
+                              (() => {
+                                const responseStr = typeof response === 'object' ? JSON.stringify(response, null, 2) : String(response);
+                                
+                                // Check if response is an image URL
+                                if (field.type === 'image' || field.type === 'file' || 
+                                    (typeof response === 'string' && 
+                                     (response.includes('supabase.co/storage') || 
+                                      response.match(/\.(jpeg|jpg|gif|png|webp)$/i) ||
+                                      response.startsWith('data:image/') ||
+                                      response.startsWith('blob:') ||
+                                      response.startsWith('http') && response.includes('image')))) {
+                                  return (
+                                    <div className="space-y-3">
+                                      <div className="relative group">
+                                        <img 
+                                          src={response}
+                                          alt={field.label || 'Uploaded image'}
+                                          className="max-w-full h-auto max-h-96 rounded-lg border border-slate-200 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+                                          onError={(e) => {
+                                            const target = e.target as HTMLImageElement;
+                                            target.style.display = 'none';
+                                            const fallback = target.nextSibling as HTMLElement;
+                                            if (fallback) fallback.style.display = 'block';
+                                          }}
+                                          onClick={() => window.open(response, '_blank')}
+                                        />
+                                        <div className="hidden bg-red-50 border border-red-200 rounded-lg p-3">
+                                          <div className="text-red-600 text-sm mb-2">Failed to load image</div>
+                                          <div className="text-slate-600 text-xs font-mono break-all">
+                                            {response}
+                                          </div>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  );
+                                }
+                                
+                                return responseStr;
+                              })()
+                            ) : (
+                              <div className="flex items-center gap-2 text-slate-400">
+                                <div className="w-2 h-2 bg-slate-300 rounded-full"></div>
+                                <span className="italic">No response provided</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        
+                        {field.required && !response && (
+                          <div className="flex items-center gap-2 text-red-600 text-sm">
+                            <XCircle className="h-4 w-4" />
+                            This field is required
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
+                </div>
+              )}
+            </div>
+          </Card>        ))}
       </div>
     );
   };
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <Link 
           href="/protected/Audit"
@@ -459,12 +623,13 @@ export default function AuditDetailView({ audit, isManager, currentUserId }: Aud
               activeTab === 'comments'
                 ? 'border-sky-500 text-sky-600'
                 : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
-            }`}
-          >
+            }`}          >
             Comments
           </button>
         </nav>
-      </div>      {/* Tab Content */}
+      </div>
+
+      {/* Tab Content */}
       <div className="space-y-6">
         {activeTab === 'overview' && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -547,8 +712,7 @@ export default function AuditDetailView({ audit, isManager, currentUserId }: Aud
                     <p className="text-slate-900 whitespace-pre-wrap">{audit.comments}</p>
                   </div>
                 </div>
-              </div>
-            ) : (
+              </div>            ) : (
               <div className="text-center py-8">
                 <MessageSquare className="h-12 w-12 text-slate-400 mx-auto mb-4" />
                 <p className="text-slate-600">No comments available for this audit</p>
@@ -556,7 +720,9 @@ export default function AuditDetailView({ audit, isManager, currentUserId }: Aud
             )}
           </Card>
         )}
-      </div>      {/* Hidden content for PDF generation - includes ALL tabs */}
+      </div>
+
+      {/* Hidden content for PDF generation - includes ALL tabs */}
       <div ref={pdfRef} className="hidden">
         {/* PDF Header with Professional Layout */}
         <div style={{ textAlign: 'center', marginBottom: '30px', borderBottom: '2px solid #334155', paddingBottom: '20px' }}>
@@ -650,16 +816,18 @@ export default function AuditDetailView({ audit, isManager, currentUserId }: Aud
                 <div style={{ marginBottom: '4px' }}><strong>Audited by:</strong> {audit.user_profile?.full_name || audit.user_profile?.email || 'Unknown'}</div>
                 <div><strong>Status:</strong> {audit.status}</div>
               </div>
-            </div>
+            </div>        </div>
+
+        {/* Form Responses Section */}
+        <div style={{ marginBottom: '30px' }}>
+          <div style={{ fontWeight: 'bold', fontSize: '18px', color: '#1e293b', marginBottom: '15px', borderBottom: '2px solid #e2e8f0', paddingBottom: '8px' }}>
+            📋 FORM RESPONSES
           </div>
-        </div>{/* Form Responses Section */}
-        <div className="mb-8">
-          <h2 className="text-2xl font-bold text-slate-900 mb-4 border-b pb-2">Form Responses</h2>
           {(() => {
             if (!audit.audit_data) {
               return (
-                <div className="text-center py-8">
-                  <p className="text-slate-600">No response data available</p>
+                <div style={{ textAlign: 'center', padding: '40px', color: '#64748b' }}>
+                  <div>No response data available</div>
                 </div>
               );
             }
@@ -669,14 +837,15 @@ export default function AuditDetailView({ audit, isManager, currentUserId }: Aud
 
             if (!formSchema || !formSchema.fields) {
               return (
-                <div className="text-center py-8">
-                  <p className="text-slate-600">Form schema not available</p>
+                <div style={{ textAlign: 'center', padding: '40px', color: '#64748b' }}>
+                  <div>Form schema not available</div>
                 </div>
               );
             }
 
             return (
-              <div style={{ width: '100%', border: '1px solid #cbd5e1', borderRadius: '8px', overflow: 'hidden' }}>                {/* Table Header */}
+              <div style={{ width: '100%', border: '1px solid #cbd5e1', borderRadius: '8px', overflow: 'hidden' }}>
+                {/* Table Header */}
                 <div style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #cbd5e1', padding: '12px' }}>
                   <div style={{ display: 'grid', gridTemplateColumns: '50px 1fr 1fr 120px 200px', gap: '16px', fontWeight: 'bold', fontSize: '14px', color: '#334155' }}>
                     <div style={{ textAlign: 'center' }}>No</div>
@@ -685,131 +854,213 @@ export default function AuditDetailView({ audit, isManager, currentUserId }: Aud
                     <div style={{ textAlign: 'center' }}>Marks Received</div>
                     <div style={{ textAlign: 'center' }}>Remark / Action Required</div>
                   </div>
-                </div>
-
-                {/* Table Body */}
+                </div>                {/* Table Body - Using the same grouping logic as main view */}
                 <div>
-                  {formSchema.fields.map((field: any, index: number) => {
-                    const response = responses[field.id] || responses[index];
-                    const responseStr = response ? (typeof response === 'object' ? JSON.stringify(response) : String(response)) : 'No response provided';
-                    
-                    // Calculate marks based on field type and response
-                    let marks = '';
-                    if (field.type === 'radio' || field.type === 'select') {
-                      if (field.enhancedOptions) {
-                        const selectedOption = field.enhancedOptions.find((opt: any) => opt.value === response);
-                        marks = selectedOption ? selectedOption.points.toString() : '0';
+                  {(() => {
+                    // Use the same grouping logic as the main view
+                    const groupedFields = formSchema.fields.reduce((acc: any, field: any, index: number) => {
+                      const fieldLabel = field.label || field.question || `Question ${index + 1}`;
+                      
+                      // Group all kitchen-related fields under "Kitchen Clean Level"
+                      if (fieldLabel.toLowerCase().includes('kitchen')) {
+                        if (!acc['Kitchen Clean Level']) {
+                          acc['Kitchen Clean Level'] = { subsections: [] };
+                        }
+                        
+                        // Don't show "Kitchen Clean Level" as a subsection since it's the section title
+                        if (!fieldLabel.toLowerCase().includes('clean level')) {
+                          acc['Kitchen Clean Level'].subsections.push({ ...field, index });
+                        }
+                      } 
+                      // Group floor-related fields and "Question 4" under "Floor Cleanliness"
+                      else if (fieldLabel.toLowerCase().includes('floor') || fieldLabel === 'Question 4') {
+                        if (!acc['Floor Cleanliness']) {
+                          acc['Floor Cleanliness'] = { subsections: [] };
+                        }
+                        
+                        // Don't show "Floor Cleanliness" as a subsection since it's the section title
+                        if (!fieldLabel.toLowerCase().includes('cleanliness')) {
+                          acc['Floor Cleanliness'].subsections.push({ ...field, index });
+                        }
                       } else {
-                        marks = response ? '1' : '0';
+                        // For other fields, treat as individual sections
+                        acc[fieldLabel] = { main: { ...field, index }, subsections: [] };
                       }
-                    } else if (field.weightage) {
-                      marks = response ? field.weightage.toString() : '0';
-                    } else {
-                      marks = response ? '1' : '0';
-                    }
+                      
+                      return acc;
+                    }, {});
 
-                    // Determine status based on response
-                    let status = '';
-                    if (field.type === 'yesno') {
-                      status = response === 'yes' ? 'Satisfactory' : response === 'no' ? 'Non-compliant' : 'Not assessed';
-                    } else if (response) {
-                      status = 'Completed';
-                    } else {
-                      status = 'Pending';
-                    }
+                    // Helper function to check if a section has any responses (same as main view)
+                    const hasResponse = (section: any) => {
+                      // Check main field response
+                      if (section.main) {
+                        const mainResponse = responses[section.main.id] || responses[section.main.index];
+                        if (mainResponse && mainResponse !== '') return true;
+                      }
+                      
+                      // Check subsection responses
+                      if (section.subsections && section.subsections.length > 0) {
+                        return section.subsections.some((field: any) => {
+                          const response = responses[field.id] || responses[field.index];
+                          return response && response !== '';
+                        });
+                      }
+                      
+                      return false;
+                    };
 
-                    return (
-                      <div key={field.id || index} style={{ borderBottom: index < formSchema.fields.length - 1 ? '1px solid #e2e8f0' : 'none' }}>
-                        <div style={{ display: 'grid', gridTemplateColumns: '50px 1fr 1fr 120px 200px', gap: '16px', padding: '12px', fontSize: '13px', alignItems: 'flex-start' }}>
-                          {/* Row Number */}
-                          <div style={{ textAlign: 'center', fontWeight: 'bold', color: '#475569' }}>
-                            {index + 1}
-                          </div>
+                    let itemNumber = 1;
 
-                          {/* Item/Question */}
-                          <div style={{ color: '#334155' }}>
-                            <div style={{ fontWeight: '600', marginBottom: '4px' }}>
-                              {field.label || field.question || `Question ${index + 1}`}
-                            </div>
-                            {field.description && (
-                              <div style={{ fontSize: '12px', color: '#64748b', fontStyle: 'italic' }}>
-                                {field.description}
-                              </div>
-                            )}
-                            {field.type && (
-                              <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '2px' }}>
-                                Type: {field.type}
-                              </div>
-                            )}
-                          </div>                          {/* Standard/Response */}
-                          <div style={{ color: '#334155' }}>
-                            <div style={{ backgroundColor: '#f1f5f9', padding: '8px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
-                              <div style={{ wordWrap: 'break-word', fontSize: '12px' }}>
-                                {field.type === 'image' && response && (response.includes('supabase.co/storage') || response.includes('image') || response.match(/\.(jpeg|jpg|gif|png|webp)$/i)) ? (
-                                  <div>
-                                    <img 
-                                      src={response}
-                                      alt={field.label || 'Uploaded image'}
-                                      style={{ 
-                                        maxWidth: '200px', 
-                                        maxHeight: '150px', 
-                                        objectFit: 'contain',
-                                        border: '1px solid #e2e8f0',
-                                        borderRadius: '4px',
-                                        display: 'block'
-                                      }}
-                                      onError={(e) => {
-                                        const target = e.target as HTMLImageElement;
-                                        target.style.display = 'none';
-                                        const fallback = target.nextSibling as HTMLElement;
-                                        if (fallback) fallback.style.display = 'block';
-                                      }}
-                                    />
-                                    <div style={{ fontSize: '11px', color: '#059669', marginTop: '4px', display: 'none' }}>
-                                      Image could not be loaded
-                                    </div>
-                                  </div>
-                                ) : (
-                                  responseStr.length > 100 ? responseStr.substring(0, 100) + '...' : responseStr
-                                )}
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Marks */}
-                          <div style={{ textAlign: 'center', fontWeight: 'bold', color: marks === '0' ? '#dc2626' : '#059669' }}>
-                            {marks}
-                          </div>
-
-                          {/* Status/Remark */}
-                          <div style={{ textAlign: 'center' }}>
-                            <div style={{ 
-                              padding: '4px 8px', 
-                              borderRadius: '4px', 
-                              fontSize: '11px', 
-                              fontWeight: '600',
-                              backgroundColor: status === 'Satisfactory' || status === 'Completed' ? '#dcfce7' : 
-                                              status === 'Non-compliant' ? '#fecaca' : '#fef3c7',
-                              color: status === 'Satisfactory' || status === 'Completed' ? '#166534' : 
-                                     status === 'Non-compliant' ? '#991b1b' : '#92400e'
-                            }}>
-                              {status}
-                            </div>
-                            {field.required && !response && (
-                              <div style={{ fontSize: '10px', color: '#dc2626', marginTop: '4px' }}>
-                                Required
-                              </div>
-                            )}
-                            {field.autoFail && response && (field.type === 'yesno' ? response === 'no' : !response) && (
-                              <div style={{ fontSize: '10px', color: '#dc2626', marginTop: '4px', fontWeight: 'bold' }}>
-                                AUTO-FAIL
-                              </div>
-                            )}
+                    return Object.entries(groupedFields)
+                      .filter(([sectionName, section]: [string, any]) => hasResponse(section))
+                      .map(([sectionName, section]: [string, any]) => (
+                      <div key={sectionName}>                        <div style={{ backgroundColor: '#e2e8f0', borderBottom: '1px solid #cbd5e1', padding: '12px' }}>
+                          <div style={{ fontWeight: 'bold', fontSize: '16px', color: '#1e293b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                            📋 {sectionName}
                           </div>
                         </div>
+
+                        {/* Render main field if exists and has subsections */}
+                        {section.main && section.subsections.length > 0 && (() => {
+                          const field = section.main;
+                          const response = responses[field.id] || responses[field.index];
+                          if (response && response !== '') {
+                            const responseStr = typeof response === 'object' ? JSON.stringify(response) : String(response);
+                            let marks = '';
+                            if (field.type === 'radio' || field.type === 'select') {
+                              if (field.enhancedOptions) {
+                                const selectedOption = field.enhancedOptions.find((opt: any) => opt.value === response);
+                                marks = selectedOption ? selectedOption.points.toString() : '0';
+                              } else {
+                                marks = response ? '1' : '0';
+                              }
+                            } else if (field.weightage) {
+                              marks = response ? field.weightage.toString() : '0';
+                            } else {
+                              marks = response ? '1' : '0';
+                            }
+                            
+                            const currentItemNumber = itemNumber++;
+                            return (
+                              <div style={{ borderBottom: '1px solid #e2e8f0', padding: '12px' }}>
+                                <div style={{ display: 'grid', gridTemplateColumns: '50px 1fr 1fr 120px 200px', gap: '16px', fontSize: '13px' }}>
+                                  <div style={{ textAlign: 'center', fontWeight: 'bold' }}>{currentItemNumber}</div>
+                                  <div style={{ fontWeight: '600' }}>
+                                    {field.label || field.question || `Question ${field.index + 1}`}
+                                    <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>Type: {field.type}</div>
+                                  </div>
+                                  <div style={{ lineHeight: '1.4' }}>
+                                    {field.type === 'image' && response && (response.includes('supabase.co/storage') || response.includes('image') || response.match(/\.(jpeg|jpg|gif|png|webp)$/i)) ? (
+                                      <div style={{ fontSize: '12px', color: '#059669', fontWeight: '500' }}>📷 Image uploaded</div>
+                                    ) : (
+                                      <div style={{ wordBreak: 'break-word' }}>{responseStr}</div>
+                                    )}
+                                  </div>
+                                  <div style={{ textAlign: 'center', fontWeight: 'bold', color: '#059669' }}>{marks}</div>
+                                  <div style={{ textAlign: 'center', fontSize: '12px', color: marks === '0' ? '#dc2626' : '#059669', fontWeight: '500' }}>
+                                    {marks === '0' ? 'FAILED' : 'Completed'}
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          }
+                          return null;
+                        })()}
+
+                        {/* Render subsections */}
+                        {section.subsections.map((field: any) => {
+                          const response = responses[field.id] || responses[field.index];
+                          if (!response || response === '') return null;
+                          
+                          const responseStr = typeof response === 'object' ? JSON.stringify(response) : String(response);
+                          let marks = '';
+                          if (field.type === 'radio' || field.type === 'select') {
+                            if (field.enhancedOptions) {
+                              const selectedOption = field.enhancedOptions.find((opt: any) => opt.value === response);
+                              marks = selectedOption ? selectedOption.points.toString() : '0';
+                            } else {
+                              marks = response ? '1' : '0';
+                            }
+                          } else if (field.weightage) {
+                            marks = response ? field.weightage.toString() : '0';
+                          } else {
+                            marks = response ? '1' : '0';
+                          }
+                          
+                          const currentItemNumber = itemNumber++;
+                          
+                          return (
+                            <div key={field.id || field.index} style={{ borderBottom: '1px solid #e2e8f0', padding: '12px' }}>
+                              <div style={{ display: 'grid', gridTemplateColumns: '50px 1fr 1fr 120px 200px', gap: '16px', fontSize: '13px' }}>
+                                <div style={{ textAlign: 'center', fontWeight: 'bold' }}>{currentItemNumber}</div>
+                                <div style={{ fontWeight: '600', paddingLeft: '20px' }}>
+                                  ▸ {field.label || field.question || `Question ${field.index + 1}`}
+                                  <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>Type: {field.type}</div>
+                                </div>
+                                <div style={{ lineHeight: '1.4' }}>
+                                  {field.type === 'image' && response && (response.includes('supabase.co/storage') || response.includes('image') || response.match(/\.(jpeg|jpg|gif|png|webp)$/i)) ? (
+                                    <div style={{ fontSize: '12px', color: '#059669', fontWeight: '500' }}>📷 Image uploaded</div>
+                                  ) : (
+                                    <div style={{ wordBreak: 'break-word' }}>{responseStr}</div>
+                                  )}
+                                </div>
+                                <div style={{ textAlign: 'center', fontWeight: 'bold', color: '#059669' }}>{marks}</div>
+                                <div style={{ textAlign: 'center', fontSize: '12px', color: marks === '0' ? '#dc2626' : '#059669', fontWeight: '500' }}>
+                                  {marks === '0' ? 'FAILED' : 'Completed'}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+
+                        {/* Render main field content if no subsections */}
+                        {section.main && section.subsections.length === 0 && (() => {
+                          const field = section.main;
+                          const response = responses[field.id] || responses[field.index];
+                          if (!response || response === '') return null;
+                          
+                          const responseStr = typeof response === 'object' ? JSON.stringify(response) : String(response);
+                          let marks = '';
+                          if (field.type === 'radio' || field.type === 'select') {
+                            if (field.enhancedOptions) {
+                              const selectedOption = field.enhancedOptions.find((opt: any) => opt.value === response);
+                              marks = selectedOption ? selectedOption.points.toString() : '0';
+                            } else {
+                              marks = response ? '1' : '0';
+                            }
+                          } else if (field.weightage) {
+                            marks = response ? field.weightage.toString() : '0';
+                          } else {
+                            marks = response ? '1' : '0';
+                          }
+                          
+                          const currentItemNumber = itemNumber++;
+                          
+                          return (
+                            <div style={{ borderBottom: '1px solid #e2e8f0', padding: '12px' }}>
+                              <div style={{ display: 'grid', gridTemplateColumns: '50px 1fr 1fr 120px 200px', gap: '16px', fontSize: '13px' }}>
+                                <div style={{ textAlign: 'center', fontWeight: 'bold' }}>{currentItemNumber}</div>
+                                <div style={{ fontWeight: '600' }}>
+                                  {field.label || field.question || `Question ${field.index + 1}`}
+                                  <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>Type: {field.type}</div>
+                                </div>
+                                <div style={{ lineHeight: '1.4' }}>
+                                  {field.type === 'image' && response && (response.includes('supabase.co/storage') || response.includes('image') || response.match(/\.(jpeg|jpg|gif|png|webp)$/i)) ? (
+                                    <div style={{ fontSize: '12px', color: '#059669', fontWeight: '500' }}>📷 Image uploaded</div>
+                                  ) : (
+                                    <div style={{ wordBreak: 'break-word' }}>{responseStr}</div>
+                                  )}
+                                </div>
+                                <div style={{ textAlign: 'center', fontWeight: 'bold', color: '#059669' }}>{marks}</div>
+                                <div style={{ textAlign: 'center', fontSize: '12px', color: marks === '0' ? '#dc2626' : '#059669', fontWeight: '500' }}>
+                                  {marks === '0' ? 'FAILED' : 'Completed'}
+                                </div>
+                              </div>
+                            </div>                          );
+                        })()}
                       </div>
-                    );
-                  })}
+                    ));
+                  })()}
                 </div>
 
                 {/* Table Footer Summary */}
@@ -832,26 +1083,27 @@ export default function AuditDetailView({ audit, isManager, currentUserId }: Aud
         </div>
 
         {/* Comments Section */}
-        <div className="mb-8">
-          <h2 className="text-2xl font-bold text-slate-900 mb-4 border-b pb-2">Comments & Notes</h2>
-          <div className="p-4 bg-white border border-slate-200 rounded-lg">
+        <div style={{ marginBottom: '30px' }}>
+          <div style={{ fontWeight: 'bold', fontSize: '18px', color: '#1e293b', marginBottom: '15px', borderBottom: '2px solid #e2e8f0', paddingBottom: '8px' }}>
+            💬 COMMENTS & NOTES
+          </div>
+          <div style={{ padding: '15px', backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
             {audit.comments ? (
-              <div className="bg-slate-50 rounded-lg p-6 border border-slate-200">
-                <div className="flex items-start gap-3">
-                  <div className="flex-1">
-                    <div className="text-sm text-slate-600 mb-2">Audit Comments:</div>
-                    <p className="text-slate-900 whitespace-pre-wrap">{audit.comments}</p>
+              <div style={{ backgroundColor: '#f8fafc', borderRadius: '8px', padding: '20px', border: '1px solid #e2e8f0' }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: '13px', color: '#64748b', marginBottom: '8px' }}>Audit Comments:</div>                    <div style={{ color: '#1e293b', whiteSpace: 'pre-wrap', lineHeight: '1.6' }}>{audit.comments}</div>
                   </div>
                 </div>
               </div>
             ) : (
-              <div className="text-center py-8">
-                <p className="text-slate-600">No comments available for this audit</p>
+              <div style={{ textAlign: 'center', padding: '40px', color: '#64748b' }}>
+                <div>No comments available for this audit</div>
               </div>
             )}
-          </div>
-        </div>
+          </div>        </div>
       </div>
+    </div>
     </div>
   );
 }
