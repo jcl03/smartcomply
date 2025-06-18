@@ -17,17 +17,19 @@ const pathLabels: Record<string, string> = {
   '/protected/user-management': 'User Management',
   '/protected/user-management/add': 'Add User',
   '/protected/compliance': 'Compliance',
-  '/protected/compliance/add': 'Add Compliance',
-  '/protected/compliance/checklists': 'Checklists',
-  '/protected/compliance/archive': 'Archive',
+  '/protected/compliance/add': 'Add Framework',
+  '/protected/compliance/archive': 'Archived Frameworks',
   '/protected/compliance/test-fill': 'Test Fill',
-  '/protected/documents': 'Documents',
+  '/protected/documents': 'My Documents',
+  '/protected/checklist': 'Checklist Responses',
   '/protected/Audit': 'Audit History',
   '/protected/reports': 'Reports',
   '/protected/profile': 'Profile',
-  '/protected/setup': 'Setup',
+  '/protected/setup': 'Setup Profile',
   '/protected/reset-password': 'Reset Password',
   '/protected/view-compliance': 'View Compliance',
+  '/protected/first-time-login': 'First Time Login',
+  '/protected/invite': 'Invite',
 };
 
 // Dynamic route patterns
@@ -39,6 +41,12 @@ const dynamicRouteLabels: Record<string, string> = {
   'add': 'Add',
   'test-fill': 'Test Fill',
   'details': 'Details',
+  'preview': 'Preview',
+  'fill': 'Fill',
+  'checklist-fill': 'Fill Checklist',
+  'view': 'View',
+  'callback': 'Callback',
+  'resend-activation': 'Resend Activation',
 };
 
 export function Breadcrumb({ items, className = "", maxItems = 5 }: BreadcrumbProps) {
@@ -125,13 +133,35 @@ function generateBreadcrumbsFromPath(pathname: string): BreadcrumbItem[] {
     if (!label) {
       // Check if this is a dynamic route
       const segment = segments[i];
+      const nextSegment = segments[i + 1];
+      const prevSegment = segments[i - 1];
       
-      // First check if it's a known dynamic route label
-      if (dynamicRouteLabels[segment]) {
+      // Special handling for nested routes
+      if (prevSegment === 'compliance' && segment.match(/^[0-9a-f-]+$/)) {
+        // This is a compliance ID
+        label = 'Framework Details';
+      } else if (prevSegment === 'checklist' && segment.match(/^[0-9a-f-]+$/)) {
+        // This is a checklist ID  
+        label = 'Checklist Details';
+      } else if (prevSegment === 'documents' && segment.match(/^[0-9a-f-]+$/)) {
+        // This is a document ID
+        label = 'Document Details';
+      } else if (prevSegment === 'Audit' && segment.match(/^[0-9a-f-]+$/)) {
+        // This is an audit ID
+        label = 'Audit Details';
+      } else if (prevSegment === 'user-management' && segment.match(/^[0-9a-f-]+$/)) {
+        // This is a user ID
+        label = 'User Details';
+      } else if (prevSegment === 'view-compliance' && segment.match(/^[0-9a-f-]+$/)) {
+        // This is a compliance view ID
+        label = 'Compliance View';
+      } else if (prevSegment === 'invite' && segment.match(/^[0-9a-f-]+$/)) {
+        // This is an invite token
+        label = 'Accept Invite';
+      } else if (dynamicRouteLabels[segment]) {
+        // First check if it's a known dynamic route label
         label = dynamicRouteLabels[segment];
-      }
-      // Handle common ID patterns
-      else if (segment.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
+      } else if (segment.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
         // UUID pattern - likely an ID
         label = 'Details';
       } else if (segment.match(/^\d+$/)) {

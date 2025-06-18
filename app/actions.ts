@@ -91,7 +91,6 @@ export const resetPasswordAction = async (formData: FormData) => {
       "Passwords do not match",
     );
   }
-
   const { error } = await supabase.auth.updateUser({
     password: password,
   });
@@ -103,7 +102,7 @@ export const resetPasswordAction = async (formData: FormData) => {
     );
   }
 
-  return encodedRedirect("success", "/protected/reset-password", "Password updated");
+  return encodedRedirect("success", "/protected", "Password updated successfully! Welcome back.");
 };
 
 export const signOutAction = async () => {

@@ -21,6 +21,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 import Link from "next/link";
+import BreadcrumbWrapper from "./BreadcrumbWrapper";
 
 export default async function DocumentViewPage({ params }: { params: Promise<{ id: string }> }) {
   const supabase = await createClient();
@@ -106,10 +107,13 @@ export default async function DocumentViewPage({ params }: { params: Promise<{ i
     : 'pending';
 
   const StatusIcon = statusConfig[currentStatus as keyof typeof statusConfig].icon;
-
   return (
     <DashboardLayout userProfile={currentUserProfile}>
-      <div className="space-y-6">
+      <BreadcrumbWrapper 
+        documentTitle={response.title || 'Untitled Document'}
+        complianceName={compliance?.name}
+      >
+        <div className="space-y-6">
         {/* Header Section */}
         <div className="bg-gradient-to-r from-slate-50 via-blue-50 to-sky-50 rounded-2xl p-6 border border-slate-200/50 shadow-sm">
           <div className="flex items-center justify-between">
@@ -366,10 +370,10 @@ export default async function DocumentViewPage({ params }: { params: Promise<{ i
                   </Button>
                 </Link>
               </CardContent>
-            </Card>
-          </div>
+            </Card>          </div>
         </div>
       </div>
+      </BreadcrumbWrapper>
     </DashboardLayout>
   );
 }

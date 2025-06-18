@@ -109,7 +109,7 @@ export default async function Login(props: { searchParams: Promise<Message> }) {
                   className="text-sm text-sky-600 hover:text-sky-500 dark:text-sky-400 dark:hover:text-sky-300 font-semibold hover:underline transition-all duration-200"
                   href="/forgot-password"
                 >
-                  Forgot password?
+                  First Time Login/Forgot password?
                 </Link>
               </div>
               <div className="relative group">
@@ -158,7 +158,7 @@ export default async function Login(props: { searchParams: Promise<Message> }) {
             </div>
 
             <FormMessage message={searchParams} />            <div className="mt-6 text-center">
-              <div className="relative">
+              {/* <div className="relative">
                 <div className="absolute inset-0 flex items-center">
                   <div className="w-full border-t border-slate-200 dark:border-slate-700"></div>
                 </div>
@@ -169,7 +169,7 @@ export default async function Login(props: { searchParams: Promise<Message> }) {
                 </div>
               </div>
               
-              {/* First Time Login Button */}
+
               <div className="mt-4 mb-4">
                 <Link
                   href="/first-time-login"
@@ -180,7 +180,7 @@ export default async function Login(props: { searchParams: Promise<Message> }) {
                   </svg>
                   First Time Login
                 </Link>
-              </div>
+              </div> */}
               
               <p className="mt-4 text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-700/50 rounded-lg p-3 border border-slate-200 dark:border-slate-600">
                 <span className="font-semibold text-sky-600 dark:text-sky-400">

@@ -287,19 +287,9 @@ export default async function ChecklistViewPage({ params }: Props) {
     
     return null;
   };
-
   return (
     <DashboardLayout userProfile={userProfile}>
-      <div className="space-y-6 p-6">
-        {/* Breadcrumb */}
-        <div className="flex items-center gap-2 text-sm text-slate-600">
-          <Link href="/protected/checklist" className="hover:text-slate-900 transition-colors">
-            Checklist Responses
-          </Link>
-          <span>/</span>
-          <span className="text-slate-900">View Response</span>
-        </div>
-
+      <div className="space-y-6">
         {/* Header */}
         <div className="relative overflow-hidden bg-gradient-to-br from-slate-50 via-sky-50 to-blue-50 rounded-2xl border border-slate-200/50 shadow-lg">
           <div className="absolute inset-0 bg-gradient-to-r from-blue-600/5 via-sky-500/5 to-indigo-600/5"></div>

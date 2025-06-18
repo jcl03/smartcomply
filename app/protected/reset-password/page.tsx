@@ -4,11 +4,46 @@ import { SubmitButton } from "@/components/submit-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
+import { CheckCircle } from "lucide-react";
+import { SuccessRedirect } from "@/components/success-redirect";
 
 export default async function ResetPassword(props: {
   searchParams: Promise<Message>;
 }) {
   const searchParams = await props.searchParams;
+    // Check if this is a success case
+  const isSuccess = searchParams && "success" in searchParams;
+  
+  if (isSuccess) {
+    // Show success state and redirect after a delay
+    return (
+      <div className="flex min-h-screen items-center justify-center p-4">
+        <div className="relative">
+          {/* Background decorative elements */}
+          <div className="absolute -top-10 -right-10 w-20 h-20 bg-gradient-to-br from-emerald-200/30 to-green-300/30 rounded-full blur-xl"></div>
+          <div className="absolute -bottom-10 -left-10 w-16 h-16 bg-gradient-to-br from-green-200/30 to-emerald-300/30 rounded-full blur-xl"></div>
+          
+          <Card className="relative p-8 shadow-2xl bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm border border-white/20 w-full max-w-md">
+            <div className="text-center">
+              <div className="mx-auto w-18 h-18 bg-gradient-to-r from-emerald-400 via-green-500 to-emerald-500 rounded-3xl flex items-center justify-center mb-6 shadow-xl">
+                <CheckCircle className="w-10 h-10 text-white drop-shadow-md" />
+              </div>
+              <h1 className="text-3xl font-bold bg-gradient-to-r from-emerald-600 to-green-600 bg-clip-text text-transparent mb-3">
+                Password Updated!
+              </h1>
+              <p className="text-slate-600 dark:text-slate-400 text-lg font-medium mb-6">
+                Your password has been successfully updated. You will be redirected to the dashboard shortly.
+              </p>              <div className="flex items-center justify-center">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-emerald-500"></div>
+                <span className="ml-2 text-emerald-600 font-medium">Redirecting...</span>
+              </div>
+            </div>
+            <SuccessRedirect redirectUrl="/protected" delay={3000} />
+          </Card>
+        </div>
+      </div>
+    );
+  }
   return (
     <div className="flex min-h-screen items-center justify-center p-4">
       <div className="relative">
