@@ -27,8 +27,8 @@ export default async function ComplianceFormsPage({ params }: { params: Promise<
     .eq('email', user.email)
     .single();
     
-  // If not admin, redirect to protected page
-  if (!profile || profile.role !== 'admin') {
+  // If not admin or manager, redirect to protected page
+  if (!profile || (profile.role !== 'admin' && profile.role !== 'manager')) {
     return redirect("/protected");
   }
   // Fetch compliance framework (only active ones)
