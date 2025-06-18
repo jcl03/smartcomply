@@ -11,6 +11,7 @@ import { useFormStatus } from "react-dom";
 import { Plus, Minus, Eye, Sparkles, AlertCircle, CheckCircle, FileText, Shield, ArrowLeft, Save, Heading2 } from "lucide-react";
 import type { ActionResult } from "@/lib/types";
 import { addFormDraft } from "../../../actions";
+import { FormPreview } from "@/components/form/form-preview";
 
 // Submit button with loading state
 function SubmitButton() {
@@ -96,7 +97,7 @@ export default function AddFormComponent({ action, complianceId }: { action: Ser
   const [formDescription, setFormDescription] = useState("");
   const [fields, setFields] = useState<FormField[]>([]);
   const [showPreview, setShowPreview] = useState(false);
-    const addField = () => {
+    const addField = (sectionId?: string) => {
     const newField: FormField = {
       id: `field_${Date.now()}`,
       type: "text",
@@ -106,6 +107,57 @@ export default function AddFormComponent({ action, complianceId }: { action: Ser
       weightage: undefined,
       autoFail: false
     };
+    
+    if (sectionId && sectionId !== 'default') {
+      // Find the section and add the field after the last field in that section
+      const sectionIndex = fields.findIndex(f => f.id === sectionId);
+      if (sectionIndex !== -1) {
+        // Find the last field in this section (before the next section)
+        let insertIndex = sectionIndex + 1;
+        while (insertIndex < fields.length && !fields[insertIndex].isSection) {
+          insertIndex++;
+        }
+        
+        const updatedFields = [...fields];
+        updatedFields.splice(insertIndex, 0, newField);
+        setFields(updatedFields);
+        return;
+      }
+    }
+    
+    // If no sections exist, create a General section first
+    if (!fields.some(f => f.isSection)) {
+      const defaultSectionField: FormField = {
+        id: `section_${Date.now()}`,
+        type: 'section',
+        label: 'General',
+        required: false,
+        isSection: true
+      };
+      
+      // Add the section and field
+      setFields([defaultSectionField, newField]);
+      return;
+    }
+    
+    // If we're adding to default section or no specific section, add to the first available section
+    if (sectionId === 'default' || !sectionId) {
+      const firstSection = fields.find(f => f.isSection);
+      if (firstSection) {
+        const sectionIndex = fields.findIndex(f => f.id === firstSection.id);
+        let insertIndex = sectionIndex + 1;
+        while (insertIndex < fields.length && !fields[insertIndex].isSection) {
+          insertIndex++;
+        }
+        
+        const updatedFields = [...fields];
+        updatedFields.splice(insertIndex, 0, newField);
+        setFields(updatedFields);
+        return;
+      }
+    }
+    
+    // Fallback: add to the end
     setFields([...fields, newField]);
   };
   
@@ -223,6 +275,7 @@ export default function AddFormComponent({ action, complianceId }: { action: Ser
   }
     const renderPreview = () => {
     if (!showPreview) return null;
+    
       return (
       <Card className="mt-6 border-gray-200 bg-white shadow-md">
         <CardHeader className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-t-xl">
@@ -234,154 +287,372 @@ export default function AddFormComponent({ action, complianceId }: { action: Ser
           </div>
         </CardHeader>
         <CardContent className="p-6">
-          <div className="space-y-4">
-            {formTitle && <h3 className="text-lg font-semibold text-gray-900">{formTitle}</h3>}
-            {formDescription && <p className="text-gray-700">{formDescription}</p>}
-            
-            {fields.map((field, index) => (
-              <div key={field.id} className={`space-y-2 ${field.isSection ? 'mt-8 mb-4' : ''}`}>
-                {field.isSection ? (
-                  <div className="bg-gradient-to-r from-indigo-50 via-purple-50 to-pink-50 rounded-lg border border-indigo-100 shadow-sm">
-                    <div className="p-6">
-                      <h3 className="text-2xl font-semibold text-indigo-900">{field.label}</h3>
-                    </div>
-                  </div>
-                ) : (
-                  <>
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <Label className="text-gray-800 font-medium">
-                        {field.label} {field.required && <span className="text-red-500">*</span>}
-                      </Label>
-                      {field.weightage && (
-                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                          Weight: {field.weightage}
-                        </span>
-                      )}
-                      {field.autoFail && (
-                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                          Auto-fail
-                        </span>
-                      )}
-                    </div>
-                    
-                    {field.type === "text" && (
-                      <Input placeholder={field.placeholder} disabled className="border-gray-200 text-gray-700 bg-white" />
-                    )}
-                    
-                    {field.type === "textarea" && (
-                      <textarea 
-                        className="w-full p-3 border border-gray-200 rounded-lg text-gray-700 bg-white" 
-                        placeholder={field.placeholder}
-                        disabled
-                        rows={3}
-                      />
-                    )}
-                    
-                    {field.type === "select" && (
-                      <select className="w-full p-3 border border-gray-200 rounded-lg text-gray-700 bg-white" disabled>
-                        <option>Select an option...</option>
-                        {shouldUseEnhancedOptions(field) ? (
-                          field.enhancedOptions?.map((option, optIndex) => (
-                            <option key={optIndex} value={option.value}>
-                              {option.value}
-                              {field.weightage && option.points !== undefined ? ` (${option.points} pts)` : ''}
-                              {field.autoFail && option.isFailOption ? ' ❌' : ''}
-                            </option>
-                          ))
-                        ) : (
-                          field.options?.map((option, optIndex) => (
-                            <option key={optIndex} value={option}>{option}</option>
-                          ))
-                        )}
-                      </select>
-                    )}
-                    
-                    {field.type === "checkbox" && (
-                      <div className="flex items-center gap-2">
-                        <div className="h-4 w-4 rounded border-2 bg-white border-gray-300 flex items-center justify-center opacity-60">
-                          {/* Disabled checkbox appearance for preview */}
-                        </div>
-                        <span className="text-gray-900">{field.label}</span>
-                      </div>
-                    )}
-                    
-                    {field.type === "radio" && (
-                      <div className="space-y-2">
-                        {shouldUseEnhancedOptions(field) ? (
-                          field.enhancedOptions?.map((option, optIndex) => (
-                            <div key={optIndex} className="flex items-center gap-2">
-                              <input 
-                                type="radio" 
-                                name={field.id} 
-                                disabled 
-                                className="h-4 w-4 border-2 border-gray-300 text-blue-600 bg-white focus:ring-2 focus:ring-blue-200 focus:ring-offset-0 checked:bg-blue-600 checked:border-blue-600"
-                              />
-                              <span className="flex items-center gap-2 text-gray-900">
-                                {option.value}
-                                {field.weightage && option.points !== undefined && (
-                                  <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
-                                    {option.points} pts
-                                  </span>
-                                )}
-                                {field.autoFail && option.isFailOption && (
-                                  <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800">
-                                    Auto-fail
-                                  </span>
-                                )}
-                              </span>
-                            </div>
-                          ))
-                        ) : (
-                          field.options?.map((option, optIndex) => (
-                            <div key={optIndex} className="flex items-center gap-2">
-                              <input 
-                                type="radio" 
-                                name={field.id} 
-                                disabled 
-                                className="h-4 w-4 border-2 border-gray-300 text-blue-600 bg-white focus:ring-2 focus:ring-blue-200 focus:ring-offset-0 checked:bg-blue-600 checked:border-blue-600"
-                              />
-                              <span className="text-gray-900">{option}</span>
-                            </div>
-                          ))
-                        )}
-                      </div>
-                    )}
-
-                    {field.type === "email" && (
-                      <Input type="email" placeholder={field.placeholder} disabled className="border-gray-200 text-gray-700 bg-white" />
-                    )}
-
-                    {field.type === "number" && (
-                      <Input type="number" placeholder={field.placeholder} disabled className="border-gray-200 text-gray-700 bg-white" />
-                    )}
-
-                    {field.type === "date" && (
-                      <Input type="date" disabled className="border-gray-200 text-gray-700 bg-white" />
-                    )}
-
-                    {field.type === "image" && (
-                      <div className="space-y-2">
-                        <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center bg-gray-50">
-                          <div className="flex flex-col items-center gap-2">
-                            <div className="bg-blue-100 p-3 rounded-full">
-                              <svg className="h-6 w-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                              </svg>
-                            </div>
-                            <p className="text-gray-700 font-medium">Click to upload image</p>
-                            <p className="text-gray-500 text-sm">or drag and drop</p>
-                            <p className="text-gray-400 text-xs">PNG, JPG, GIF up to 10MB</p>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </>
-                )}
-              </div>
-            ))}
-          </div>
+          <FormPreview 
+            schema={{
+              title: formTitle,
+              description: formDescription,
+              fields: fields
+            }}
+          />
         </CardContent>
       </Card>
+    );
+  };
+
+  // Add renderEditMode function to organize fields by sections
+  const renderEditMode = () => {
+    const sections: { [key: string]: FormField[] } = {};
+    let currentSection = '';
+    
+    // First pass: organize fields by sections
+    fields.forEach(field => {
+      if (field.isSection) {
+        currentSection = field.id;
+        sections[currentSection] = [];
+      } else {
+        if (!sections[currentSection]) {
+          sections[currentSection] = [];
+        }
+        sections[currentSection].push(field);
+      }
+    });
+    
+    // If no sections exist but we have fields, create a default section for display
+    if (Object.keys(sections).length === 0 && fields.filter(f => !f.isSection).length > 0) {
+      sections['default'] = fields.filter(f => !f.isSection);
+    }
+    
+    return (
+      <div className="space-y-6">
+        {Object.entries(sections).map(([sectionId, sectionFields]) => {
+          const sectionField = fields.find(f => f.id === sectionId);
+          const sectionIndex = fields.findIndex(f => f.id === sectionId);
+          
+          return (
+            <Card key={sectionId} className="border border-gray-200 bg-gradient-to-r from-gray-50/50 to-blue-50/50">
+              <CardHeader className="bg-gradient-to-r from-gray-100 to-blue-100 border-b border-gray-200">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3 flex-1">
+                    <div className="bg-blue-600 text-white rounded-full w-8 h-8 flex items-center justify-center text-sm font-bold">
+                      {Object.keys(sections).indexOf(sectionId) + 1}
+                    </div>
+                    {sectionField ? (
+                      <Input
+                        value={sectionField.label}
+                        onChange={(e) => updateField(sectionIndex, { label: e.target.value })}
+                        placeholder="Enter section name"
+                        className="font-semibold text-gray-900 bg-white/80 border-gray-200 focus:border-blue-400 focus:ring-blue-200"
+                      />
+                    ) : (
+                      <span className="font-semibold text-gray-900">
+                        {sectionId === 'default' ? 'General' : 'Unnamed Section'}
+                      </span>
+                    )}
+                  </div>
+                  {sectionField && (
+                    <Button
+                      type="button"
+                      onClick={() => removeField(sectionIndex)}
+                      variant="ghost"
+                      size="sm"
+                      className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                    >
+                      <Minus className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+              </CardHeader>
+              <CardContent className="p-4">
+                <div className="space-y-4">
+                  {sectionFields.map((field, fieldIndex) => {
+                    const actualFieldIndex = fields.findIndex(f => f.id === field.id);
+                    return (
+                      <Card key={field.id} className="border border-gray-200 bg-white/60 hover:bg-white/80 transition-colors">
+                        <CardContent className="p-4">
+                          <div className="flex items-center justify-between mb-4">
+                            <h4 className="font-semibold text-gray-900">Field #{fieldIndex + 1}</h4>
+                            <Button
+                              type="button"
+                              onClick={() => removeField(actualFieldIndex)}
+                              variant="ghost"
+                              size="sm"
+                              className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                            >
+                              <Minus className="h-4 w-4" />
+                            </Button>
+                          </div>
+
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <Label className="text-gray-700 font-medium">Field Type *</Label>
+                              <select
+                                value={field.type}
+                                onChange={(e) => updateField(actualFieldIndex, { type: e.target.value })}
+                                className="w-full p-2 bg-white border border-gray-200 rounded-md focus:border-blue-400 focus:ring-blue-200 text-gray-900"
+                              >
+                                <option value="text">Text Input</option>
+                                <option value="textarea">Text Area</option>
+                                <option value="select">Dropdown</option>
+                                <option value="checkbox">Checkbox</option>
+                                <option value="radio">Radio Buttons</option>
+                                <option value="email">Email</option>
+                                <option value="number">Number</option>
+                                <option value="date">Date</option>
+                                <option value="image">Image</option>
+                              </select>
+                            </div>
+                            
+                            <div className="space-y-2">
+                              <Label className="text-gray-700 font-medium">Field Label *</Label>
+                              <Input
+                                value={field.label}
+                                onChange={(e) => updateField(actualFieldIndex, { label: e.target.value })}
+                                placeholder="Enter field label"
+                                className="bg-white border-gray-200 focus:border-blue-400 focus:ring-blue-200 text-gray-900 placeholder:text-gray-400"
+                              />
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                            <div className="space-y-2">
+                              <Label className="text-gray-700 font-medium">Placeholder Text</Label>
+                              <Input
+                                value={field.placeholder || ""}
+                                onChange={(e) => updateField(actualFieldIndex, { placeholder: e.target.value })}
+                                placeholder="Enter placeholder text"
+                                className="bg-white border-gray-200 focus:border-blue-400 focus:ring-blue-200 text-gray-900 placeholder:text-gray-400"
+                              />
+                            </div>
+
+                            <div className="space-y-2">
+                              <Label className="text-gray-700 font-medium">Required Field</Label>
+                              <div className="flex items-center gap-2">
+                                <div 
+                                  onClick={() => updateField(actualFieldIndex, { required: !field.required })}
+                                  className={`h-4 w-4 rounded border-2 cursor-pointer transition-all duration-200 flex items-center justify-center ${
+                                    field.required 
+                                      ? 'bg-blue-600 border-blue-600' 
+                                      : 'bg-white border-gray-300 hover:border-blue-400'
+                                  }`}
+                                >
+                                  {field.required && (
+                                    <svg className="h-3 w-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                    </svg>
+                                  )}
+                                </div>
+                                <Label className="text-gray-700 font-medium cursor-pointer" onClick={() => updateField(actualFieldIndex, { required: !field.required })}>
+                                  Required Field
+                                </Label>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Scoring Options */}
+                          <div className="mt-4">
+                            <h4 className="text-sm font-medium text-gray-800 mb-3">Scoring Options</h4>
+                            <div className="grid grid-cols-2 gap-4">
+                              <div className="space-y-2">
+                                <Label className="text-gray-800 font-medium">Weightage (optional)</Label>
+                                <Input 
+                                  type="number"
+                                  min="0"
+                                  step="0.1"
+                                  value={field.weightage || ""}
+                                  onChange={(e) => updateField(actualFieldIndex, { weightage: e.target.value ? parseFloat(e.target.value) : undefined })}
+                                  placeholder="e.g., 10, 5.5"
+                                  className="border-gray-200 focus:border-blue-400 focus:ring-blue-200 bg-white text-gray-900 placeholder:text-gray-400"
+                                />
+                                <p className="text-xs text-gray-600">Numerical weight for scoring</p>
+                              </div>
+                              <div className="flex items-center gap-2 pt-6">
+                                <div 
+                                  onClick={() => updateField(actualFieldIndex, { autoFail: !field.autoFail })}
+                                  className={`h-4 w-4 rounded border-2 cursor-pointer transition-all duration-200 flex items-center justify-center ${
+                                    field.autoFail 
+                                      ? 'bg-red-600 border-red-600' 
+                                      : 'bg-white border-gray-300 hover:border-blue-400'
+                                  }`}
+                                >
+                                  {field.autoFail && (
+                                    <svg className="h-3 w-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                    </svg>
+                                  )}
+                                </div>
+                                <Label className="text-gray-800 font-medium cursor-pointer" onClick={() => updateField(actualFieldIndex, { autoFail: !field.autoFail })}>Auto-fail</Label>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Options for select/radio/checkbox fields */}
+                          {(field.type === "select" || field.type === "radio" || field.type === "checkbox") && (
+                            <div className="space-y-2 mt-4">
+                              <div className="flex items-center justify-between">
+                                <Label className="text-gray-800 font-medium">
+                                  {shouldUseEnhancedOptions(field) ? "Options (Enhanced)" : "Options"}
+                                </Label>
+                                <Button 
+                                  type="button" 
+                                  onClick={() => shouldUseEnhancedOptions(field) ? addEnhancedOption(actualFieldIndex) : addOption(actualFieldIndex)}
+                                  variant="outline"
+                                  size="sm"
+                                  className="border-gray-200 text-gray-600 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-700 bg-white font-medium"
+                                >
+                                  <Plus size={16} className="mr-2" />
+                                  Add Option
+                                </Button>
+                              </div>
+                              {shouldUseEnhancedOptions(field) ? (
+                                field.enhancedOptions?.map((option, optIndex) => (
+                                  <div key={optIndex} className="border border-gray-200 rounded-lg p-3 space-y-2 bg-white/80">
+                                    <div className="flex gap-2">
+                                      <Input 
+                                        value={option.value}
+                                        onChange={(e) => updateEnhancedOption(actualFieldIndex, optIndex, { value: e.target.value })}
+                                        placeholder={`Option ${optIndex + 1}`}
+                                        className="border-gray-200 focus:border-blue-400 focus:ring-blue-200 bg-white text-gray-900 placeholder:text-gray-400"
+                                      />
+                                      <Button 
+                                        type="button" 
+                                        onClick={() => removeEnhancedOption(actualFieldIndex, optIndex)}
+                                        variant="outline"
+                                        size="sm"
+                                        className="border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300 hover:text-red-700 bg-white font-medium"
+                                      >
+                                        <Minus size={16} className="text-red-500" />
+                                      </Button>
+                                    </div>
+                                    {field.weightage && (
+                                      <div className="grid grid-cols-2 gap-2">
+                                        <div>
+                                          <Label className="text-xs text-gray-800 font-medium">Points</Label>
+                                          <Input 
+                                            type="number"
+                                            value={option.points || ""}
+                                            onChange={(e) => updateEnhancedOption(actualFieldIndex, optIndex, { points: e.target.value ? parseFloat(e.target.value) : undefined })}
+                                            placeholder="Points"
+                                            className="border-gray-200 focus:border-blue-400 focus:ring-blue-200 bg-white text-gray-900 placeholder:text-gray-400"
+                                          />
+                                        </div>
+                                      </div>
+                                    )}
+                                    {field.autoFail && (
+                                      <div className="flex items-center gap-2">
+                                        <div
+                                          onClick={() => updateEnhancedOption(actualFieldIndex, optIndex, { isFailOption: !option.isFailOption })}
+                                          className={`h-4 w-4 rounded border-2 cursor-pointer transition-all duration-200 flex items-center justify-center ${
+                                            option.isFailOption 
+                                              ? 'bg-red-600 border-red-600' 
+                                              : 'bg-white border-gray-300 hover:border-blue-400'
+                                          }`}
+                                        >
+                                          {option.isFailOption && (
+                                            <svg className="h-3 w-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                            </svg>
+                                          )}
+                                        </div>
+                                        <Label className="text-xs text-gray-800 font-medium cursor-pointer" onClick={() => updateEnhancedOption(actualFieldIndex, optIndex, { isFailOption: !option.isFailOption })}>Auto-fail option</Label>
+                                      </div>
+                                    )}
+                                  </div>
+                                ))
+                              ) : (
+                                field.options?.map((option, optIndex) => (
+                                  <div key={optIndex} className="flex gap-2">
+                                    <Input 
+                                      value={option}
+                                      onChange={(e) => updateOption(actualFieldIndex, optIndex, e.target.value)}
+                                      placeholder={`Option ${optIndex + 1}`}
+                                      className="border-gray-200 focus:border-blue-400 focus:ring-blue-200 bg-white text-gray-900 placeholder:text-gray-400"
+                                    />
+                                    <Button 
+                                      type="button" 
+                                      onClick={() => removeOption(actualFieldIndex, optIndex)}
+                                      variant="outline"
+                                      size="sm"
+                                      className="border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300 hover:text-red-700 bg-white font-medium"
+                                    >
+                                      <Minus size={16} className="text-red-500" />
+                                    </Button>
+                                  </div>
+                                ))
+                              )}
+                            </div>
+                          )}
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+
+                  {/* Add Field Button */}
+                  <div className="flex justify-center pt-2">
+                    <Button 
+                      type="button" 
+                      onClick={() => addField(sectionId)}
+                      variant="outline"
+                      className="border-gray-300 text-gray-700 hover:bg-gray-50 hover:border-gray-400"
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Field
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })}
+
+        {/* No Sections State */}
+        {fields.filter(f => !f.isSection).length === 0 && (
+          <div className="text-center py-12 px-6 border-2 border-dashed border-gray-200 rounded-lg bg-gray-50/30">
+            <div className="bg-gray-50 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+              <Plus className="h-8 w-8 text-gray-400" />
+            </div>
+            <h3 className="text-lg font-semibold text-gray-800 mb-2">No Sections Added</h3>
+            <p className="text-gray-600 mb-4">
+              Start building your form by adding your first section to organize your fields.
+            </p>
+            <Button 
+              type="button" 
+              onClick={addSection}
+              className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white transition-all duration-200 shadow-md hover:shadow-lg"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Add Your First Section
+            </Button>
+          </div>
+        )}
+
+        {/* Add Section Button */}
+        {fields.some(f => f.isSection) && fields.filter(f => !f.isSection).length === 0 && (
+          <div className="flex justify-center pt-4">
+            <Button 
+              type="button" 
+              onClick={addSection}
+              className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white transition-all duration-200 shadow-md hover:shadow-lg"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Add Another Section
+            </Button>
+          </div>
+        )}
+
+        {/* Add Section Button when there are fields */}
+        {fields.filter(f => !f.isSection).length > 0 && (
+          <div className="flex justify-center pt-4">
+            <Button 
+              type="button" 
+              onClick={addSection}
+              className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white transition-all duration-200 shadow-md hover:shadow-lg"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Add Section
+            </Button>
+          </div>
+        )}
+      </div>
     );
   };
   
@@ -420,21 +691,21 @@ export default function AddFormComponent({ action, complianceId }: { action: Ser
               </div>
               <div>
                 <h3 className="text-2xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
-                  Framework Details
+                  Form Details
                 </h3>
-                <p className="text-gray-600 mt-1">Configure your compliance framework settings and parameters</p>
+                <p className="text-gray-600 mt-1">Configure your form settings and parameters</p>
               </div>
             </div>
             
             <div className="space-y-6">
               <div className="space-y-3">
-                <Label htmlFor="title" className="text-gray-800 font-semibold text-lg">Framework Name <span className="text-red-500">*</span></Label>
+                <Label htmlFor="title" className="text-gray-800 font-semibold text-lg">Form Title <span className="text-red-500">*</span></Label>
                 <div className="relative">
                   <Input 
                     id="title" 
                     value={formTitle}
                     onChange={(e) => setFormTitle(e.target.value)}
-                    placeholder="e.g., SOX Compliance, GDPR Data Protection, ISO 27001 Security" 
+                    placeholder="e.g., SOX Controls Assessment, GDPR Data Protection Form" 
                     required 
                     className="h-14 border-gray-200 focus:border-blue-500 focus:ring-blue-200 bg-white/90 backdrop-blur-sm text-gray-900 text-lg font-medium rounded-xl shadow-lg transition-all duration-300 hover:shadow-xl focus:shadow-xl"
                   />
@@ -444,17 +715,18 @@ export default function AddFormComponent({ action, complianceId }: { action: Ser
                   <div className="bg-blue-100 p-1 rounded-full mt-1">
                     <div className="w-1 h-1 bg-blue-600 rounded-full"></div>
                   </div>
-                  <p className="text-sm text-gray-600">Choose a descriptive name that clearly identifies the compliance standard or regulation this framework addresses</p>                </div>
+                  <p className="text-sm text-gray-600">Choose a descriptive name that clearly identifies what this form is for</p>
+                </div>
               </div>
               
               <div className="space-y-3">
-                <Label htmlFor="description" className="text-gray-800 font-semibold text-lg">Description</Label>
+                <Label htmlFor="description" className="text-gray-800 font-semibold text-lg">Form Description</Label>
                 <div className="relative">
                   <textarea 
                     id="description"
                     value={formDescription}
                     onChange={(e) => setFormDescription(e.target.value)}
-                    placeholder="Brief description of what this framework is for"
+                    placeholder="Brief description of what this form is for"
                     className="w-full h-24 p-4 border border-gray-200 rounded-xl focus:border-blue-500 focus:ring-blue-200 bg-white/90 backdrop-blur-sm text-gray-900 font-medium shadow-lg transition-all duration-300 hover:shadow-xl focus:shadow-xl resize-none"
                   />
                   <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 to-indigo-500/5 rounded-xl pointer-events-none"></div>
@@ -484,19 +756,19 @@ export default function AddFormComponent({ action, complianceId }: { action: Ser
                     <div className="bg-blue-100 p-1 rounded-full mt-1">
                       <div className="w-1 h-1 bg-blue-600 rounded-full"></div>
                     </div>
-                    <p className="text-gray-700 font-medium">Your framework will be created and ready for configuration</p>
+                    <p className="text-gray-700 font-medium">Add sections to organize your form structure</p>
                   </div>
                   <div className="flex items-start gap-3">
                     <div className="bg-blue-100 p-1 rounded-full mt-1">
                       <div className="w-1 h-1 bg-blue-600 rounded-full"></div>
                     </div>
-                    <p className="text-gray-700 font-medium">You can add forms, checklists, and compliance requirements</p>
+                    <p className="text-gray-700 font-medium">Add fields within each section for data collection</p>
                   </div>
                   <div className="flex items-start gap-3">
                     <div className="bg-blue-100 p-1 rounded-full mt-1">
                       <div className="w-1 h-1 bg-blue-600 rounded-full"></div>
                     </div>
-                    <p className="text-gray-700 font-medium">Team members can be assigned and workflows configured</p>
+                    <p className="text-gray-700 font-medium">Configure validation rules and scoring options</p>
                   </div>
                 </div>
               </div>
@@ -534,7 +806,7 @@ export default function AddFormComponent({ action, complianceId }: { action: Ser
               </Button>
               <Button 
                 type="button" 
-                onClick={addField} 
+                onClick={() => addField()} 
                 className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white shadow-md hover:shadow-lg"
               >
                 <Plus size={16} className="mr-2" />
@@ -542,299 +814,33 @@ export default function AddFormComponent({ action, complianceId }: { action: Ser
               </Button>
             </div>
           </div>
-          {fields.map((field, index) => (
-            <Card key={field.id} className={`border-gray-200 bg-white shadow-md hover:shadow-lg transition-all duration-300 ${field.isSection ? 'border-dashed' : ''}`}>
-              <div className="p-4 space-y-4">
-                {field.isSection ? (
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      <Input 
-                        value={field.label}
-                        onChange={(e) => updateField(index, { label: e.target.value })}
-                        placeholder="Enter section title"
-                        className="text-lg font-semibold border-none bg-transparent p-0 focus-visible:ring-0 focus-visible:ring-offset-0 text-gray-900 placeholder:text-gray-400"
-                      />
-                    </div>
-                    <Button 
-                      type="button" 
-                      onClick={() => removeField(index)}
-                      variant="ghost"
-                      size="sm"
-                      className="text-gray-600 hover:text-gray-700 hover:bg-gray-50"
-                    >
-                      <Minus size={16} />
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <h4 className="font-medium">Field {index + 1}</h4>
-                      <Button 
-                        type="button" 
-                        onClick={() => removeField(index)}
-                        variant="outline"
-                        size="sm"
-                      >
-                        <Minus size={16} />
-                      </Button>
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label>Field Type</Label>
-                      <select 
-                        value={field.type}
-                        onChange={(e) => updateField(index, { type: e.target.value })}
-                        className="w-full p-2 border rounded-md"
-                      >
-                        <option value="text">Text Input</option>
-                        <option value="textarea">Text Area</option>
-                        <option value="select">Dropdown</option>
-                        <option value="checkbox">Checkbox</option>
-                        <option value="radio">Radio Buttons</option>
-                        <option value="email">Email</option>
-                        <option value="number">Number</option>
-                        <option value="date">Date</option>
-                        <option value="image">Image</option>
-                      </select>
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label className="text-gray-800 font-medium">Field Label</Label>
-                      <Input 
-                        value={field.label}
-                        onChange={(e) => updateField(index, { label: e.target.value })}
-                        placeholder="Field label"
-                        className="border-gray-200 focus:border-blue-400 focus:ring-blue-200 bg-white text-gray-900"
-                      />
-                    </div>
-                  </div>
-                )}
-                
-                <div className="space-y-2">
-                  <Label className="text-gray-800 font-medium">Placeholder Text</Label>
-                  <Input 
-                    value={field.placeholder || ""}
-                    onChange={(e) => updateField(index, { placeholder: e.target.value })}
-                    placeholder="Placeholder text"
-                    className="border-gray-200 focus:border-blue-400 focus:ring-blue-200 bg-white text-gray-900"
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label className="text-gray-800 font-medium">Required Field</Label>
-                  <div className="flex items-center gap-2">
-                    <div 
-                      onClick={() => updateField(index, { required: !field.required })}
-                      className={`h-4 w-4 rounded border-2 cursor-pointer transition-all duration-200 flex items-center justify-center ${
-                        field.required 
-                          ? 'bg-blue-600 border-blue-600' 
-                          : 'bg-white border-gray-300 hover:border-blue-400'
-                      }`}
-                    >
-                      {field.required && (
-                        <svg className="h-3 w-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                        </svg>
-                      )}
-                    </div>
-                    <Label className="text-gray-800 font-medium cursor-pointer" onClick={() => updateField(index, { required: !field.required })}>Required Field</Label>
-                  </div>
-                </div>
-                
-                {/* Scoring Options */}
-                <div className="space-y-4 bg-gray-50 rounded-lg p-3 border border-gray-200">
-                  <h5 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
-                    <div className="bg-blue-100 p-1 rounded">
-                      <Sparkles className="h-3 w-3 text-blue-600" />
-                    </div>
-                    Scoring Options
-                  </h5>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label className="text-gray-800 font-medium">Weightage (optional)</Label>
-                      <Input 
-                        type="number"
-                        min="0"
-                        step="0.1"
-                        value={field.weightage || ""}
-                        onChange={(e) => updateField(index, { weightage: e.target.value ? parseFloat(e.target.value) : undefined })}
-                        placeholder="e.g., 10, 5.5"
-                        className="border-gray-200 focus:border-blue-400 focus:ring-blue-200 bg-white text-gray-900"
-                      />
-                      <p className="text-xs text-gray-600">Numerical weight for scoring</p>
-                    </div>
-                    <div className="flex items-center gap-2 pt-6">
-                      <div 
-                        onClick={() => updateField(index, { autoFail: !field.autoFail })}
-                        className={`h-4 w-4 rounded border-2 cursor-pointer transition-all duration-200 flex items-center justify-center ${
-                          field.autoFail 
-                            ? 'bg-blue-600 border-blue-600' 
-                            : 'bg-white border-gray-300 hover:border-blue-400'
-                        }`}
-                      >
-                        {field.autoFail && (
-                          <svg className="h-3 w-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                          </svg>
-                        )}
-                      </div>
-                      <div className="cursor-pointer" onClick={() => updateField(index, { autoFail: !field.autoFail })}>
-                        <Label className="text-gray-800 font-medium cursor-pointer">Auto-fail</Label>
-                        <p className="text-xs text-red-600">Failing this field fails entire audit</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                
-                {(field.type === "select" || field.type === "radio") && (
-                  <div className="space-y-3 bg-gray-50 rounded-lg p-3 border border-gray-200">
-                    <div className="flex items-center justify-between">
-                      <Label className="text-gray-800 font-medium">
-                        Options
-                        {shouldUseEnhancedOptions(field) && (
-                          <span className="text-xs text-blue-600 ml-2 bg-blue-100 px-2 py-1 rounded-full">(Enhanced)</span>
-                        )}
-                      </Label>
-                      <Button 
-                        type="button" 
-                        onClick={() => shouldUseEnhancedOptions(field) ? addEnhancedOption(index) : addOption(index)}
-                        variant="outline"
-                        size="sm"
-                        className="border-gray-200 text-gray-700 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-800 bg-white font-medium"
-                      >
-                        <Plus size={16} className="mr-1 text-blue-600" />
-                        Add Option
-                      </Button>
-                    </div>
-                    
-                    {shouldUseEnhancedOptions(field) ? (
-                      // Enhanced options with scoring and pass/fail
-                      field.enhancedOptions?.map((option, optIndex) => (
-                        <div key={optIndex} className="border border-gray-200 rounded-lg p-3 space-y-2 bg-white">
-                          <div className="flex gap-2">
-                            <Input 
-                              value={option.value}
-                              onChange={(e) => updateEnhancedOption(index, optIndex, { value: e.target.value })}
-                              placeholder={`Option ${optIndex + 1}`}
-                              className="flex-1 border-gray-200 focus:border-blue-400 focus:ring-blue-200 bg-white text-gray-900"
-                            />
-                            <Button 
-                              type="button" 
-                              onClick={() => removeEnhancedOption(index, optIndex)}
-                              variant="outline"
-                              size="sm"
-                              className="border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300 hover:text-red-700 bg-white font-medium"
-                            >
-                              <Minus size={16} className="text-red-500" />
-                            </Button>
-                          </div>
-                          
-                          {field.weightage !== undefined && field.weightage > 0 && (
-                            <div className="grid grid-cols-2 gap-2">
-                              <div>
-                                <Label className="text-xs text-gray-700 font-medium">Points</Label>
-                                <Input 
-                                  type="number"
-                                  value={option.points || ""}
-                                  onChange={(e) => updateEnhancedOption(index, optIndex, { 
-                                    points: e.target.value ? parseFloat(e.target.value) : 0 
-                                  })}
-                                  placeholder="0"
-                                  className="text-xs border-gray-200 focus:border-blue-400 focus:ring-blue-200 bg-white text-gray-900"
-                                />
-                              </div>
-                            </div>
-                          )}
-                            {field.autoFail && (
-                            <div className="flex items-center gap-2">
-                              <div
-                                onClick={() => updateEnhancedOption(index, optIndex, { isFailOption: !option.isFailOption })}
-                                className={`h-4 w-4 rounded border-2 cursor-pointer transition-all duration-200 flex items-center justify-center ${
-                                  option.isFailOption 
-                                    ? 'bg-blue-600 border-blue-600' 
-                                    : 'bg-white border-gray-300 hover:border-blue-400'
-                                }`}
-                              >
-                                {option.isFailOption && (
-                                  <svg className="h-3 w-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                                  </svg>
-                                )}
-                              </div>
-                              <Label className="text-xs text-red-600 font-medium cursor-pointer" onClick={() => updateEnhancedOption(index, optIndex, { isFailOption: !option.isFailOption })}>
-                                Auto-fail option (selecting this fails the audit)
-                              </Label>
-                            </div>
-                          )}
-                        </div>
-                      ))
-                    ) : (
-                      // Simple options (backward compatibility)
-                      field.options?.map((option, optIndex) => (
-                        <div key={optIndex} className="flex gap-2">
-                          <Input 
-                            value={option}
-                            onChange={(e) => updateOption(index, optIndex, e.target.value)}
-                            placeholder={`Option ${optIndex + 1}`}
-                            className="border-gray-200 focus:border-blue-400 focus:ring-blue-200 bg-white text-gray-900"
-                          />
-                          <Button 
-                            type="button" 
-                            onClick={() => removeOption(index, optIndex)}
-                            variant="outline"
-                            size="sm"
-                            className="border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300 hover:text-red-700 bg-white font-medium"
-                          >
-                            <Minus size={16} className="text-red-500" />
-                          </Button>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                )}
-              </div>
-            </Card>
-          ))}
-            {fields.length === 0 && (
-            <div className="text-center py-8 border-2 border-dashed border-gray-300 rounded-lg bg-gray-50">              <div className="flex flex-col items-center gap-3">
-                <div className="bg-blue-100 p-3 rounded-full">
-                  <FileText className="h-6 w-6 text-blue-600" />
-                </div>
-                <p className="text-gray-700 font-medium mb-2">No fields added yet</p>
-                <p className="text-gray-600 text-sm mb-4">Start building your form by adding your first field</p>
-                <Button 
-                  type="button" 
-                  onClick={addField}
-                  className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white shadow-md hover:shadow-lg"
-                >
-                  <Plus size={16} className="mr-2" />
-                  Add Your First Field
-                </Button>
-              </div>
-            </div>
+          {showPreview ? (
+            renderPreview()
+          ) : (
+            renderEditMode()
           )}
         </div>
         
-        {renderPreview()}
-      </CardContent>        <CardFooter className="flex justify-between gap-4 p-6 bg-gradient-to-br from-white via-blue-50/30 to-indigo-50/30 border-t border-gray-100">
-        <div className="flex items-center gap-4">
-          <Link 
-            href={`/protected/compliance/${complianceId}/forms`} 
-            className="group inline-flex items-center gap-2 text-gray-600 hover:text-gray-800 font-semibold transition-all duration-300 hover:scale-105"
-          >
-            <ArrowLeft size={16} className="transition-transform group-hover:-translate-x-1" />
-            Cancel
-          </Link>
-          <div className="flex items-center gap-2 text-gray-500">
-            <AlertCircle className="h-4 w-4" />
-            <span className="text-sm">Draft forms can be edited later</span>
+        <CardFooter className="flex justify-between gap-4 p-6 bg-gradient-to-br from-white via-blue-50/30 to-indigo-50/30 border-t border-gray-100">
+          <div className="flex items-center gap-4">
+            <Link 
+              href={`/protected/compliance/${complianceId}/forms`} 
+              className="group inline-flex items-center gap-2 text-gray-600 hover:text-gray-800 font-semibold transition-all duration-300 hover:scale-105"
+            >
+              <ArrowLeft size={16} className="transition-transform group-hover:-translate-x-1" />
+              Cancel
+            </Link>
+            <div className="flex items-center gap-2 text-gray-500">
+              <AlertCircle className="h-4 w-4" />
+              <span className="text-sm">Draft forms can be edited later</span>
+            </div>
           </div>
-        </div>
-        <div className="flex gap-4">
-          <DraftButton />
-          <SubmitButton />
-        </div>
-      </CardFooter>
+          <div className="flex gap-4">
+            <DraftButton />
+            <SubmitButton />
+          </div>
+        </CardFooter>
+      </CardContent>
     </form>
   );
 }
