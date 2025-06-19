@@ -20,15 +20,15 @@ export default async function ComplianceArchivePage() {
   // Get current user profile for dashboard layout
   const currentUserProfile = await getUserProfile();
   
-  // Check if user is admin
+  // Check if user is admin or manager
   const { data: profile } = await supabase
     .from('view_user_profiles')
     .select('role')
     .eq('email', user.email)
     .single();
     
-  // If not admin, redirect to protected page
-  if (!profile || profile.role !== 'admin') {
+  // If not admin or manager, redirect to protected page
+  if (!profile || !['admin', 'manager'].includes(profile.role)) {
     return redirect("/protected");
   }
 
@@ -117,16 +117,20 @@ export default async function ComplianceArchivePage() {
                         </td>
                         <td className="p-4">
                           <div className="flex gap-2">
-                            <form action={handleReactivate} className="inline">
-                              <input type="hidden" name="id" value={framework.id} />
-                              <button
-                                type="submit"
-                                className="px-3 py-1.5 text-xs font-medium bg-emerald-50 text-emerald-700 rounded-lg hover:bg-emerald-100 transition-all duration-200 border border-emerald-200 flex items-center gap-2"
-                              >
-                                <RotateCcw size={12} />
-                                Reactivate
-                              </button>
-                            </form>
+                            {profile.role === 'admin' ? (
+                              <form action={handleReactivate} className="inline">
+                                <input type="hidden" name="id" value={framework.id} />
+                                <button
+                                  type="submit"
+                                  className="px-3 py-1.5 text-xs font-medium bg-emerald-50 text-emerald-700 rounded-lg hover:bg-emerald-100 transition-all duration-200 border border-emerald-200 flex items-center gap-2"
+                                >
+                                  <RotateCcw size={12} />
+                                  Reactivate
+                                </button>
+                              </form>
+                            ) : (
+                              <span className="text-xs text-gray-400">No actions</span>
+                            )}
                           </div>
                         </td>
                       </tr>
