@@ -21,7 +21,6 @@ export const generatePDF = async (
   } = {}
 ) => {
   if (!element) return;
-
   const {
     margin = { top: 10, right: 10, bottom: 10, left: 10 },
     format = 'a4',
@@ -30,6 +29,14 @@ export const generatePDF = async (
     quality = 2,
     pagebreak = true
   } = options;
+
+  // Ensure margin properties are defined with fallback values
+  const marginSafe = {
+    top: margin.top ?? 10,
+    right: margin.right ?? 10,
+    bottom: margin.bottom ?? 10,
+    left: margin.left ?? 10
+  };
 
   // Set up dimensions
   const pdf = new jsPDF({
@@ -40,7 +47,6 @@ export const generatePDF = async (
   
   const pdfWidth = pdf.internal.pageSize.getWidth();
   const pdfHeight = pdf.internal.pageSize.getHeight();
-
   try {
     // Capture the element as canvas
     const canvas = await html2canvas(element, {
@@ -48,25 +54,21 @@ export const generatePDF = async (
       logging: false,
       useCORS: true,
       allowTaint: true,
-    });
-
-    const imgData = canvas.toDataURL('image/png');
-    const imgWidth = pdfWidth - margin.left - margin.right;
+    } as any);    const imgData = canvas.toDataURL('image/png');
+    const imgWidth = pdfWidth - marginSafe.left - marginSafe.right;
     const imgHeight = (canvas.height * imgWidth) / canvas.width;
 
     // If we need to handle page breaks for long content
-    if (pagebreak && imgHeight > pdfHeight - margin.top - margin.bottom) {
+    if (pagebreak && imgHeight > pdfHeight - marginSafe.top - marginSafe.bottom) {
       // Calculate the number of pages needed
       let heightLeft = canvas.height;
       let position = 0;
-      let page = 1;
-
-      // First page
+      let page = 1;      // First page
       pdf.addImage(
         imgData, 
         'PNG', 
-        margin.left, 
-        margin.top, 
+        marginSafe.left, 
+        marginSafe.top, 
         imgWidth, 
         imgHeight
       );
@@ -76,25 +78,23 @@ export const generatePDF = async (
       // Add more pages if needed
       while (heightLeft > 0) {
         position += pdfHeight;
-        pdf.addPage();
-        pdf.addImage(
+        pdf.addPage();        pdf.addImage(
           imgData, 
           'PNG', 
-          margin.left, 
-          margin.top - position, 
+          marginSafe.left, 
+          marginSafe.top - position, 
           imgWidth, 
           imgHeight
         );
         heightLeft -= pdfHeight;
         page++;
       }
-    } else {
-      // For single page content
+    } else {      // For single page content
       pdf.addImage(
         imgData, 
         'PNG', 
-        margin.left, 
-        margin.top, 
+        marginSafe.left, 
+        marginSafe.top, 
         imgWidth, 
         imgHeight
       );
