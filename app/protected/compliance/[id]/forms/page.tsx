@@ -27,8 +27,8 @@ export default async function ComplianceFormsPage({ params }: { params: Promise<
     .eq('email', user.email)
     .single();
     
-  // If not admin or manager, redirect to protected page
-  if (!profile || (profile.role !== 'admin' && profile.role !== 'manager')) {
+  // If not admin, manager, or user, redirect to protected page
+  if (!profile || !['admin', 'manager', 'user'].includes(profile.role)) {
     return redirect("/protected");
   }
   // Fetch compliance framework (only active ones)
@@ -100,13 +100,15 @@ export default async function ComplianceFormsPage({ params }: { params: Promise<
                   View Archived
                 </Link>
               )}
-              <Link 
-                href={`/protected/compliance/${id}/forms/add`}
-                className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-gradient-to-r from-sky-500 to-blue-600 text-white hover:from-sky-600 hover:to-blue-700 transition-all duration-200 shadow-md hover:shadow-lg font-medium"
-              >
-                <Plus className="h-4 w-4" />
-                Add Form
-              </Link>
+              {isAdmin && (
+                <Link 
+                  href={`/protected/compliance/${id}/forms/add`}
+                  className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-gradient-to-r from-sky-500 to-blue-600 text-white hover:from-sky-600 hover:to-blue-700 transition-all duration-200 shadow-md hover:shadow-lg font-medium"
+                >
+                  <Plus className="h-4 w-4" />
+                  Add Form
+                </Link>
+              )}
             </div>
           </div>
         </div>

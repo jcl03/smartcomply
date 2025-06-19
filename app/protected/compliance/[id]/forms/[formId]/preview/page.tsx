@@ -40,8 +40,8 @@ export default async function PreviewFormPage({
     .eq('email', user.email)
     .single();
     
-  // If not admin, redirect to protected page
-  if (!profile || profile.role !== 'admin') {
+  // If not admin, manager, or user, redirect to protected page
+  if (!profile || !['admin', 'manager', 'user'].includes(profile.role)) {
     return redirect("/protected");
   }
   
