@@ -285,3 +285,15 @@ export async function getUserProfiles(userIds: string[]) {
   
   return profiles;
 }
+
+export async function getCompliances() {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from('compliance')
+    .select('id, name, status');
+  if (error) {
+    console.error('Error fetching compliances:', error);
+    return [];
+  }
+  return data || [];
+}

@@ -91,6 +91,8 @@ export async function inviteUser(formData: FormData) {
         return { error: "Database error: Unable to send invitation. Please check your Supabase configuration." };
       } else if (inviteError.message?.includes('Invalid token')) {
         return { error: "Authentication error: Invalid service role key." };
+      } else if (inviteError.status === 422 && inviteError.code === 'email_exists') {
+        return { error: "A user with this email address has already been registered. Please use a different email or ask the user to reset their password." };
       } else {
         return { error: `Failed to send invitation: ${inviteError.message || 'Unknown error'}` };
       }
