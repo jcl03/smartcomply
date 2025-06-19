@@ -89,6 +89,16 @@
   .login-card:hover {
     @apply scale-[1.01] shadow-2xl;
   }
+  
+  /* Responsive table styles */
+  .table-responsive {
+    @apply w-full overflow-x-auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  .table-responsive table {
+    @apply min-w-full;
+  }
 }
 
 @layer utilities {
@@ -143,4 +153,43 @@
 [data-nextjs-scroll-focus-boundary] > iframe,
 .vercel-toolbar {
   display: none !important;
+}
+
+/* Auto-responsive tables for narrow screens */
+@media (max-width: 768px) {
+  /* Make only table containers scrollable, not cards */
+  div:has(> table) {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  /* Fallback for browsers without :has() support */
+  .overflow-hidden table {
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+  
+  /* Ensure tables have minimum width to trigger scroll */
+  table {
+    min-width: 600px;
+  }
+  
+  /* Prevent text wrapping in table cells */
+  table th,
+  table td {
+    white-space: nowrap;
+    min-width: 120px;
+  }
+  
+  /* Adjust column widths */
+  table th:first-child,
+  table td:first-child {
+    min-width: 150px; /* First column slightly wider */
+  }
+  
+  table th:last-child,
+  table td:last-child {
+    min-width: 100px; /* Actions column can be narrower */
+  }
 }
