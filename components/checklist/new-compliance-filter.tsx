@@ -58,8 +58,7 @@ export default function ComplianceFilter({ complianceFrameworks, activeFilterId 
             ))}
           </select>
         </div>
-      </div>
-      
+      </form>
       {activeFilterId && (
         <Link
           href="/protected/checklist"

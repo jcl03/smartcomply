@@ -23,7 +23,6 @@ import { Button } from "@/components/ui/button";
 import { format, formatDistanceToNow } from "date-fns";
 import Link from "next/link";
 import { generatePDF } from "@/utils/pdf-utils";
-import { generatePDF } from "@/utils/pdf-utils";
 
 interface AuditDetailData {
   id: number;

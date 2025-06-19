@@ -28,17 +28,16 @@ import FilterByCompliance from "@/components/checklist/filter-by-compliance";
 import FilteredIndicator from "@/components/checklist/filtered-indicator";
 
 // Add this function to handle server-side filtering based on search params
-export default async function ChecklistResponsesPage({
-  searchParams,
-}: {
-  searchParams: { [key: string]: string | string[] | undefined };
-}) {
-  const supabase = await createClient();
-    // Get the compliance filter from URL search params
-  const complianceFilter = typeof searchParams.compliance === 'string' && searchParams.compliance !== '' 
-    ? searchParams.compliance.trim() 
+export default async function Page(props: any) {
+  // Extract searchParams from Next.js props
+  const { searchParams } = props;
+  // Await Next.js PageProps promise
+  const { compliance } = (await searchParams) ?? {};
+  const complianceFilter = typeof compliance === 'string' && compliance !== ''
+    ? compliance.trim()
     : undefined;
   
+  const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) {
     return redirect("/sign-in");
