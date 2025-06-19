@@ -18,7 +18,8 @@ import {
   BarChart3,
   Plus,
   ClipboardList,
-  Filter
+  Filter,
+  Search
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { getUserProfile } from "@/lib/api";
@@ -26,15 +27,21 @@ import ComplianceFilter from "@/components/checklist/basic-filter";
 import FilterIndicator from "@/components/checklist/filter-indicator";
 import FilterByCompliance from "@/components/checklist/filter-by-compliance";
 import FilteredIndicator from "@/components/checklist/filtered-indicator";
+import SearchFilter from "@/components/checklist/search-filter";
+import SearchIndicator from "@/components/checklist/search-indicator";
+import { Input } from "@/components/ui/input";
 
 // Add this function to handle server-side filtering based on search params
 export default async function Page(props: any) {
   // Extract searchParams from Next.js props
   const { searchParams } = props;
   // Await Next.js PageProps promise
-  const { compliance } = (await searchParams) ?? {};
+  const { compliance, search } = (await searchParams) ?? {};
   const complianceFilter = typeof compliance === 'string' && compliance !== ''
     ? compliance.trim()
+    : undefined;
+  const searchQuery = typeof search === 'string' && search !== ''
+    ? search.trim()
     : undefined;
   
   const supabase = await createClient();
@@ -55,6 +62,7 @@ export default async function Page(props: any) {
   console.log('User profile:', profile);
   console.log('Current user ID:', user.id);
   console.log('Active compliance filter:', complianceFilter);
+  console.log('Active search query:', searchQuery);
 
   // Fetch all active compliance frameworks for filtering
   const { data: complianceFrameworks } = await supabase
@@ -202,8 +210,42 @@ export default async function Page(props: any) {
         acc[profile.user_id] = profile;
         return acc;
       }, {} as Record<string, any>);
-    }
+    }  }
+  
+  // Apply search filtering if search query is provided
+  if (searchQuery && responses && responses.length > 0) {
+    const searchLower = searchQuery.toLowerCase();
+    responses = responses.filter(response => {
+      // Search in checklist title
+      const title = response.title || 
+                   checklistInfo[response.checklist_id]?.checklist_schema?.title || 
+                   `Checklist ${response.checklist_id}`;
+      if (title.toLowerCase().includes(searchLower)) return true;
+
+      // Search in compliance framework name
+      const frameworkName = checklistInfo[response.checklist_id]?.compliance?.name || '';
+      if (frameworkName.toLowerCase().includes(searchLower)) return true;
+
+      // For managers, also search in user names and emails
+      if (profile.role === 'manager') {
+        const userProfile = userProfiles[response.user_id];
+        if (userProfile) {
+          const fullName = userProfile.full_name || '';
+          const email = userProfile.email || '';
+          const role = userProfile.role || '';
+          
+          if (fullName.toLowerCase().includes(searchLower) ||
+              email.toLowerCase().includes(searchLower) ||
+              role.toLowerCase().includes(searchLower)) {
+            return true;
+          }
+        }
+      }
+
+      return false;
+    });
   }
+  
   if (error) {
     console.error('Error fetching checklist responses:', error);
   }
@@ -322,8 +364,7 @@ export default async function Page(props: any) {
                     : "View your submitted checklists and track your compliance completion status."
                   }
                 </p>
-                
-                <div className="flex items-center gap-6 pt-2">
+                  <div className="flex items-center gap-6 pt-2">
                   <div className="flex items-center gap-2 text-sm text-slate-500">
                     <div className="w-2 h-2 bg-emerald-500 rounded-full"></div>
                     <span>System Operational</span>
@@ -339,11 +380,19 @@ export default async function Page(props: any) {
                     complianceFilter={complianceFilter} 
                     frameworkName={complianceFrameworks?.find(f => f.id.toString() === complianceFilter)?.name} 
                   />
+                  <SearchIndicator searchQuery={searchQuery} />
                 </div>
               </div>
               
               <div className="lg:text-right space-y-3">
                 <div className="flex flex-col sm:flex-row gap-3">
+                  <Link
+                    href="/protected/checklist/new"
+                    className="inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 px-4 py-3 text-sm font-medium text-white hover:from-sky-600 hover:to-blue-700 transition-all duration-200 shadow-lg hover:shadow-xl mr-2"
+                  >
+                    <Plus size={16} className="mr-2" />
+                    Fill Checklist
+                  </Link>
                   <Link
                     href="/protected/compliance"
                     className="inline-flex items-center justify-center rounded-xl bg-white/90 backdrop-blur-sm px-4 py-3 text-sm font-medium text-slate-700 hover:bg-white transition-all duration-200 border border-slate-200 shadow-lg hover:shadow-xl"
@@ -458,16 +507,19 @@ export default async function Page(props: any) {
               </div>
             </CardContent>
           </Card>
-        )}
-
-        {/* Submissions Overview */}        <Card className="bg-white/90 border-slate-200/50 rounded-2xl shadow-xl overflow-hidden">
+        )}        {/* Submissions Overview */}        <Card className="bg-white/90 border-slate-200/50 rounded-2xl shadow-xl overflow-hidden">
           <div className="bg-slate-800 text-white p-5 relative">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3 flex-1">
                 <ComplianceFilter 
                   complianceFrameworks={complianceFrameworks || []} 
                   activeFilterId={complianceFilter}
                 />
+                <SearchFilter placeholder={
+                  profile.role === 'manager' 
+                    ? "Search checklists, frameworks, or users..." 
+                    : "Search your checklists or frameworks..."
+                } />
               </div>
               <div className="flex items-center">
                 <div className="bg-indigo-600/60 text-white px-5 py-2 rounded-full text-sm font-medium flex items-center">
@@ -599,10 +651,13 @@ export default async function Page(props: any) {
                   <div className="absolute -top-2 -right-2 w-8 h-8 bg-gradient-to-br from-emerald-400 to-green-500 rounded-full flex items-center justify-center shadow-lg">
                     <Plus className="h-4 w-4 text-white" />
                   </div>
-                </div>
-                <h3 className="text-xl font-bold text-slate-800 mb-3">No Submissions Found</h3>
+                </div>                <h3 className="text-xl font-bold text-slate-800 mb-3">No Submissions Found</h3>
                 <p className="text-slate-600 mb-8 max-w-md mx-auto text-base leading-relaxed">
-                  {profile.role === 'manager' 
+                  {searchQuery ? (
+                    `No checklists match your search "${searchQuery}". Try adjusting your search terms or clearing the search filter.`
+                  ) : complianceFilter ? (
+                    "No submissions found for the selected compliance framework. Try selecting a different framework or clearing the filter."
+                  ) : profile.role === 'manager' 
                     ? "No checklist submissions have been made yet. Team members can start submitting compliance checklists to track organizational progress."
                     : "You haven't submitted any checklists yet. Start by completing your first compliance checklist to track your progress."
                   }

@@ -131,15 +131,15 @@ export function ChecklistFillForm({ complianceId, checklistId, checklist, framew
         throw new Error("No checklist items found");
       }
 
-      // Check if any responses already exist for this user
-      const { data: existingResponse } = await supabase
-        .from("checklist_responses")
-        .select("id")
-        .eq("checklist_id", checklistId)
-        .eq("user_id", user.id)
-        .single();      if (existingResponse) {
-        throw new Error("You have already submitted a response for this checklist");
-      }
+      // // Check if any responses already exist for this user
+      // const { data: existingResponse } = await supabase
+      //   .from("checklist_responses")
+      //   .select("id")
+      //   .eq("checklist_id", checklistId)
+      //   .eq("user_id", user.id)
+      //   .single();      if (existingResponse) {
+      //   throw new Error("You have already submitted a response for this checklist");
+      // }
 
       // Upload all temporary files to storage
       const uploadedFormData = { ...formData };
@@ -242,7 +242,7 @@ export function ChecklistFillForm({ complianceId, checklistId, checklist, framew
           : `Checklist saved but requires attention. Some items need completion or review. (Status: ${status.toUpperCase()})`,
         variant: result === "pass" ? "default" : "destructive",
       });      // Redirect back to documents page
-      window.location.href = `/protected/documents`;
+      window.location.href = `/protected/checklist`;
     } catch (error: any) {
       toast({
         title: "Error",
