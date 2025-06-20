@@ -145,15 +145,17 @@ export default async function ComplianceFormsPage({ params }: { params: Promise<
                           <td className="p-4">
                             <div className="max-w-xs">
                               {form.form_schema?.title ? (
-                                <div className="font-medium text-sky-800 text-sm">{form.form_schema.title}</div>
+                                <>
+                                  <div className="font-medium text-sky-800 text-sm">{form.form_schema.title}</div>
+                                  {form.form_schema.description && (
+                                    <div className="text-xs text-sky-500 mt-1">{form.form_schema.description}</div>
+                                  )}
+                                </>
                               ) : (
                                 <div className="text-sky-600 text-sm">
                                   {Object.keys(form.form_schema || {}).length} fields
                                 </div>
                               )}
-                              <div className="text-xs text-sky-500 mt-1 truncate bg-sky-50 px-2 py-1 rounded">
-                                {JSON.stringify(form.form_schema).substring(0, 80)}...
-                              </div>
                             </div>
                           </td>
                           <td className="p-4">
