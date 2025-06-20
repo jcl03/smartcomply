@@ -229,6 +229,51 @@ export default function EditFormComponent({ form, complianceId }: { form: Form; 
     setErrorMessage("");
     setSuccessMessage("");
     
+    // Custom validation: ensure each section has at least one field
+    const sections: { [key: string]: any[] } = {};
+    let currentSection = '';
+    fields.forEach(field => {
+      if (field.isSection) {
+        currentSection = field.id;
+        sections[currentSection] = [];
+      } else {
+        if (!sections[currentSection]) sections[currentSection] = [];
+        sections[currentSection].push(field);
+      }
+    });
+    const emptySectionEntry = Object.entries(sections).find(([_, fs]) => fs.length === 0);
+    if (emptySectionEntry) {
+      const [emptySectionId] = emptySectionEntry;
+      const sectionField = fields.find(f => f.id === emptySectionId);
+      const sectionName = sectionField?.label?.trim() ? sectionField.label : 'Unnamed Section';
+      setTimeout(() => {
+        alert(`Section "${sectionName}" has no field inserted. Please add at least one field to this section.`);
+        const el = document.querySelector(`[data-section-id='${emptySectionId}']`);
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 100);
+      return;
+    }
+    // New validation: ensure checkbox/radio fields have at least one non-empty option
+    const invalidField = fields.find(f => {
+      if (f.type === 'checkbox' || f.type === 'radio') {
+        if (shouldUseEnhancedOptions(f)) {
+          return !f.enhancedOptions || f.enhancedOptions.length === 0 || f.enhancedOptions.every(opt => !opt.value?.trim());
+        } else {
+          return !f.options || f.options.length === 0 || f.options.every(opt => !opt?.trim());
+        }
+      }
+      return false;
+    });
+    if (invalidField) {
+      const fieldLabel = invalidField.label?.trim() ? invalidField.label : 'Unnamed Field';
+      setTimeout(() => {
+        alert(`Field "${fieldLabel}" (${invalidField.type}) must have at least one non-empty option.`);
+        const el = document.querySelector(`[data-field-id='${invalidField.id}']`);
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 100);
+      return;
+    }
+    
     try {
       // Save all fields including sections
       const formSchema = {
@@ -325,6 +370,7 @@ const renderEditMode = () => {
                       onChange={(e) => updateField(sectionIndex, { label: e.target.value })}
                       placeholder="Enter section name"
                       className="font-semibold text-sky-900 bg-white/80 border-sky-200 focus:border-sky-400 focus:ring-sky-200"
+                      required
                     />
                   ) : (
                     <span className="font-semibold text-sky-900">
@@ -392,44 +438,46 @@ const renderEditMode = () => {
                               onChange={(e) => updateField(actualFieldIndex, { label: e.target.value })}
                               placeholder="Enter field label"
                               className="bg-white border-sky-200 focus:border-sky-400 focus:ring-sky-200 text-sky-900 placeholder:text-sky-400"
+                              required
                             />
                           </div>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                          <div className="space-y-2">
-                            <Label className="text-sky-700 font-medium">Placeholder Text</Label>
-                            <Input
-                              value={field.placeholder || ""}
-                              onChange={(e) => updateField(actualFieldIndex, { placeholder: e.target.value })}
-                              placeholder="Enter placeholder text"
-                              className="bg-white border-sky-200 focus:border-sky-400 focus:ring-sky-200 text-sky-900 placeholder:text-sky-400"
-                            />
-                          </div>
-
-                          <div className="space-y-2">
-                            <Label className="text-sky-700 font-medium">Required Field</Label>
-                            <div className="flex items-center gap-2">
-                              <div 
-                                onClick={() => updateField(actualFieldIndex, { required: !field.required })}
-                                className={`h-4 w-4 rounded border-2 cursor-pointer transition-all duration-200 flex items-center justify-center ${
-                                  field.required 
-                                    ? 'bg-sky-600 border-sky-600' 
-                                    : 'bg-white border-sky-300 hover:border-sky-400'
-                                }`}
-                              >
-                                {field.required && (
-                                  <svg className="h-3 w-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                                  </svg>
-                                )}
+                        {!(field.type === 'checkbox' || field.type === 'radio' || field.type === 'image') && (
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                            <div className="space-y-2">
+                              <Label className="text-sky-700 font-medium">Placeholder Text</Label>
+                              <Input
+                                value={field.placeholder || ""}
+                                onChange={(e) => updateField(actualFieldIndex, { placeholder: e.target.value })}
+                                placeholder="Enter placeholder text"
+                                className="bg-white border-sky-200 focus:border-sky-400 focus:ring-sky-200 text-sky-900 placeholder:text-sky-400"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label className="text-sky-700 font-medium">Required Field</Label>
+                              <div className="flex items-center gap-2">
+                                <div 
+                                  onClick={() => updateField(actualFieldIndex, { required: !field.required })}
+                                  className={`h-4 w-4 rounded border-2 cursor-pointer transition-all duration-200 flex items-center justify-center ${
+                                    field.required 
+                                      ? 'bg-sky-600 border-sky-600' 
+                                      : 'bg-white border-sky-300 hover:border-sky-400'
+                                  }`}
+                                >
+                                  {field.required && (
+                                    <svg className="h-3 w-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                    </svg>
+                                  )}
+                                </div>
+                                <Label className="text-sky-700 font-medium cursor-pointer" onClick={() => updateField(actualFieldIndex, { required: !field.required })}>
+                                  Required Field
+                                </Label>
                               </div>
-                              <Label className="text-sky-700 font-medium cursor-pointer" onClick={() => updateField(actualFieldIndex, { required: !field.required })}>
-                                Required Field
-                              </Label>
                             </div>
                           </div>
-                        </div>
+                        )}
 
                         {/* Scoring Options */}
                         <div className="mt-4">
