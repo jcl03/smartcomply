@@ -26,16 +26,6 @@ interface Certificate {
   upload_date: string | null;
   audit_id: number | null;
   checklist_responses_id: number | null;
-  audit?: {
-    id: number;
-    title: string | null;
-    status: string | null;
-  } | null;
-  checklist_responses?: {
-    id: number;
-    title: string | null;
-    status: string | null;
-  } | null;
 }
 
 interface CertificateListProps {
@@ -237,18 +227,18 @@ export function CertificateList({ certificates, canManage }: CertificateListProp
                       <h4 className="font-medium text-gray-900">Related Records</h4>
                       
                       <div className="space-y-2">
-                        {cert.audit && (
+                        {cert.audit_id && (
                           <div className="p-3 bg-blue-50 rounded-lg">
                             <div className="flex items-center justify-between">
                               <div>
                                 <p className="font-medium text-blue-900">
-                                  {cert.audit.title || `Audit #${cert.audit.id}`}
+                                  Audit #{cert.audit_id}
                                 </p>
                                 <p className="text-sm text-blue-700">
-                                  Status: {cert.audit.status || "Unknown"}
+                                  Linked to audit record
                                 </p>
                               </div>
-                              <Link href={`/protected/Audit/${cert.audit.id}`}>
+                              <Link href={`/protected/Audit/${cert.audit_id}`}>
                                 <Button variant="outline" size="sm">
                                   <ExternalLink className="h-4 w-4" />
                                   View Audit
@@ -258,18 +248,18 @@ export function CertificateList({ certificates, canManage }: CertificateListProp
                           </div>
                         )}
                         
-                        {cert.checklist_responses && (
+                        {cert.checklist_responses_id && (
                           <div className="p-3 bg-green-50 rounded-lg">
                             <div className="flex items-center justify-between">
                               <div>
                                 <p className="font-medium text-green-900">
-                                  {cert.checklist_responses.title || `Checklist Response #${cert.checklist_responses.id}`}
+                                  Checklist Response #{cert.checklist_responses_id}
                                 </p>
                                 <p className="text-sm text-green-700">
-                                  Status: {cert.checklist_responses.status || "Unknown"}
+                                  Linked to checklist response
                                 </p>
                               </div>
-                              <Link href={`/protected/checklist-responses/${cert.checklist_responses.id}`}>
+                              <Link href={`/protected/checklist-responses/${cert.checklist_responses_id}`}>
                                 <Button variant="outline" size="sm">
                                   <ExternalLink className="h-4 w-4" />
                                   View Response
@@ -279,7 +269,7 @@ export function CertificateList({ certificates, canManage }: CertificateListProp
                           </div>
                         )}
                         
-                        {!cert.audit && !cert.checklist_responses && (
+                        {!cert.audit_id && !cert.checklist_responses_id && (
                           <p className="text-sm text-gray-500 italic">
                             No related audit or checklist response records.
                           </p>

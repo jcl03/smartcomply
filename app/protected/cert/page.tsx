@@ -43,7 +43,6 @@ export default async function CertificatesPage({
     .single();
     
   const canManageCerts = profile && ['admin', 'manager'].includes(profile.role);
-
   // Build query filters
   let query = supabase
     .from('cert')
@@ -55,17 +54,7 @@ export default async function CertificatesPage({
       expiration,
       upload_date,
       audit_id,
-      checklist_responses_id,
-      audit:audit_id (
-        id,
-        title,
-        status
-      ),
-      checklist_responses:checklist_responses_id (
-        id,
-        title,
-        status
-      )
+      checklist_responses_id
     `)
     .order('created_at', { ascending: false });
 

@@ -7,8 +7,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Upload, Calendar, FolderOpen, Link2, ArrowLeft } from "lucide-react";
+import { Upload, Calendar, FolderOpen, Link2, ArrowLeft, CheckCircle, X, FileText } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
+import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
 
 interface Audit {
@@ -187,11 +188,14 @@ export function AddCertificateForm({ audits, checklistResponses }: AddCertificat
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {/* File Upload */}
+          <form onSubmit={handleSubmit} className="space-y-6">            {/* File Upload */}
             <div className="space-y-2">
               <Label htmlFor="file">Certificate File *</Label>
-              <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition-colors">
+              <div className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
+                selectedFile 
+                  ? 'border-green-300 bg-green-50 hover:border-green-400' 
+                  : 'border-gray-300 hover:border-gray-400'
+              }`}>
                 <input
                   id="file"
                   type="file"
@@ -199,18 +203,61 @@ export function AddCertificateForm({ audits, checklistResponses }: AddCertificat
                   className="hidden"
                   accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
                 />
-                <Label
-                  htmlFor="file"
-                  className="cursor-pointer flex flex-col items-center space-y-2"
-                >
-                  <Upload className="h-8 w-8 text-gray-400" />
-                  <span className="text-sm font-medium">
-                    {selectedFile ? selectedFile.name : "Choose certificate file"}
-                  </span>
-                  <span className="text-xs text-gray-500">
-                    PDF, Image, or Document (max 10MB)
-                  </span>
-                </Label>
+                
+                {selectedFile ? (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-center">
+                      <CheckCircle className="h-8 w-8 text-green-500" />
+                    </div>
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-center gap-2">
+                        <FileText className="h-4 w-4 text-green-600" />
+                        <span className="text-sm font-medium text-green-700">
+                          {selectedFile.name}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-center gap-2">
+                        <Badge variant="secondary" className="text-xs">
+                          {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
+                        </Badge>
+                        <Badge variant="outline" className="text-xs">
+                          {selectedFile.type.includes('pdf') ? 'PDF' : 
+                           selectedFile.type.includes('image') ? 'Image' : 'Document'}
+                        </Badge>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-center gap-2">
+                      <Label
+                        htmlFor="file"
+                        className="cursor-pointer text-xs text-green-600 hover:text-green-700 underline"
+                      >
+                        Change file
+                      </Label>
+                      <span className="text-xs text-gray-400">•</span>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedFile(null)}
+                        className="text-xs text-red-600 hover:text-red-700 underline flex items-center gap-1"
+                      >
+                        <X className="h-3 w-3" />
+                        Remove
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <Label
+                    htmlFor="file"
+                    className="cursor-pointer flex flex-col items-center space-y-2"
+                  >
+                    <Upload className="h-8 w-8 text-gray-400" />
+                    <span className="text-sm font-medium">
+                      Choose certificate file
+                    </span>
+                    <span className="text-xs text-gray-500">
+                      PDF, Image, or Document (max 10MB)
+                    </span>
+                  </Label>
+                )}
               </div>
             </div>
 
