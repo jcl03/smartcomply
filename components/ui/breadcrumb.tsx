@@ -30,6 +30,8 @@ const pathLabels: Record<string, string> = {
   '/protected/view-compliance': 'View Compliance',
   '/protected/first-time-login': 'First Time Login',
   '/protected/invite': 'Invite',
+  '/protected/cert': 'Certificate Management',
+  '/protected/cert/add': 'Add Certificate',
 };
 
 // Dynamic route patterns
@@ -125,59 +127,60 @@ function generateBreadcrumbsFromPath(pathname: string): BreadcrumbItem[] {
     currentPath += `/${segments[i]}`;
     
     // Skip the first 'protected' segment in display
-    if (segments[i] === 'protected') continue;
-    
-    // Handle dynamic routes (like [id])
-    let label = pathLabels[currentPath];
-    
-    if (!label) {
-      // Check if this is a dynamic route
-      const segment = segments[i];
-      const nextSegment = segments[i + 1];
-      const prevSegment = segments[i - 1];
+    if (segments[i] === 'protected') continue;      // Handle dynamic routes (like [id])
+      let label = pathLabels[currentPath];
       
-      // Special handling for nested routes
-      if (prevSegment === 'compliance' && segment.match(/^[0-9a-f-]+$/)) {
-        // This is a compliance ID
-        label = 'Framework Details';
-      } else if (prevSegment === 'checklist' && segment.match(/^[0-9a-f-]+$/)) {
-        // This is a checklist ID  
-        label = 'Checklist Details';
-      } else if (prevSegment === 'documents' && segment.match(/^[0-9a-f-]+$/)) {
-        // This is a document ID
-        label = 'Document Details';
-      } else if (prevSegment === 'Audit' && segment.match(/^[0-9a-f-]+$/)) {
-        // This is an audit ID
-        label = 'Audit Details';
-      } else if (prevSegment === 'user-management' && segment.match(/^[0-9a-f-]+$/)) {
-        // This is a user ID
-        label = 'User Details';
-      } else if (prevSegment === 'view-compliance' && segment.match(/^[0-9a-f-]+$/)) {
-        // This is a compliance view ID
-        label = 'Compliance View';
-      } else if (prevSegment === 'invite' && segment.match(/^[0-9a-f-]+$/)) {
-        // This is an invite token
-        label = 'Accept Invite';
-      } else if (dynamicRouteLabels[segment]) {
-        // First check if it's a known dynamic route label
-        label = dynamicRouteLabels[segment];
-      } else if (segment.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
-        // UUID pattern - likely an ID
-        label = 'Details';
-      } else if (segment.match(/^\d+$/)) {
-        // Numeric ID
-        label = 'Details';
-      } else if (segment.startsWith('[') && segment.endsWith(']')) {
-        // Next.js dynamic route parameter
-        label = 'Details';
-      } else {
-        // Capitalize and clean up the segment
-        label = segment
-          .split('-')
-          .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-          .join(' ');
+      if (!label) {
+        // Check if this is a dynamic route
+        const segment = segments[i];
+        const nextSegment = segments[i + 1];
+        const prevSegment = segments[i - 1];
+        
+        // Special handling for nested routes
+        if (prevSegment === 'compliance' && segment.match(/^[0-9a-f-]+$/)) {
+          // This is a compliance ID
+          label = 'Framework Details';
+        } else if (prevSegment === 'checklist' && segment.match(/^[0-9a-f-]+$/)) {
+          // This is a checklist ID  
+          label = 'Checklist Details';
+        } else if (prevSegment === 'documents' && segment.match(/^[0-9a-f-]+$/)) {
+          // This is a document ID
+          label = 'Document Details';
+        } else if (prevSegment === 'Audit' && segment.match(/^[0-9a-f-]+$/)) {
+          // This is an audit ID
+          label = 'Audit Details';
+        } else if (prevSegment === 'user-management' && segment.match(/^[0-9a-f-]+$/)) {
+          // This is a user ID
+          label = 'User Details';
+        } else if (prevSegment === 'view-compliance' && segment.match(/^[0-9a-f-]+$/)) {
+          // This is a compliance view ID
+          label = 'Compliance View';
+        } else if (prevSegment === 'invite' && segment.match(/^[0-9a-f-]+$/)) {
+          // This is an invite token
+          label = 'Accept Invite';
+        } else if (prevSegment === 'cert' && segment.match(/^[0-9a-f-]+$/)) {
+          // This is a certificate ID
+          label = 'Certificate Details';
+        } else if (dynamicRouteLabels[segment]) {
+          // First check if it's a known dynamic route label
+          label = dynamicRouteLabels[segment];
+        } else if (segment.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
+          // UUID pattern - likely an ID
+          label = 'Details';
+        } else if (segment.match(/^\d+$/)) {
+          // Numeric ID
+          label = 'Details';
+        } else if (segment.startsWith('[') && segment.endsWith(']')) {
+          // Next.js dynamic route parameter
+          label = 'Details';
+        } else {
+          // Capitalize and clean up the segment
+          label = segment
+            .split('-')
+            .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+            .join(' ');
+        }
       }
-    }
     
     breadcrumbs.push({
       label,

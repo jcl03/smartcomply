@@ -48,7 +48,7 @@ const navigation = [
   { name: "Checklists", href: "/protected/checklist", icon: FileText, managerOnly: true },
   { name: "Audits", href: "/protected/Audit", icon: CheckCircle, excludeForAdmin: true },
   // { name: "Reports", href: "/protected/reports", icon: FileText, excludeForAdmin: true },
-  { name: "Cert", href: "/protected/cert", icon: Folder }, // Added Cert button
+  { name: "Cert", href: "/protected/cert", icon: Folder, managerOnly: true}, // Added Cert button
 ];
 
 export default function DashboardLayout({ children, userProfile }: DashboardLayoutProps) {  const [sidebarOpen, setSidebarOpen] = useState(false);
