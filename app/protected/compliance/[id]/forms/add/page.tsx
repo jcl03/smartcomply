@@ -127,7 +127,7 @@ export default async function AddFormPage({ params }: { params: Promise<{ id: st
                 </div>
                 
                 <div className="flex justify-end gap-4 mt-6">
-                  <Link href={`/protected/view-compliance/${id}/forms`}>
+                  <Link href={`/protected/compliance/${id}/forms`}>
                     <Button variant="outline">View Forms</Button>
                   </Link>
                   <Link href={`/protected/compliance/${id}/forms`}>

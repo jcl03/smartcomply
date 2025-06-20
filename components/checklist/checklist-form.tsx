@@ -133,7 +133,7 @@ export function ChecklistFillForm({ complianceId, checklistId }: Props) {
       });
 
       // Redirect back to compliance view
-      window.location.href = `/protected/view-compliance/${complianceId}`;
+      window.location.href = `/protected/compliance/${complianceId}`;
     } catch (error: any) {
       toast({
         title: "Error",

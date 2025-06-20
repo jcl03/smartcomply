@@ -128,7 +128,7 @@ export default async function AddChecklistPage({ params }: { params: Promise<{ i
                 </div>
                 
                 <div className="flex justify-end gap-4 mt-6">
-                  <Link href={`/protected/view-compliance/${id}/checklists`}>
+                  <Link href={`/protected/compliance/${id}/checklists`}>
                     <Button variant="outline">View Checklists</Button>
                   </Link>
                   <Link href={`/protected/compliance/${id}/checklists`}>

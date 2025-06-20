@@ -153,7 +153,7 @@ export default async function EditChecklistPage({
                   </ul>
                 </div>
                 
-                <div className="flex justify-end gap-4 mt-6">                  <Link href={`/protected/view-compliance/${id}/checklists/${checklistId}`}>
+                <div className="flex justify-end gap-4 mt-6">                  <Link href={`/protected/compliance/${id}/checklists/${checklistId}`}>
                     <Button variant="outline">View Checklist</Button>
                   </Link>
                   <Link href={`/protected/compliance/${id}/checklists`}>
