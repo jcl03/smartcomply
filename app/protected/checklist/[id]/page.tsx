@@ -475,6 +475,7 @@ export default async function ChecklistViewPage({ params }: Props) {
         )}
 
         {/* Response Data Debug (only for managers in development) */}
+        {/*
         {userProfile.role === 'manager' && process.env.NODE_ENV === 'development' && (
           <Card>
             <CardHeader>
@@ -487,6 +488,7 @@ export default async function ChecklistViewPage({ params }: Props) {
             </CardContent>
           </Card>
         )}
+        */}
       </div>
     </DashboardLayout>
   );
