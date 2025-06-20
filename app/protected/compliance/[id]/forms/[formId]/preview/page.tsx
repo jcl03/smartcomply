@@ -223,6 +223,8 @@ export default async function PreviewFormPage({
                   </div>
                 </div>
                 
+                {/* Remove schema structure from user view */}
+                {/*
                 <div className="pt-4 border-t border-sky-100">
                   <Label className="text-sky-700 font-medium">Schema Structure</Label>
                   <div className="mt-2 bg-sky-50 border border-sky-200 rounded-lg p-4 max-h-80 overflow-auto">
@@ -231,6 +233,7 @@ export default async function PreviewFormPage({
                     </pre>
                   </div>
                 </div>
+                */}
               </div>
             </CardContent>
           </Card>
