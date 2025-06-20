@@ -30,7 +30,6 @@ export default async function CertificateDetailPage({
     .single();
     
   const canManage = profile && ['admin', 'manager'].includes(profile.role);
-
   // Fetch certificate with related data
   const { data: certificate, error } = await supabase
     .from('cert')
@@ -42,8 +41,17 @@ export default async function CertificateDetailPage({
       expiration,
       upload_date,
       audit_id,
-      checklist_responses_id,
-      audit:audit_id (
+      checklist_responses_id
+    `)
+    .eq('id', id)
+    .single();
+
+  // Fetch related audit data separately if audit_id exists
+  let audit = null;
+  if (certificate?.audit_id) {
+    const { data: auditData } = await supabase
+      .from('audit')
+      .select(`
         id,
         title,
         status,
@@ -51,19 +59,36 @@ export default async function CertificateDetailPage({
         marks,
         percentage,
         result
-      ),
-      checklist_responses:checklist_responses_id (
+      `)
+      .eq('id', certificate.audit_id)
+      .single();
+    audit = auditData;
+  }
+
+  // Fetch related checklist response data separately if checklist_responses_id exists
+  let checklistResponse = null;
+  if (certificate?.checklist_responses_id) {
+    const { data: checklistData } = await supabase
+      .from('checklist_responses')
+      .select(`
         id,
         title,
         status,
         created_at,
         result
-      )
-    `)
-    .eq('id', id)
-    .single();
+      `)
+      .eq('id', certificate.checklist_responses_id)
+      .single();
+    checklistResponse = checklistData;
+  }
 
-  if (error || !certificate) {
+  // Combine the data
+  const certificateWithRelations = certificate ? {
+    ...certificate,
+    audit,
+    checklist_responses: checklistResponse
+  } : null;
+  if (error || !certificateWithRelations) {
     return redirect("/protected/cert");
   }
 
@@ -78,10 +103,9 @@ export default async function CertificateDetailPage({
     .select('id, title, status')
     .order('created_at', { ascending: false });
 
-  return (
-    <DashboardLayout userProfile={currentUserProfile}>
+  return (    <DashboardLayout userProfile={currentUserProfile}>
       <CertificateDetailView
-        certificate={certificate}
+        certificate={certificateWithRelations}
         canManage={canManage || false}
         audits={audits || []}
         checklistResponses={checklistResponses || []}
