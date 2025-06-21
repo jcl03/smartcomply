@@ -56,6 +56,7 @@ export default async function CertificatesPage({
       audit_id,
       checklist_responses_id
     `)
+    .eq('status', 'active') // Only show active certificates
     .order('created_at', { ascending: false });
 
   // Apply search filter
@@ -118,12 +119,20 @@ export default async function CertificatesPage({
             </p>
           </div>
           {canManageCerts && (
-            <Link href="/protected/cert/add">
-              <Button className="flex items-center gap-2">
-                <Plus className="h-4 w-4" />
-                Add Certificate
-              </Button>
-            </Link>
+            <div className="flex gap-2">
+              <Link href="/protected/cert/archived">
+                <Button variant="outline" className="flex items-center gap-2">
+                  <FileText className="h-4 w-4" />
+                  View Archived
+                </Button>
+              </Link>
+              <Link href="/protected/cert/add">
+                <Button className="flex items-center gap-2">
+                  <Plus className="h-4 w-4" />
+                  Add Certificate
+                </Button>
+              </Link>
+            </div>
           )}
         </div>
 

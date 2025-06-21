@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -16,6 +16,8 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { format } from "date-fns";
+import { archiveCertificate } from "@/app/protected/cert/actions";
+import { useRouter } from "next/navigation";
 
 interface Certificate {
   id: number;
@@ -35,6 +37,7 @@ interface CertificateListProps {
 
 export function CertificateList({ certificates, canManage }: CertificateListProps) {
   const [expandedCard, setExpandedCard] = useState<number | null>(null);
+  const router = useRouter();
 
   const getExpirationStatus = (expirationDate: string | null) => {
     if (!expirationDate) return { status: "unknown", color: "gray" };
@@ -168,7 +171,6 @@ export function CertificateList({ certificates, canManage }: CertificateListProp
                     <Eye className="h-4 w-4" />
                     {isExpanded ? "Hide" : "View"} Details
                   </Button>
-                  
                   {fileInfo?.url && (
                     <Button
                       variant="outline"
@@ -177,6 +179,18 @@ export function CertificateList({ certificates, canManage }: CertificateListProp
                     >
                       <Download className="h-4 w-4" />
                       Download
+                    </Button>
+                  )}
+                  {canManage && (
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={async () => {
+                        await archiveCertificate(cert.id);
+                        router.refresh();
+                      }}
+                    >
+                      Archive
                     </Button>
                   )}
                 </div>

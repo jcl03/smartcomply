@@ -175,3 +175,59 @@ export async function getCertificateStats() {
     return { error: "Failed to get certificate statistics" };
   }
 }
+
+export async function archiveCertificate(id: number): Promise<ActionResult> {
+  const supabase = await createClient();
+
+  // Get current user
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    return { error: "Unauthorized" };
+  }
+  // Check if user has manager or admin role
+  const { data: profile } = await supabase
+    .from('view_user_profiles')
+    .select('role')
+    .eq('email', user.email)
+    .single();
+  if (!profile || !['admin', 'manager'].includes(profile.role)) {
+    return { error: "Insufficient permissions" };
+  }
+  const { error } = await supabase
+    .from('cert')
+    .update({ status: 'archive' })
+    .eq('id', id);
+  if (error) {
+    console.error("Error archiving certificate:", error);
+    return { error: "Failed to archive certificate" };
+  }
+  return { success: true };
+}
+
+export async function reactivateCertificate(id: number): Promise<ActionResult> {
+  const supabase = await createClient();
+
+  // Get current user
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    return { error: "Unauthorized" };
+  }
+  // Check if user has manager or admin role
+  const { data: profile } = await supabase
+    .from('view_user_profiles')
+    .select('role')
+    .eq('email', user.email)
+    .single();
+  if (!profile || !['admin', 'manager'].includes(profile.role)) {
+    return { error: "Insufficient permissions" };
+  }
+  const { error } = await supabase
+    .from('cert')
+    .update({ status: 'active' })
+    .eq('id', id);
+  if (error) {
+    console.error("Error reactivating certificate:", error);
+    return { error: "Failed to reactivate certificate" };
+  }
+  return { success: true };
+}
