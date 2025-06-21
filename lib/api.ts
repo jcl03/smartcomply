@@ -297,3 +297,331 @@ export async function getCompliances() {
   }
   return data || [];
 }
+
+// Dashboard-specific API functions
+export async function getDashboardData(userRole: string, userId?: string) {
+  const supabase = await createClient();
+  
+  try {
+    // Get base compliance data
+    const { data: compliance } = await supabase
+      .from('compliance')
+      .select('id, name, status')
+      .eq('status', 'active');
+
+    // Get audit data based on role
+    let auditQuery = supabase
+      .from('audit')
+      .select(`
+        id,
+        user_id,
+        status,
+        created_at,
+        result,
+        marks,
+        percentage,
+        form:form_id (
+          compliance_id,
+          compliance:compliance_id (name)
+        )
+      `);
+
+    // Filter by user for non-admin roles
+    if (userRole !== 'admin' && userId) {
+      auditQuery = auditQuery.eq('user_id', userId);
+    }
+
+    const { data: audits } = await auditQuery;
+
+    // Get checklist responses
+    let checklistQuery = supabase
+      .from('checklist_responses')
+      .select(`
+        id,
+        user_id,
+        status,
+        created_at,
+        result,
+        checklist:checklist_id (
+          compliance_id,
+          compliance:compliance_id (name)
+        )
+      `);
+
+    if (userRole !== 'admin' && userId) {
+      checklistQuery = checklistQuery.eq('user_id', userId);
+    }
+
+    const { data: checklistResponses } = await checklistQuery;
+
+    // Get user profiles for admin dashboard
+    let userProfiles: { id: string; full_name: string; email: string; role: string; created_at: string; last_sign_in_at: string }[] = [];
+    if (userRole === 'admin') {
+      const { data: profiles } = await supabase
+        .from('view_user_profiles')
+        .select('id, full_name, email, role, created_at, last_sign_in_at');
+      userProfiles = profiles || [];
+    }
+
+    return {
+      compliance: compliance || [],
+      audits: audits || [],
+      checklistResponses: checklistResponses || [],
+      userProfiles
+    };
+  } catch (error) {
+    console.error('Error fetching dashboard data:', error);
+    return {
+      compliance: [],
+      audits: [],
+      checklistResponses: [],
+      userProfiles: []
+    };
+  }
+}
+
+export async function getAuditorPerformanceData() {
+  const supabase = await createClient();
+  
+  try {
+    // Get all auditors and their performance
+    const { data: auditors } = await supabase
+      .from('view_user_profiles')
+      .select('id, full_name, role')
+      .eq('role', 'auditor');
+
+    const { data: audits } = await supabase
+      .from('audit')
+      .select('id, user_id, status, created_at, result, marks, percentage');
+
+    const { data: checklistResponses } = await supabase
+      .from('checklist_responses')
+      .select('id, user_id, status, created_at, result');
+
+    return {
+      auditors: auditors || [],
+      audits: audits || [],
+      checklistResponses: checklistResponses || []
+    };
+  } catch (error) {
+    console.error('Error fetching auditor performance data:', error);
+    return {
+      auditors: [],
+      audits: [],
+      checklistResponses: []
+    };
+  }
+}
+
+export async function getComplianceTrendsData() {
+  const supabase = await createClient();
+  
+  try {
+    // Get compliance trends over time
+    const { data: audits } = await supabase
+      .from('audit')
+      .select(`
+        id,
+        created_at,
+        result,
+        status,
+        form:form_id (
+          compliance_id,
+          compliance:compliance_id (id, name)
+        )
+      `)
+      .order('created_at', { ascending: false });
+
+    const { data: checklistResponses } = await supabase
+      .from('checklist_responses')
+      .select(`
+        id,
+        created_at,
+        result,
+        status,
+        checklist:checklist_id (
+          compliance_id,
+          compliance:compliance_id (id, name)
+        )
+      `)
+      .order('created_at', { ascending: false });
+
+    return {
+      audits: audits || [],
+      checklistResponses: checklistResponses || []
+    };
+  } catch (error) {
+    console.error('Error fetching compliance trends data:', error);
+    return {
+      audits: [],
+      checklistResponses: []
+    };
+  }
+}
+
+// New API functions for story-driven visualizations
+
+export async function getRiskTimelineData() {
+  const supabase = await createClient();
+  
+  try {
+    // Get upcoming audits and checklist responses with due dates
+    const { data: audits } = await supabase
+      .from('audit')
+      .select(`
+        id,
+        title,
+        created_at,
+        status,
+        percentage,
+        user_id,
+        form:form_id (
+          compliance:compliance_id (name)
+        )
+      `)
+      .neq('status', 'completed')
+      .order('created_at', { ascending: false });
+
+    const { data: userProfiles } = await supabase
+      .from('view_user_profiles')
+      .select('id, full_name');
+
+    return {
+      audits: audits || [],
+      userProfiles: userProfiles || []
+    };
+  } catch (error) {
+    console.error('Error fetching risk timeline data:', error);
+    return {
+      audits: [],
+      userProfiles: []
+    };
+  }
+}
+
+export async function getWorkloadData() {
+  const supabase = await createClient();
+  
+  try {
+    // Get auditor workload data
+    const { data: audits } = await supabase
+      .from('audit')
+      .select(`
+        id,
+        user_id,
+        created_at,
+        status,
+        percentage
+      `)
+      .order('created_at', { ascending: false });
+
+    const { data: checklistResponses } = await supabase
+      .from('checklist_responses')
+      .select(`
+        id,
+        user_id,
+        created_at,
+        status
+      `)
+      .order('created_at', { ascending: false });
+
+    const { data: userProfiles } = await supabase
+      .from('view_user_profiles')
+      .select('id, full_name, role');
+
+    return {
+      audits: audits || [],
+      checklistResponses: checklistResponses || [],
+      userProfiles: userProfiles || []
+    };
+  } catch (error) {
+    console.error('Error fetching workload data:', error);
+    return {
+      audits: [],
+      checklistResponses: [],
+      userProfiles: []
+    };
+  }
+}
+
+export async function getComplianceHealthData() {
+  const supabase = await createClient();
+  
+  try {
+    // Get daily compliance health data
+    const { data: audits } = await supabase
+      .from('audit')
+      .select(`
+        id,
+        created_at,
+        status,
+        result,
+        form:form_id (
+          compliance:compliance_id (name)
+        )
+      `)
+      .order('created_at', { ascending: false });
+
+    const { data: checklistResponses } = await supabase
+      .from('checklist_responses')
+      .select(`
+        id,
+        created_at,
+        status,
+        result,
+        checklist:checklist_id (
+          compliance:compliance_id (name)
+        )
+      `)
+      .order('created_at', { ascending: false });
+
+    return {
+      audits: audits || [],
+      checklistResponses: checklistResponses || []
+    };
+  } catch (error) {
+    console.error('Error fetching compliance health data:', error);
+    return {
+      audits: [],
+      checklistResponses: []
+    };
+  }
+}
+
+export async function getPerformanceRadarData() {
+  const supabase = await createClient();
+  
+  try {
+    // Get detailed auditor performance data
+    const { data: auditors } = await supabase
+      .from('view_user_profiles')
+      .select('id, full_name, role')
+      .eq('role', 'auditor');
+
+    const { data: audits } = await supabase
+      .from('audit')
+      .select(`
+        id,
+        user_id,
+        status,
+        result,
+        marks,
+        percentage,
+        created_at,
+        form:form_id (
+          compliance:compliance_id (name)
+        )
+      `);
+
+    return {
+      auditors: auditors || [],
+      audits: audits || []
+    };
+  } catch (error) {
+    console.error('Error fetching performance radar data:', error);
+    return {
+      auditors: [],
+      audits: []
+    };
+  }
+}

@@ -250,9 +250,9 @@ export default async function Page(props: any) {
     console.error('Error fetching checklist responses:', error);
   }
   // Debug logging
-  console.log('Responses data:', responses);
-  console.log('Checklist info:', checklistInfo);
-  console.log('User profiles:', userProfiles);
+  // console.log('Responses data:', responses);
+  // console.log('Checklist info:', checklistInfo);
+  // console.log('User profiles:', userProfiles);
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'completed':

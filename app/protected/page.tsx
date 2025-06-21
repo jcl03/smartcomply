@@ -1,4 +1,13 @@
-import { getUserProfile } from "@/lib/api";
+import { 
+  getUserProfile, 
+  getDashboardData, 
+  getAuditorPerformanceData, 
+  getComplianceTrendsData,
+  getRiskTimelineData,
+  getWorkloadData,
+  getComplianceHealthData,
+  getPerformanceRadarData
+} from "@/lib/api";
 import { createClient } from "@/utils/supabase/server";
 import { 
   FileText,
@@ -20,6 +29,22 @@ import { redirect } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { formatDistanceToNow } from "date-fns";
 import DashboardLayout from "@/components/dashboard/dashboard-layout";
+import AuditorPerformanceChart from "@/components/dashboard/auditor-performance-chart";
+import ComplianceTrendsChart from "@/components/dashboard/compliance-trends-chart";
+import ComplianceSummary from "@/components/dashboard/compliance-summary";
+import RiskTimeline from "@/components/dashboard/risk-timeline";
+import WorkloadBalance from "@/components/dashboard/workload-balance";
+import ComplianceHealthCalendar from "@/components/dashboard/compliance-health-calendar";
+import PerformanceRadar from "@/components/dashboard/performance-radar";
+import { 
+  processAuditorPerformanceData, 
+  processComplianceTrendsData, 
+  processComplianceSummaryData,
+  processRiskTimelineData,
+  processWorkloadData,
+  processComplianceHealthData,
+  processPerformanceRadarData
+} from "@/utils/dashboard-utils";
 import Link from "next/link";
 
 export default async function ProtectedPage() {
@@ -36,42 +61,78 @@ export default async function ProtectedPage() {
   // Fetch user profile data from the view for the current user only
   const userProfile = await getUserProfile();
   
-  // Check if user is admin
-  const isAdmin = userProfile?.role === 'admin';
+  if (!userProfile) {
+    return redirect("/sign-in");
+  }
+  // Check user role
+  const userRole = userProfile.role;
+  const isAdmin = userRole === 'admin';
+  const isAuditor = userRole === 'auditor' || userRole === 'user'; // Users are auditors in this system
+  const isManager = userRole === 'manager';
+  const isRegularUser = userRole === 'user' || (!userRole && !isAdmin && !isManager); // Default role
 
-  // Fetch real-time data from the system
+  // Fetch dashboard data based on role
+  const dashboardData = await getDashboardData(userRole, user.id);
   
-  // 1. Get compliance frameworks count
-  const { data: frameworksData, error: frameworksError } = await supabase
+  // Process data for different visualizations
+  const complianceSummaryData = processComplianceSummaryData(
+    dashboardData.audits, 
+    dashboardData.checklistResponses, 
+    dashboardData.compliance
+  );
+
+  const complianceTrendsData = processComplianceTrendsData(
+    dashboardData.audits, 
+    dashboardData.checklistResponses
+  );
+  // Get auditor performance data (for admin and manager roles)
+  let auditorPerformanceData: any[] = [];
+  if (isAdmin || isManager) {
+    const auditorData = await getAuditorPerformanceData();
+    auditorPerformanceData = processAuditorPerformanceData(
+      auditorData.auditors,
+      auditorData.audits,
+      auditorData.checklistResponses
+    );
+  }
+
+  // Get additional story-driven data
+  const riskTimelineRawData = await getRiskTimelineData();
+  const riskTimelineData = processRiskTimelineData(
+    riskTimelineRawData.audits,
+    riskTimelineRawData.userProfiles
+  );
+
+  const workloadRawData = await getWorkloadData();
+  const workloadData = processWorkloadData(
+    workloadRawData.audits,
+    workloadRawData.checklistResponses,
+    workloadRawData.userProfiles
+  );
+
+  const complianceHealthRawData = await getComplianceHealthData();
+  const complianceHealthData = processComplianceHealthData(
+    complianceHealthRawData.audits,
+    complianceHealthRawData.checklistResponses
+  );
+
+  const performanceRadarRawData = await getPerformanceRadarData();
+  const performanceRadarData = processPerformanceRadarData(
+    performanceRadarRawData.auditors,
+    performanceRadarRawData.audits
+  );
+
+  // Legacy data for existing components
+  const { data: frameworksData } = await supabase
     .from('compliance')
     .select('id, name, status, created_at')
     .eq('status', 'active');
 
-  // 2. Get total forms count across all frameworks
-  const { data: formsData, error: formsError } = await supabase
+  const { data: formsData } = await supabase
     .from('compliance_forms')
     .select('id, name, created_at, compliance_id')
     .order('created_at', { ascending: false });
 
-  // 3. Get recent user activities (if you have an audit/activity table)
-  // For now, we'll use the most recent form submissions or updates
-  const { data: recentFormsData } = await supabase
-    .from('compliance_forms')
-    .select('id, name, created_at, compliance(name)')
-    .order('created_at', { ascending: false })
-    .limit(5);
-
-  // 4. Get user management data (for admin users)
-  let usersData = null;
-  if (isAdmin) {
-    const { data: userData } = await supabase
-      .from('view_user_profiles')
-      .select('id, full_name, email, role, created_at, last_sign_in_at')
-      .order('created_at', { ascending: false });
-    usersData = userData;
-  }
-
-  // 5. Calculate dynamic metrics
   const totalFrameworks = frameworksData?.length || 0;
   const totalForms = formsData?.length || 0;
   const recentFormsCount = formsData?.filter(form => {
@@ -79,16 +140,10 @@ export default async function ProtectedPage() {
     dayAgo.setDate(dayAgo.getDate() - 7);
     return new Date(form.created_at) > dayAgo;
   }).length || 0;
+  const complianceScore = Math.round(complianceSummaryData.complianceRate);
+  const pendingReviews = complianceSummaryData.pendingAudits;
 
-  // Calculate compliance score (example calculation)
-  const complianceScore = Math.round((totalFrameworks > 0 ? (totalForms / totalFrameworks) * 20 + 74 : 85));
-  
-  // Get pending reviews (forms created in last 30 days that might need review)
-  const pendingReviews = formsData?.filter(form => {
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-    return new Date(form.created_at) > thirtyDaysAgo;
-  }).length || 0;
+  const usersData = dashboardData.userProfiles;
     return (
     <DashboardLayout userProfile={userProfile}>
       <div className="space-y-8 p-6">
@@ -232,7 +287,501 @@ export default async function ProtectedPage() {
               </p>
             </div>
           </Card>
-        </div>        {/* Main Dashboard Content */}
+        </div>
+
+        {/* Role-Specific Dashboard Visualizations */}
+        <div className="space-y-8">
+          {/* Compliance Summary - Available for all roles */}
+          <ComplianceSummary data={complianceSummaryData} userRole={userRole} />          {/* Admin Dashboard - IT Admin Focus */}
+          {isAdmin && (
+            <div className="space-y-8">
+              <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-3">
+                <div className="bg-blue-100 p-2 rounded-lg">
+                  <Shield className="h-6 w-6 text-blue-600" />
+                </div>
+                IT Admin Dashboard - Framework & System Management
+              </h2>
+              
+              {/* Framework Management Section */}
+              <div className="space-y-6">
+                <h3 className="text-xl font-semibold text-slate-700">Framework Usage & Performance</h3>
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  <Card className="p-6">
+                    <h4 className="text-lg font-semibold mb-4">Framework Adoption</h4>
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm">ISO 27001</span>
+                        <div className="flex items-center gap-2">
+                          <div className="w-20 bg-gray-200 rounded-full h-2">
+                            <div className="bg-blue-600 h-2 rounded-full" style={{width: '85%'}}></div>
+                          </div>
+                          <span className="text-sm text-gray-600">85%</span>
+                        </div>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm">SOC 2</span>
+                        <div className="flex items-center gap-2">
+                          <div className="w-20 bg-gray-200 rounded-full h-2">
+                            <div className="bg-green-600 h-2 rounded-full" style={{width: '72%'}}></div>
+                          </div>
+                          <span className="text-sm text-gray-600">72%</span>
+                        </div>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm">GDPR</span>
+                        <div className="flex items-center gap-2">
+                          <div className="w-20 bg-gray-200 rounded-full h-2">
+                            <div className="bg-yellow-600 h-2 rounded-full" style={{width: '61%'}}></div>
+                          </div>
+                          <span className="text-sm text-gray-600">61%</span>
+                        </div>
+                      </div>
+                    </div>
+                  </Card>
+                  
+                  <Card className="p-6">
+                    <h4 className="text-lg font-semibold mb-4">Schema Performance</h4>
+                    <div className="space-y-3">                      <div className="flex justify-between">
+                        <span className="text-sm">Active Templates</span>
+                        <span className="font-semibold">{dashboardData.compliance.length}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-sm">Completion Rate</span>
+                        <span className="font-semibold text-green-600">94%</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-sm">Schema Updates</span>
+                        <span className="font-semibold">12 this month</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-sm">User Feedback Score</span>
+                        <span className="font-semibold text-blue-600">4.8/5</span>
+                      </div>
+                    </div>
+                  </Card>
+                  
+                  <Card className="p-6">
+                    <h4 className="text-lg font-semibold mb-4">System Health</h4>
+                    <div className="space-y-3">
+                      <div className="flex justify-between">
+                        <span className="text-sm">Uptime</span>
+                        <span className="font-semibold text-green-600">99.9%</span>
+                      </div>                      <div className="flex justify-between">
+                        <span className="text-sm">Active Users</span>
+                        <span className="font-semibold">{dashboardData.userProfiles.length}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-sm">API Calls/min</span>
+                        <span className="font-semibold">145</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-sm">Storage Used</span>
+                        <span className="font-semibold">2.4 GB</span>
+                      </div>
+                    </div>
+                  </Card>
+                </div>
+              </div>
+
+              {/* Configuration & Analytics Section */}
+              <div className="space-y-6">
+                <h3 className="text-xl font-semibold text-slate-700">User Adoption & Template Analytics</h3>
+                <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+                  <Card className="p-6">
+                    <h4 className="text-lg font-semibold mb-4">User Adoption Trends</h4>
+                    <ComplianceTrendsChart data={complianceTrendsData} />
+                  </Card>
+                  <Card className="p-6">
+                    <h4 className="text-lg font-semibold mb-4">Template Effectiveness</h4>                    <div className="space-y-4">
+                      {dashboardData.compliance.slice(0, 4).map((complianceItem: any, index: number) => (
+                        <div key={index} className="flex justify-between items-center p-3 bg-gray-50 rounded">
+                          <div>
+                            <div className="font-medium">{complianceItem.name}</div>
+                            <div className="text-sm text-gray-600">Active Framework</div>
+                          </div>
+                          <div className="text-right">
+                            <div className="font-semibold text-green-600">95%</div>
+                            <div className="text-xs text-gray-500">Success Rate</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </Card>
+                </div>
+              </div>
+            </div>
+          )}          {/* Manager Dashboard - Operational Oversight */}
+          {isManager && (
+            <div className="space-y-8">
+              <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-3">
+                <div className="bg-purple-100 p-2 rounded-lg">
+                  <Users className="h-6 w-6 text-purple-600" />
+                </div>
+                Manager Dashboard - Operational Oversight & Team Performance
+              </h2>
+              
+              {/* Team Performance Overview */}
+              <div className="space-y-6">
+                <h3 className="text-xl font-semibold text-slate-700">Team Performance & Workload</h3>
+                <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+                  <AuditorPerformanceChart 
+                    data={auditorPerformanceData} 
+                    showDetails={true}
+                  />
+                  <WorkloadBalance data={workloadData} userRole={userRole} viewType="team" />
+                </div>
+              </div>
+
+              {/* Audit Pipeline & Compliance Status */}
+              <div className="space-y-6">
+                <h3 className="text-xl font-semibold text-slate-700">Audit Pipeline & Compliance Status</h3>
+                <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+                  <Card className="p-6">
+                    <h4 className="text-lg font-semibold mb-4">Audit Pipeline</h4>
+                    <div className="space-y-4">
+                      <div className="flex justify-between items-center p-3 bg-amber-50 rounded-lg">
+                        <div>
+                          <div className="font-medium">In Progress</div>
+                          <div className="text-sm text-gray-600">Active audits</div>
+                        </div>
+                        <div className="text-2xl font-bold text-amber-600">
+                          {dashboardData.audits.filter(a => a.status === 'in_progress').length}
+                        </div>
+                      </div>
+                      <div className="flex justify-between items-center p-3 bg-blue-50 rounded-lg">
+                        <div>
+                          <div className="font-medium">Scheduled</div>
+                          <div className="text-sm text-gray-600">Upcoming audits</div>
+                        </div>
+                        <div className="text-2xl font-bold text-blue-600">
+                          {dashboardData.audits.filter(a => a.status === 'scheduled').length}
+                        </div>
+                      </div>
+                      <div className="flex justify-between items-center p-3 bg-red-50 rounded-lg">
+                        <div>
+                          <div className="font-medium">Overdue</div>
+                          <div className="text-sm text-gray-600">Needs attention</div>
+                        </div>                        <div className="text-2xl font-bold text-red-600">
+                          {dashboardData.audits.filter(a => {
+                            return a.status !== 'completed' && new Date(a.created_at) < new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+                          }).length}
+                        </div>
+                      </div>
+                    </div>
+                  </Card>
+                  <ComplianceTrendsChart 
+                    data={complianceTrendsData} 
+                    timeRange="month"
+                  />
+                </div>
+              </div>
+
+              {/* Risk Management & Health Monitoring */}
+              <div className="space-y-6">
+                <h3 className="text-xl font-semibold text-slate-700">Risk Management & Health Monitoring</h3>
+                <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+                  <RiskTimeline data={riskTimelineData} userRole={userRole} timeframe="month" />
+                  <ComplianceHealthCalendar data={complianceHealthData} userRole={userRole} />
+                </div>
+              </div>
+
+              {/* Performance Analytics */}
+              <div className="space-y-6">
+                <h3 className="text-xl font-semibold text-slate-700">Team Skills & Performance Analysis</h3>
+                <PerformanceRadar data={performanceRadarData} userRole={userRole} />
+              </div>
+            </div>
+          )}          {/* Auditor Dashboard - Personal Tasks & Performance */}
+          {isAuditor && (
+            <div className="space-y-8">
+              <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-3">
+                <div className="bg-emerald-100 p-2 rounded-lg">
+                  <Target className="h-6 w-6 text-emerald-600" />
+                </div>
+                My Auditor Dashboard - Tasks & Performance
+              </h2>
+              
+              {/* Personal Assignment Overview */}
+              <div className="space-y-6">
+                <h3 className="text-xl font-semibold text-slate-700">My Assignments & Deadlines</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                  <Card className="p-6 bg-emerald-50 border-emerald-200 rounded-2xl">
+                    <div className="flex items-center gap-3 mb-3">
+                      <CheckCircle className="h-8 w-8 text-emerald-600" />
+                      <div>
+                        <p className="text-2xl font-bold text-emerald-900">
+                          {dashboardData.audits.filter(a => a.user_id === user.id && a.result === 'pass').length}
+                        </p>
+                        <p className="text-sm text-emerald-600">Completed Audits</p>
+                      </div>
+                    </div>
+                  </Card>
+                  
+                  <Card className="p-6 bg-amber-50 border-amber-200 rounded-2xl">
+                    <div className="flex items-center gap-3 mb-3">
+                      <Clock className="h-8 w-8 text-amber-600" />
+                      <div>
+                        <p className="text-2xl font-bold text-amber-900">
+                          {dashboardData.audits.filter(a => a.user_id === user.id && a.status === 'in_progress').length}
+                        </p>
+                        <p className="text-sm text-amber-600">In Progress</p>
+                      </div>
+                    </div>
+                  </Card>
+                  
+                  <Card className="p-6 bg-blue-50 border-blue-200 rounded-2xl">
+                    <div className="flex items-center gap-3 mb-3">
+                      <Calendar className="h-8 w-8 text-blue-600" />
+                      <div>
+                        <p className="text-2xl font-bold text-blue-900">
+                          {dashboardData.audits.filter(a => a.user_id === user.id && a.status === 'scheduled').length}
+                        </p>
+                        <p className="text-sm text-blue-600">Scheduled</p>
+                      </div>
+                    </div>
+                  </Card>
+                  
+                  <Card className="p-6 bg-purple-50 border-purple-200 rounded-2xl">
+                    <div className="flex items-center gap-3 mb-3">
+                      <TrendingUp className="h-8 w-8 text-purple-600" />
+                      <div>
+                        <p className="text-2xl font-bold text-purple-900">
+                          {(() => {
+                            const userAudits = dashboardData.audits.filter(a => a.user_id === user.id && a.percentage);
+                            const avg = userAudits.length > 0 
+                              ? userAudits.reduce((sum, a) => sum + a.percentage, 0) / userAudits.length 
+                              : 0;
+                            return avg.toFixed(0);
+                          })()}%
+                        </p>
+                        <p className="text-sm text-purple-600">Avg Score</p>
+                      </div>
+                    </div>
+                  </Card>
+                </div>
+              </div>
+
+              {/* My Checklist Tasks */}
+              <div className="space-y-6">
+                <h3 className="text-xl font-semibold text-slate-700">My Checklist Tasks</h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <Card className="p-6 bg-emerald-50 border-emerald-200 rounded-2xl">
+                    <div className="flex items-center gap-3 mb-3">
+                      <CheckSquare className="h-8 w-8 text-emerald-600" />
+                      <div>
+                        <p className="text-2xl font-bold text-emerald-900">
+                          {dashboardData.checklistResponses.filter(r => r.user_id === user.id && r.result === 'pass').length}
+                        </p>
+                        <p className="text-sm text-emerald-600">Completed</p>
+                      </div>
+                    </div>
+                  </Card>
+                  
+                  <Card className="p-6 bg-amber-50 border-amber-200 rounded-2xl">
+                    <div className="flex items-center gap-3 mb-3">
+                      <Clock className="h-8 w-8 text-amber-600" />
+                      <div>
+                        <p className="text-2xl font-bold text-amber-900">
+                          {dashboardData.checklistResponses.filter(r => r.user_id === user.id && r.status === 'pending').length}
+                        </p>
+                        <p className="text-sm text-amber-600">Pending</p>
+                      </div>
+                    </div>
+                  </Card>
+                  
+                  <Card className="p-6 bg-blue-50 border-blue-200 rounded-2xl">
+                    <div className="flex items-center gap-3 mb-3">
+                      <Target className="h-8 w-8 text-blue-600" />
+                      <div>
+                        <p className="text-2xl font-bold text-blue-900">
+                          {(() => {
+                            const userResponses = dashboardData.checklistResponses.filter(r => r.user_id === user.id);
+                            const passed = userResponses.filter(r => r.result === 'pass').length;
+                            const rate = userResponses.length > 0 ? (passed / userResponses.length) * 100 : 0;
+                            return rate.toFixed(0);
+                          })()}%
+                        </p>
+                        <p className="text-sm text-blue-600">Success Rate</p>
+                      </div>
+                    </div>
+                  </Card>
+                </div>
+              </div>
+
+              {/* Personal Performance Trend */}
+              <div className="space-y-6">
+                <h3 className="text-xl font-semibold text-slate-700">My Performance Trend</h3>                <ComplianceTrendsChart 
+                  data={complianceTrendsData.filter(d => {
+                    return dashboardData.audits.some(audit => {
+                      const auditForm = audit.form;
+                      if (Array.isArray(auditForm) && auditForm.length > 0) {
+                        const compliance = auditForm[0].compliance;
+                        if (Array.isArray(compliance) && compliance.length > 0) {
+                          return audit.user_id === user.id && compliance[0].name === d.framework;
+                        }
+                      }
+                      return false;
+                    });
+                  })} 
+                  timeRange="week"
+                />
+              </div>
+
+              {/* My Certificates & Skills */}
+              <div className="space-y-6">
+                <h3 className="text-xl font-semibold text-slate-700">My Certificates & Skills</h3>
+                <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+                  <Card className="p-6">
+                    <h4 className="text-lg font-semibold mb-4">Certifications</h4>
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-center p-3 bg-emerald-50 rounded-lg">
+                        <div>
+                          <div className="font-medium">ISO 27001 Lead Auditor</div>
+                          <div className="text-sm text-gray-600">Expires: Dec 2024</div>
+                        </div>
+                        <span className="px-3 py-1 bg-emerald-100 text-emerald-700 rounded-lg text-sm">Active</span>
+                      </div>
+                      <div className="flex justify-between items-center p-3 bg-blue-50 rounded-lg">
+                        <div>
+                          <div className="font-medium">SOC 2 Certified</div>
+                          <div className="text-sm text-gray-600">Expires: Mar 2025</div>
+                        </div>
+                        <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-lg text-sm">Active</span>
+                      </div>
+                    </div>
+                  </Card>
+                  <Card className="p-6">
+                    <h4 className="text-lg font-semibold mb-4">Skill Development</h4>
+                    <div className="space-y-4">
+                      <div>
+                        <div className="flex justify-between mb-2">
+                          <span className="text-sm font-medium">Audit Efficiency</span>
+                          <span className="text-sm text-gray-600">92%</span>
+                        </div>
+                        <div className="w-full bg-gray-200 rounded-full h-2">
+                          <div className="bg-emerald-600 h-2 rounded-full" style={{width: '92%'}}></div>
+                        </div>
+                      </div>
+                      <div>
+                        <div className="flex justify-between mb-2">
+                          <span className="text-sm font-medium">Risk Assessment</span>
+                          <span className="text-sm text-gray-600">87%</span>
+                        </div>
+                        <div className="w-full bg-gray-200 rounded-full h-2">
+                          <div className="bg-blue-600 h-2 rounded-full" style={{width: '87%'}}></div>
+                        </div>
+                      </div>
+                      <div>
+                        <div className="flex justify-between mb-2">
+                          <span className="text-sm font-medium">Documentation</span>
+                          <span className="text-sm text-gray-600">95%</span>
+                        </div>
+                        <div className="w-full bg-gray-200 rounded-full h-2">
+                          <div className="bg-purple-600 h-2 rounded-full" style={{width: '95%'}}></div>
+                        </div>
+                      </div>
+                    </div>
+                  </Card>
+                </div>
+              </div>
+            </div>
+          )}          {/* Regular User/Auditor Dashboard - Personal Compliance Status */}
+          {isRegularUser && !isAdmin && !isManager && !isAuditor && (
+            <div className="space-y-8">
+              <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-3">
+                <div className="bg-sky-100 p-2 rounded-lg">
+                  <CheckSquare className="h-6 w-6 text-sky-600" />
+                </div>
+                My Compliance Dashboard
+              </h2>
+              
+              {/* Personal compliance metrics */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <Card className="p-6 bg-emerald-50 border-emerald-200 rounded-2xl">
+                  <div className="flex items-center gap-3 mb-3">
+                    <CheckCircle className="h-8 w-8 text-emerald-600" />
+                    <div>
+                      <p className="text-2xl font-bold text-emerald-900">
+                        {dashboardData.checklistResponses.filter(r => r.user_id === user.id && r.result === 'pass').length}
+                      </p>
+                      <p className="text-sm text-emerald-600">Completed Tasks</p>
+                    </div>
+                  </div>
+                </Card>
+                
+                <Card className="p-6 bg-amber-50 border-amber-200 rounded-2xl">
+                  <div className="flex items-center gap-3 mb-3">
+                    <Clock className="h-8 w-8 text-amber-600" />
+                    <div>
+                      <p className="text-2xl font-bold text-amber-900">
+                        {dashboardData.checklistResponses.filter(r => r.user_id === user.id && r.status === 'pending').length}
+                      </p>
+                      <p className="text-sm text-amber-600">Pending Tasks</p>
+                    </div>
+                  </div>
+                </Card>
+                
+                <Card className="p-6 bg-blue-50 border-blue-200 rounded-2xl">
+                  <div className="flex items-center gap-3 mb-3">
+                    <Target className="h-8 w-8 text-blue-600" />
+                    <div>
+                      <p className="text-2xl font-bold text-blue-900">
+                        {(() => {
+                          const userResponses = dashboardData.checklistResponses.filter(r => r.user_id === user.id);
+                          const passed = userResponses.filter(r => r.result === 'pass').length;
+                          const rate = userResponses.length > 0 ? (passed / userResponses.length) * 100 : 0;
+                          return rate.toFixed(0);
+                        })()}%
+                      </p>
+                      <p className="text-sm text-blue-600">Success Rate</p>
+                    </div>
+                  </div>
+                </Card>
+              </div>
+              
+              {/* Personal upcoming deadlines or tasks */}
+              <Card className="bg-gradient-to-r from-sky-50 to-blue-50 border-sky-200 rounded-2xl p-6">
+                <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-3">
+                  <Calendar className="h-5 w-5 text-sky-600" />
+                  My Recent Activity
+                </h3>
+                <div className="space-y-3">
+                  {dashboardData.checklistResponses
+                    .filter(r => r.user_id === user.id)
+                    .slice(0, 5)
+                    .map((response, index) => (
+                      <div key={index} className="flex items-center justify-between p-3 bg-white rounded-lg border border-sky-200">
+                        <div>
+                          <p className="font-medium text-slate-900">Checklist Response</p>
+                          <p className="text-sm text-slate-600">
+                            {formatDistanceToNow(new Date(response.created_at), { addSuffix: true })}
+                          </p>
+                        </div>
+                        <span className={`px-3 py-1 rounded-lg text-sm font-medium ${
+                          response.result === 'pass' 
+                            ? 'bg-emerald-100 text-emerald-700' 
+                            : response.result === 'failed'
+                            ? 'bg-red-100 text-red-700'
+                            : 'bg-amber-100 text-amber-700'
+                        }`}>
+                          {response.result || response.status}
+                        </span>
+                      </div>
+                    ))}
+                  
+                  {dashboardData.checklistResponses.filter(r => r.user_id === user.id).length === 0 && (
+                    <div className="text-center py-8">
+                      <ListChecks className="h-12 w-12 text-slate-300 mx-auto mb-3" />
+                      <p className="text-slate-500">No recent activity to show</p>
+                    </div>
+                  )}
+                </div>
+              </Card>
+            </div>
+          )}
+        </div>
+
+        {/* Main Dashboard Content */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Active Frameworks Overview */}
           <div className="lg:col-span-2">
