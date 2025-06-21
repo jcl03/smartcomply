@@ -40,8 +40,10 @@ export type Audit = {
 export type Form = {
   id: number;
   form_schema: any;
-  compliance_id: number;  status: 'active' | 'archive' | 'draft';
+  compliance_id: number;
+  status: 'active' | 'archive' | 'draft';
   date_created: string;
+  threshold?: number;
   compliance?: {
     id: number;
     name: string;

@@ -75,9 +75,9 @@ export async function addForm(formData: FormData): Promise<ActionResult> {
   if (!profile || profile.role !== 'admin') {
     return { error: "Insufficient permissions" };
   }
-
   const complianceId = formData.get("compliance_id") as string;
   const formSchemaStr = formData.get("form_schema") as string;
+  const threshold = formData.get("threshold") as string;
 
   if (!complianceId || !formSchemaStr) {
     return { error: "Compliance ID and form schema are required" };
@@ -89,11 +89,13 @@ export async function addForm(formData: FormData): Promise<ActionResult> {
   } catch (error) {
     return { error: "Invalid JSON format in form schema" };
   }
+  
   const { error } = await supabase
     .from('form')
     .insert([{ 
       compliance_id: parseInt(complianceId),
       form_schema: formSchema,
+      threshold: threshold ? parseFloat(threshold) : null,
       status: 'active'
     }]);
 
@@ -651,9 +653,9 @@ export async function addFormDraft(formData: FormData): Promise<ActionResult> {
   if (!profile || profile.role !== 'admin') {
     return { error: "Insufficient permissions" };
   }
-
   const complianceId = formData.get("compliance_id") as string;
   const formSchemaStr = formData.get("form_schema") as string;
+  const threshold = formData.get("threshold") as string;
 
   if (!complianceId || !formSchemaStr) {
     return { error: "Compliance ID and form schema are required" };
@@ -671,6 +673,7 @@ export async function addFormDraft(formData: FormData): Promise<ActionResult> {
     .insert([{ 
       compliance_id: parseInt(complianceId),
       form_schema: formSchema,
+      threshold: threshold ? parseFloat(threshold) : null,
       status: 'draft'  // Set status as draft
     }]);
 

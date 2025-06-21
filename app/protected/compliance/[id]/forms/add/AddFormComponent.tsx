@@ -9,9 +9,28 @@ import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import Link from "next/link";
 import { useFormStatus } from "react-dom";
 import { Plus, Minus, Eye, Sparkles, AlertCircle, CheckCircle, FileText, Shield, ArrowLeft, Save, Heading2 } from "lucide-react";
-import type { ActionResult } from "@/lib/types";
-import { addFormDraft } from "../../../actions";
 import { FormPreview } from "@/components/form/form-preview";
+import type { ActionResult } from "@/lib/types";
+
+// Define types
+type FormFieldOption = {
+  value: string;
+  points?: number;
+  isFailOption?: boolean;
+};
+
+type FormField = {
+  id: string;
+  type: string;
+  label: string;
+  required: boolean;
+  placeholder?: string;
+  options?: string[];
+  enhancedOptions?: FormFieldOption[];
+  weightage?: number;
+  autoFail?: boolean;
+  isSection?: boolean;
+};
 
 // Submit button with loading state
 function SubmitButton() {
@@ -41,7 +60,7 @@ function SubmitButton() {
   );
 }
 
-// Add DraftButton after SubmitButton component
+// Draft button
 function DraftButton() {
   const { pending } = useFormStatus();
   
@@ -69,35 +88,16 @@ function DraftButton() {
   );
 }
 
-type FormFieldOption = {
-  value: string;
-  points?: number;
-  isFailOption?: boolean;
-};
-
-type FormField = {
-  id: string;
-  type: string;
-  label: string;
-  required: boolean;
-  placeholder?: string;
-  options?: string[]; // Keep for backward compatibility
-  enhancedOptions?: FormFieldOption[]; // New enhanced options
-  weightage?: number;
-  autoFail?: boolean;
-  isSection?: boolean; // New field to identify section headers
-};
-
-type ServerAction = (formData: FormData) => Promise<ActionResult>;
-
-export default function AddFormComponent({ action, complianceId }: { action: ServerAction; complianceId: string }) {
+export default function AddFormComponent({ action, complianceId }: { action: (formData: FormData) => Promise<ActionResult>; complianceId: string }) {
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
   const [formTitle, setFormTitle] = useState("");
   const [formDescription, setFormDescription] = useState("");
+  const [threshold, setThreshold] = useState<number>(70);
   const [fields, setFields] = useState<FormField[]>([]);
   const [showPreview, setShowPreview] = useState(false);
-    const addField = (sectionId?: string) => {
+
+  const addField = (sectionId?: string) => {
     const newField: FormField = {
       id: `field_${Date.now()}`,
       type: "text",
@@ -109,10 +109,8 @@ export default function AddFormComponent({ action, complianceId }: { action: Ser
     };
     
     if (sectionId && sectionId !== 'default') {
-      // Find the section and add the field after the last field in that section
       const sectionIndex = fields.findIndex(f => f.id === sectionId);
       if (sectionIndex !== -1) {
-        // Find the last field in this section (before the next section)
         let insertIndex = sectionIndex + 1;
         while (insertIndex < fields.length && !fields[insertIndex].isSection) {
           insertIndex++;
@@ -125,7 +123,6 @@ export default function AddFormComponent({ action, complianceId }: { action: Ser
       }
     }
     
-    // If no sections exist, create a General section first
     if (!fields.some(f => f.isSection)) {
       const defaultSectionField: FormField = {
         id: `section_${Date.now()}`,
@@ -135,12 +132,10 @@ export default function AddFormComponent({ action, complianceId }: { action: Ser
         isSection: true
       };
       
-      // Add the section and field
       setFields([defaultSectionField, newField]);
       return;
     }
     
-    // If we're adding to default section or no specific section, add to the first available section
     if (sectionId === 'default' || !sectionId) {
       const firstSection = fields.find(f => f.isSection);
       if (firstSection) {
@@ -157,7 +152,6 @@ export default function AddFormComponent({ action, complianceId }: { action: Ser
       }
     }
     
-    // Fallback: add to the end
     setFields([...fields, newField]);
   };
   
@@ -185,13 +179,13 @@ export default function AddFormComponent({ action, complianceId }: { action: Ser
     updatedFields[fieldIndex].options![optionIndex] = value;
     setFields(updatedFields);
   };
-    const removeOption = (fieldIndex: number, optionIndex: number) => {
+  
+  const removeOption = (fieldIndex: number, optionIndex: number) => {
     const updatedFields = [...fields];
     updatedFields[fieldIndex].options!.splice(optionIndex, 1);
     setFields(updatedFields);
   };
 
-  // Enhanced options functions
   const addEnhancedOption = (fieldIndex: number) => {
     const updatedFields = [...fields];
     if (!updatedFields[fieldIndex].enhancedOptions) {
@@ -222,7 +216,6 @@ export default function AddFormComponent({ action, complianceId }: { action: Ser
     setFields(updatedFields);
   };
 
-  // Check if field should use enhanced options
   const shouldUseEnhancedOptions = (field: FormField) => {
     return (field.weightage !== undefined && field.weightage > 0) || field.autoFail;
   };
@@ -237,93 +230,60 @@ export default function AddFormComponent({ action, complianceId }: { action: Ser
     };
     setFields([...fields, newField]);
   };
-  
-  async function clientAction(formData: FormData) {
+
+  const handleSubmit = async (formData: FormData) => {
     setErrorMessage("");
     setSuccessMessage("");
     
-    // Custom validation: ensure each section has at least one field
-    const sections: { [key: string]: any[] } = {};
-    let currentSection = '';
-    fields.forEach(field => {
-      if (field.isSection) {
-        currentSection = field.id;
-        sections[currentSection] = [];
-      } else {
-        if (!sections[currentSection]) sections[currentSection] = [];
-        sections[currentSection].push(field);
-      }
-    });
-    const emptySectionEntry = Object.entries(sections).find(([_, fs]) => fs.length === 0);
-    if (emptySectionEntry) {
-      const [emptySectionId] = emptySectionEntry;
-      const sectionField = fields.find(f => f.id === emptySectionId);
-      const sectionName = sectionField?.label?.trim() ? sectionField.label : 'Unnamed Section';
-      setTimeout(() => {
-        alert(`Section "${sectionName}" has no field inserted. Please add at least one field to this section.`);
-        const el = document.querySelector(`[data-section-id='${emptySectionId}']`);
-        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }, 100);
-      return;
-    }
-    // New validation: ensure checkbox/radio fields have at least one non-empty option
-    const invalidField = fields.find(f => {
-      if (f.type === 'checkbox' || f.type === 'radio') {
-        if (shouldUseEnhancedOptions(f)) {
-          return !f.enhancedOptions || f.enhancedOptions.length === 0 || f.enhancedOptions.every(opt => !opt.value?.trim());
-        } else {
-          return !f.options || f.options.length === 0 || f.options.every(opt => !opt?.trim());
-        }
-      }
-      return false;
-    });
-    if (invalidField) {
-      const fieldLabel = invalidField.label?.trim() ? invalidField.label : 'Unnamed Field';
-      setTimeout(() => {
-        alert(`Field \"${fieldLabel}\" (${invalidField.type}) must have at least one non-empty option.`);
-        const el = document.querySelector(`[data-field-id='${invalidField.id}']`);
-        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }, 100);
-      return;
-    }
-    
     try {
+      if (fields.length === 0) {
+        setErrorMessage("Please add at least one field to the form");
+        return;
+      }
+      
+      const emptyFields = fields.filter(f => !f.label.trim());
+      if (emptyFields.length > 0) {
+        setErrorMessage("All fields must have labels");
+        return;
+      }
+      
       const formSchema = {
         title: formTitle,
         description: formDescription,
         fields: fields
       };
       
-      // Add the schema to form data
-      formData.append("form_schema", JSON.stringify(formSchema));
-      formData.append("compliance_id", complianceId);
+      const serverFormData = new FormData();
+      serverFormData.append("compliance_id", complianceId);
+      serverFormData.append("form_schema", JSON.stringify(formSchema));
+      serverFormData.append("threshold", threshold.toString());
       
-      // Check if this is a draft save
-      const isDraft = formData.get("action") === "draft";
-      const result = await (isDraft ? addFormDraft(formData) : action(formData));
+      const isDraft = (formData.get("action") as string) === "draft";
+      
+      const result = await action(serverFormData);
       
       if (result?.error) {
         setErrorMessage(result.error);
       } else {
-        setSuccessMessage(isDraft ? "Form saved as draft!" : "Form created successfully!");
-        if (!isDraft) {
-          // Only reset form if it's not a draft
-          setFormTitle("");
-          setFormDescription("");
-          setFields([]);
-        }
+        setSuccessMessage(`Form ${isDraft ? 'draft saved' : 'created'} successfully!`);
+        setTimeout(() => {
+          window.location.href = `/protected/compliance/${complianceId}/forms`;
+        }, 1500);
       }
     } catch (error: any) {
       setErrorMessage(error?.message || "An unexpected error occurred");
       console.error(error);
     }
-  }
-    const renderPreview = () => {
+  };
+
+  const renderPreview = () => {
     if (!showPreview) return null;
     
-      return (
+    return (
       <Card className="mt-6 border-gray-200 bg-white shadow-md">
-        <CardHeader className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-t-xl">
+        <CardHeader className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-t
+
+-xl">
           <div className="flex items-center gap-3">
             <div className="bg-white/20 p-2 rounded-lg">
               <Eye className="h-5 w-5" />
@@ -344,12 +304,10 @@ export default function AddFormComponent({ action, complianceId }: { action: Ser
     );
   };
 
-  // Add renderEditMode function to organize fields by sections
   const renderEditMode = () => {
     const sections: { [key: string]: FormField[] } = {};
     let currentSection = '';
     
-    // First pass: organize fields by sections
     fields.forEach(field => {
       if (field.isSection) {
         currentSection = field.id;
@@ -362,7 +320,6 @@ export default function AddFormComponent({ action, complianceId }: { action: Ser
       }
     });
     
-    // If no sections exist but we have fields, create a default section for display
     if (Object.keys(sections).length === 0 && fields.filter(f => !f.isSection).length > 0) {
       sections['default'] = fields.filter(f => !f.isSection);
     }
@@ -496,7 +453,6 @@ export default function AddFormComponent({ action, complianceId }: { action: Ser
                             </div>
                           )}
 
-                          {/* Scoring Options */}
                           <div className="mt-4">
                             <h4 className="text-sm font-medium text-gray-800 mb-3">Scoring Options</h4>
                             <div className="grid grid-cols-2 gap-4">
@@ -533,7 +489,6 @@ export default function AddFormComponent({ action, complianceId }: { action: Ser
                             </div>
                           </div>
 
-                          {/* Options for select/radio/checkbox fields */}
                           {(field.type === "select" || field.type === "radio" || field.type === "checkbox") && (
                             <div className="space-y-2 mt-4">
                               <div className="flex items-center justify-between">
@@ -633,8 +588,6 @@ export default function AddFormComponent({ action, complianceId }: { action: Ser
                       </Card>
                     );
                   })}
-
-                  {/* Add Field Button */}
                   <div className="flex justify-center pt-2">
                     <Button 
                       type="button" 
@@ -651,8 +604,6 @@ export default function AddFormComponent({ action, complianceId }: { action: Ser
             </Card>
           );
         })}
-
-        {/* No Sections State */}
         {fields.filter(f => !f.isSection).length === 0 && (
           <div className="text-center py-12 px-6 border-2 border-dashed border-gray-200 rounded-lg bg-gray-50/30">
             <div className="bg-gray-50 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
@@ -672,8 +623,6 @@ export default function AddFormComponent({ action, complianceId }: { action: Ser
             </Button>
           </div>
         )}
-
-        {/* Add Section Button */}
         {fields.some(f => f.isSection) && fields.filter(f => !f.isSection).length === 0 && (
           <div className="flex justify-center pt-4">
             <Button 
@@ -686,8 +635,6 @@ export default function AddFormComponent({ action, complianceId }: { action: Ser
             </Button>
           </div>
         )}
-
-        {/* Add Section Button when there are fields */}
         {fields.filter(f => !f.isSection).length > 0 && (
           <div className="flex justify-center pt-4">
             <Button 
@@ -703,9 +650,10 @@ export default function AddFormComponent({ action, complianceId }: { action: Ser
       </div>
     );
   };
-  
+
   return (
-    <form action={clientAction}>      <CardContent className="space-y-8 p-8 bg-gradient-to-br from-white via-blue-50/30 to-indigo-50/30">
+    <form action={handleSubmit}>
+      <CardContent className="space-y-8 p-8 bg-white">
         {errorMessage && (
           <div className="relative p-6 bg-gradient-to-r from-red-50 to-pink-50 border border-red-200/50 text-red-800 rounded-xl shadow-lg backdrop-blur-sm">
             <div className="flex items-center gap-3">
@@ -726,105 +674,105 @@ export default function AddFormComponent({ action, complianceId }: { action: Ser
             </div>
           </div>
         )}
-          {/* Framework Details Section */}
-        <div className="relative">
-          <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-indigo-500/10 rounded-2xl blur-xl"></div>
-          <div className="relative space-y-6 bg-white/70 backdrop-blur-lg rounded-2xl p-8 border border-white/50 shadow-xl">
-            <div className="flex items-center gap-4 mb-6">
-              <div className="relative">
-                <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-xl blur-md opacity-75"></div>
-                <div className="relative bg-gradient-to-r from-blue-500 to-indigo-600 p-3 rounded-xl">
-                  <Shield className="h-6 w-6 text-white" />
+        <div className="space-y-6 bg-white rounded-2xl p-8 border border-gray-200 shadow-sm">
+          <div className="flex items-center gap-4 mb-6">
+            <div className="bg-blue-100 p-3 rounded-xl">
+              <Shield className="h-6 w-6 text-blue-600" />
+            </div>
+            <div>
+              <h3 className="text-2xl font-bold text-gray-900">
+                Form Details
+              </h3>
+              <p className="text-gray-600 mt-1">Configure your form settings and parameters</p>
+            </div>
+          </div>
+          <div className="space-y-6">
+            <div className="space-y-3">
+              <Label htmlFor="title" className="text-gray-800 font-semibold text-lg">Form Title <span className="text-red-500">*</span></Label>
+              <Input 
+                id="title" 
+                value={formTitle}
+                onChange={(e) => setFormTitle(e.target.value)}
+                placeholder="e.g., SOX Controls Assessment, GDPR Data Protection Form" 
+                required 
+                className="h-14 border-gray-200 focus:border-blue-500 focus:ring-blue-200 bg-white text-gray-900 text-lg font-medium rounded-xl"
+              />
+              <div className="flex items-start gap-2 mt-2">
+                <div className="bg-blue-100 p-1 rounded-full mt-1">
+                  <div className="w-1 h-1 bg-blue-600 rounded-full"></div>
                 </div>
-              </div>
-              <div>
-                <h3 className="text-2xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
-                  Form Details
-                </h3>
-                <p className="text-gray-600 mt-1">Configure your form settings and parameters</p>
+                <p className="text-sm text-gray-600">Choose a descriptive name that clearly identifies what this form is for</p>
               </div>
             </div>
-            
-            <div className="space-y-6">
-              <div className="space-y-3">
-                <Label htmlFor="title" className="text-gray-800 font-semibold text-lg">Form Title <span className="text-red-500">*</span></Label>
-                <div className="relative">
-                  <Input 
-                    id="title" 
-                    value={formTitle}
-                    onChange={(e) => setFormTitle(e.target.value)}
-                    placeholder="e.g., SOX Controls Assessment, GDPR Data Protection Form" 
-                    required 
-                    className="h-14 border-gray-200 focus:border-blue-500 focus:ring-blue-200 bg-white/90 backdrop-blur-sm text-gray-900 text-lg font-medium rounded-xl shadow-lg transition-all duration-300 hover:shadow-xl focus:shadow-xl"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 to-indigo-500/5 rounded-xl pointer-events-none"></div>
+            <div className="space-y-3">
+              <Label htmlFor="description" className="text-gray-800 font-semibold text-lg">Form Description</Label>
+              <textarea 
+                id="description"
+                value={formDescription}
+                onChange={(e) => setFormDescription(e.target.value)}
+                placeholder="Brief description of what this form is for"
+                className="w-full h-24 p-4 border border-gray-200 rounded-xl focus:border-blue-500 focus:ring-blue-200 bg-white text-gray-900 font-medium resize-none"
+              />
+            </div>
+            <div className="space-y-3">
+              <Label htmlFor="threshold" className="text-gray-800 font-semibold text-lg">Passing Score Threshold <span className="text-red-500">*</span></Label>
+              <div className="relative">
+                <Input 
+                  id="threshold" 
+                  type="number"
+                  min="0"
+                  max="100"
+                  value={threshold}
+                  onChange={(e) => setThreshold(Number(e.target.value))}
+                  placeholder="70" 
+                  required 
+                  className="h-14 border-gray-200 focus:border-blue-500 focus:ring-blue-200 bg-white text-gray-900 text-lg font-medium rounded-xl"
+                />
+                <div className="absolute right-4 top-1/2 transform -translate-y-1/2">
+                  <span className="text-gray-500 font-medium">%</span>
                 </div>
-                <div className="flex items-start gap-2 mt-2">
+              </div>
+              <div className="flex items-start gap-2 mt-2">
+                <div className="bg-blue-100 p-1 rounded-full mt-1">
+                  <div className="w-1 h-1 bg-blue-600 rounded-full"></div>
+                </div>
+                <p className="text-sm text-gray-600">Set the minimum percentage score required for compliance (typically 70-80%)</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="bg-white rounded-2xl p-8 border border-gray-200 shadow-sm">
+          <div className="flex items-start gap-4">
+            <div className="bg-blue-100 p-3 rounded-xl">
+              <CheckCircle className="h-6 w-6 text-blue-600" />
+            </div>
+            <div className="flex-1">
+              <h3 className="text-xl font-bold text-gray-900 mb-4">
+                What happens next?
+              </h3>
+              <div className="space-y-3">
+                <div className="flex items-start gap-3">
                   <div className="bg-blue-100 p-1 rounded-full mt-1">
                     <div className="w-1 h-1 bg-blue-600 rounded-full"></div>
                   </div>
-                  <p className="text-sm text-gray-600">Choose a descriptive name that clearly identifies what this form is for</p>
+                  <p className="text-gray-700 font-medium">Add sections to organize your form structure</p>
                 </div>
-              </div>
-              
-              <div className="space-y-3">
-                <Label htmlFor="description" className="text-gray-800 font-semibold text-lg">Form Description</Label>
-                <div className="relative">
-                  <textarea 
-                    id="description"
-                    value={formDescription}
-                    onChange={(e) => setFormDescription(e.target.value)}
-                    placeholder="Brief description of what this form is for"
-                    className="w-full h-24 p-4 border border-gray-200 rounded-xl focus:border-blue-500 focus:ring-blue-200 bg-white/90 backdrop-blur-sm text-gray-900 font-medium shadow-lg transition-all duration-300 hover:shadow-xl focus:shadow-xl resize-none"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 to-indigo-500/5 rounded-xl pointer-events-none"></div>
+                <div className="flex items-start gap-3">
+                  <div className="bg-blue-100 p-1 rounded-full mt-1">
+                    <div className="w-1 h-1 bg-blue-600 rounded-full"></div>
+                  </div>
+                  <p className="text-gray-700 font-medium">Add fields within each section for data collection</p>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="bg-blue-100 p-1 rounded-full mt-1">
+                    <div className="w-1 h-1 bg-blue-600 rounded-full"></div>
+                  </div>
+                  <p className="text-gray-700 font-medium">Configure validation rules and scoring options</p>
                 </div>
               </div>
             </div>
           </div>
         </div>
-        
-        {/* What happens next? */}
-        <div className="relative">
-          <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/10 to-purple-500/10 rounded-2xl blur-xl"></div>
-          <div className="relative bg-white/70 backdrop-blur-lg rounded-2xl p-8 border border-white/50 shadow-xl">
-            <div className="flex items-start gap-4">
-              <div className="relative">
-                <div className="absolute inset-0 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-xl blur-md opacity-75"></div>
-                <div className="relative bg-gradient-to-r from-indigo-500 to-purple-600 p-3 rounded-xl">
-                  <CheckCircle className="h-6 w-6 text-white" />
-                </div>
-              </div>
-              <div className="flex-1">
-                <h3 className="text-xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent mb-4">
-                  What happens next?
-                </h3>
-                <div className="space-y-3">
-                  <div className="flex items-start gap-3">
-                    <div className="bg-blue-100 p-1 rounded-full mt-1">
-                      <div className="w-1 h-1 bg-blue-600 rounded-full"></div>
-                    </div>
-                    <p className="text-gray-700 font-medium">Add sections to organize your form structure</p>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <div className="bg-blue-100 p-1 rounded-full mt-1">
-                      <div className="w-1 h-1 bg-blue-600 rounded-full"></div>
-                    </div>
-                    <p className="text-gray-700 font-medium">Add fields within each section for data collection</p>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <div className="bg-blue-100 p-1 rounded-full mt-1">
-                      <div className="w-1 h-1 bg-blue-600 rounded-full"></div>
-                    </div>
-                    <p className="text-gray-700 font-medium">Configure validation rules and scoring options</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        
-        {/* Form Fields */}
         <div className="space-y-4 bg-gray-50 rounded-lg p-4 border border-gray-200">
           <div className="flex items-center justify-between">
             <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
@@ -868,7 +816,6 @@ export default function AddFormComponent({ action, complianceId }: { action: Ser
             renderEditMode()
           )}
         </div>
-        
         <CardFooter className="flex justify-between gap-4 p-6 bg-gradient-to-br from-white via-blue-50/30 to-indigo-50/30 border-t border-gray-100">
           <div className="flex items-center gap-4">
             <Link 
