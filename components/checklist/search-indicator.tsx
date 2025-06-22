@@ -14,7 +14,7 @@ export default function SearchIndicator({ searchQuery }: SearchIndicatorProps) {
   if (!searchQuery) return null;
 
   const clearSearch = () => {
-    const params = new URLSearchParams(searchParams.toString());
+    const params = new URLSearchParams(searchParams!.toString());
     params.delete('search');
     router.push(`?${params.toString()}`);
   };

@@ -32,7 +32,7 @@ export function CertificateFilters({ searchParams, folders }: CertificateFilters
   const [searchValue, setSearchValue] = useState(searchParams.search || "");
 
   const updateSearchParams = useCallback((updates: Record<string, string | null>) => {
-    const params = new URLSearchParams(urlSearchParams.toString());
+    const params = new URLSearchParams(urlSearchParams!.toString());
     
     Object.entries(updates).forEach(([key, value]) => {
       if (value === null || value === "") {

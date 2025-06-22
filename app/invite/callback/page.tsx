@@ -7,7 +7,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 function InviteCallbackContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const next = searchParams.get("next");
+  const next = searchParams?.get("next");
 
   useEffect(() => {
     const handleInviteAuth = async () => {

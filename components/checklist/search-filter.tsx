@@ -12,11 +12,11 @@ interface SearchFilterProps {
 export default function SearchFilter({ placeholder = "Search checklists..." }: SearchFilterProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [searchValue, setSearchValue] = useState(searchParams.get('search') || '');
+  const [searchValue, setSearchValue] = useState(searchParams!.get('search') || '');
 
   // Update the URL when search value changes
   const updateSearch = (value: string) => {
-    const params = new URLSearchParams(searchParams.toString());
+    const params = new URLSearchParams(searchParams!.toString());
     
     if (value.trim()) {
       params.set('search', value.trim());

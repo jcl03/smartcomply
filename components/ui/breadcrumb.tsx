@@ -59,10 +59,16 @@ export function Breadcrumb({ items, className = "", maxItems = 5 }: BreadcrumbPr
   
   try {
     const { breadcrumbs } = useBreadcrumb();
-    breadcrumbItems = breadcrumbs.length > 0 ? breadcrumbs : (items || generateBreadcrumbsFromPath(pathname));
+    breadcrumbItems = Array.isArray(breadcrumbs) && breadcrumbs.length > 0
+      ? breadcrumbs
+      : Array.isArray(items) && items.length > 0
+        ? items
+        : generateBreadcrumbsFromPath(pathname || "");
   } catch {
     // If context is not available, fall back to items or auto-generation
-    breadcrumbItems = items || generateBreadcrumbsFromPath(pathname);
+    breadcrumbItems = Array.isArray(items) && items.length > 0
+      ? items
+      : generateBreadcrumbsFromPath(pathname || "");
   }
 
   if (breadcrumbItems.length === 0) return null;
