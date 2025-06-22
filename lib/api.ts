@@ -11,58 +11,136 @@ export async function getUserProfile() {
   if (!user) {
     return null;
   }
-  
   // Then fetch the profile for this specific user
-  const { data, error } = await supabase
+  const { data: profile, error } = await supabase
     .from('view_user_profiles')
     .select('*')
     .eq('email', user.email)
     .single();
-  
+
   if (error) {
     console.error("Error fetching user profile:", error);
     return null;
   }
-  
-  return data as UserProfile;
+
+  // If the profile has a tenant_id, fetch the tenant data
+  let tenant = null;
+  if (profile.tenant_id) {
+    const { data: tenantData, error: tenantError } = await supabase
+      .from('tenant')
+      .select('id, name')
+      .eq('id', profile.tenant_id)
+      .single();
+    
+    if (!tenantError && tenantData) {
+      tenant = tenantData;
+    }
+  }
+
+  return { ...profile, tenant } as UserProfile;
 }
 
 export async function getAllUserProfiles() {
   const supabase = await createClient();
   
-  const { data, error } = await supabase
+  // Get user profiles first
+  const { data: profiles, error: profilesError } = await supabase
     .from('view_user_profiles')
     .select('*');
-  
-  if (error) {
-    console.error("Error fetching user profiles:", error);
+
+  if (profilesError) {
+    console.error("Error fetching user profiles:", profilesError);
     return [];
   }
+
+  // Get tenants separately 
+  const { data: tenants, error: tenantsError } = await supabase
+    .from('tenant')
+    .select('id, name');
+
+  if (tenantsError) {
+    console.error("Error fetching tenants:", tenantsError);
+  }
+
+  // Create a tenant lookup map
+  const tenantMap = new Map();
+  if (tenants) {
+    tenants.forEach(tenant => tenantMap.set(tenant.id, tenant));
+  }
+  // Merge tenant data with profiles
+  const profilesWithTenants = profiles.map(profile => ({
+    ...profile,
+    tenant: profile.tenant_id ? tenantMap.get(profile.tenant_id) : null
+  }));
   
-  return data as UserProfile[];
+  return profilesWithTenants as UserProfile[];
 }
 
 export async function getAllUserProfilesWithRevocationStatus() {
   const supabase = await createClient();
   
-  const { data, error } = await supabase
+  // Get user profiles first
+  const { data: profiles, error: profilesError } = await supabase
     .from('view_user_profiles')
     .select('*');
   
-  if (error) {
-    console.error("Error fetching user profiles:", error);
+  if (profilesError) {
+    console.error("Error fetching user profiles:", profilesError);
     return [];
   }
+  // Get tenants separately 
+  const { data: tenants, error: tenantsError } = await supabase
+    .from('tenant')
+    .select('id, name');
+
+  if (tenantsError) {
+    console.error("Error fetching tenants:", tenantsError);
+  }
+
+  // Create a tenant lookup map
+  const tenantMap = new Map();
+  if (tenants) {
+    tenants.forEach(tenant => tenantMap.set(tenant.id, tenant));
+  }
+
+  // Get fresh tenant_id data directly from profiles table using admin client
+  const adminClient = createAdminClient();
+  const { data: freshProfiles, error: freshProfilesError } = await adminClient
+    .from('profiles')
+    .select('user_id, tenant_id');
+  
+  const freshTenantMap = new Map();
+  if (freshProfiles) {
+    freshProfiles.forEach(p => freshTenantMap.set(p.user_id, p.tenant_id));
+  }
+
+  console.log("Fresh tenant data from profiles table:", freshProfiles);
+
+  // Merge tenant data with profiles, using fresh data when available
+  const profilesWithTenants = profiles.map(profile => {
+    const freshTenantId = freshTenantMap.get(profile.user_id) || profile.tenant_id;
+    const tenant = freshTenantId ? tenantMap.get(freshTenantId) : null;
+    
+    if (freshTenantId !== profile.tenant_id) {
+      console.log(`Tenant ID mismatch for user ${profile.email}: view=${profile.tenant_id}, fresh=${freshTenantId}`);
+    }
+    
+    return {
+      ...profile,
+      tenant_id: freshTenantId, // Use fresh data
+      tenant
+    };
+  });
 
   // Get revocation status for all users
   try {
     const adminClient = createAdminClient();
     const { data: authUsers, error: authError } = await adminClient.auth.admin.listUsers();
-    
-    if (authError || !authUsers) {
+      if (authError || !authUsers) {
       console.error("Error fetching auth users:", authError);
-      return data.map(profile => ({ ...profile, isRevoked: false }));    }    // Map profiles with revocation status
-    const profilesWithRevocationStatus = data.map(profile => {
+      return profilesWithTenants.map(profile => ({ ...profile, isRevoked: false }));
+    }// Map profiles with revocation status
+    const profilesWithRevocationStatus = profilesWithTenants.map(profile => {
       const authUser = authUsers.users.find(u => u.email === profile.email);
       let isRevoked = false;
       
@@ -76,7 +154,7 @@ export async function getAllUserProfilesWithRevocationStatus() {
 
     return profilesWithRevocationStatus;
   } catch (err) {    console.error("Error checking revocation status:", err);
-    return data.map(profile => ({ ...profile, isRevoked: false }));
+    return profilesWithTenants.map(profile => ({ ...profile, isRevoked: false }));
   }
 }
 
@@ -624,4 +702,20 @@ export async function getPerformanceRadarData() {
       audits: []
     };
   }
+}
+
+export async function getAllTenants() {
+  const supabase = await createClient();
+  
+  const { data, error } = await supabase
+    .from('tenant')
+    .select('id, name')
+    .order('name');
+  
+  if (error) {
+    console.error("Error fetching tenants:", error);
+    return [];
+  }
+  
+  return data;
 }

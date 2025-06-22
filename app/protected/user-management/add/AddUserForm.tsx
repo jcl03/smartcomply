@@ -37,9 +37,25 @@ function SubmitButton() {
 
 type ServerAction = (formData: FormData) => Promise<ActionResult>;
 
-export default function AddUserForm({ action }: { action: ServerAction }) {
+interface Tenant {
+  id: number;
+  name: string;
+}
+
+interface AddUserFormProps {
+  action: ServerAction;
+  tenants: Tenant[];
+  currentUserRole: string;
+}
+
+export default function AddUserForm({ action, tenants, currentUserRole }: AddUserFormProps) {
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
+  const [selectedRole, setSelectedRole] = useState(currentUserRole === "manager" ? "user" : "");
+  
+  const isAdminRole = selectedRole === "admin";
+  const isCurrentUserManager = currentUserRole === "manager";
+  const managerTenantId = isCurrentUserManager && tenants.length === 1 ? tenants[0].id.toString() : "";
   
   async function clientAction(formData: FormData) {
     setErrorMessage("");
@@ -49,12 +65,15 @@ export default function AddUserForm({ action }: { action: ServerAction }) {
       const result = await action(formData);
       
       if (result?.error) {
-        setErrorMessage(result.error);
-      } else {
+        setErrorMessage(result.error);      } else {
         setSuccessMessage("User invitation sent successfully!");
         // Reset form
         const form = document.getElementById("add-user-form") as HTMLFormElement;
-        if (form) form.reset();
+        if (form) {
+          form.reset();
+          // Reset role to appropriate default
+          setSelectedRole(isCurrentUserManager ? "user" : "");
+        }
       }
     } catch (error: any) {
       setErrorMessage(error?.message || "An unexpected error occurred");
@@ -62,6 +81,15 @@ export default function AddUserForm({ action }: { action: ServerAction }) {
     }
   }  return (
     <form id="add-user-form" action={clientAction} className="space-y-8">
+      {/* Hidden role input for managers to ensure role is submitted */}
+      {isCurrentUserManager && (
+        <input type="hidden" name="role" value="user" />
+      )}
+      
+      {/* Hidden tenant input for managers to ensure tenant is submitted */}
+      {isCurrentUserManager && managerTenantId && (
+        <input type="hidden" name="tenant_id" value={managerTenantId} />
+      )}
       {/* Success Message */}
       {successMessage && (
         <div className="bg-gradient-to-r from-emerald-50 to-green-50 border border-emerald-200 rounded-xl p-6 flex items-start gap-4">
@@ -114,28 +142,90 @@ export default function AddUserForm({ action }: { action: ServerAction }) {
             <div className="w-1 h-1 bg-blue-500 rounded-full"></div>
             <p>Choose a descriptive email that clearly identifies the user you want to invite</p>
           </div>
-        </div>
-
-        {/* Role Field */}
+        </div>        {/* Role Field */}
         <div className="space-y-3">
           <Label htmlFor="role" className="text-gray-900 font-semibold text-base">
             User Role <span className="text-red-500">*</span>
-          </Label>
-          <select 
+          </Label>          <select 
             id="role" 
             name="role"
-            className="flex h-14 w-full rounded-xl border border-gray-300 bg-gray-50 px-4 py-3 text-base text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 transition-all duration-200"
-            required
+            value={selectedRole}
+            onChange={(e) => setSelectedRole(e.target.value)}
+            disabled={isCurrentUserManager}
+            className={`flex h-14 w-full rounded-xl border px-4 py-3 text-base transition-all duration-200 ${
+              isCurrentUserManager
+                ? 'border-gray-200 bg-gray-100 text-gray-600 cursor-not-allowed' 
+                : 'border-gray-300 bg-gray-50 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2'
+            }`}
+            required={!isCurrentUserManager}
           >
-            <option value="">Select a role...</option>
-            <option value="user">User - Basic access to compliance tools</option>
-            <option value="manager">Manager - Can oversee compliance activities</option>
-            <option value="external_auditor">External Auditor - Limited audit access</option>
-            <option value="admin">Admin - Full system access</option>
+            {isCurrentUserManager ? (
+              <option value="user">User - Basic access to compliance tools</option>
+            ) : (
+              <>
+                <option value="">Select a role...</option>
+                <option value="user">User - Basic access to compliance tools</option>
+                <option value="manager">Manager - Can oversee compliance activities</option>
+                <option value="external_auditor">External Auditor - Limited audit access</option>
+                <option value="admin">Admin - Full system access</option>
+              </>
+            )}
           </select>
+          {isCurrentUserManager ? (
+            <div className="flex items-center gap-2 text-sm text-blue-600">
+              <div className="w-1 h-1 bg-blue-500 rounded-full"></div>
+              <p>As a manager, you can only invite users with the User role.</p>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 text-sm text-blue-600">
+              <div className="w-1 h-1 bg-blue-500 rounded-full"></div>
+              <p>Select the appropriate role for the user you're inviting.</p>
+            </div>
+          )}
         </div>
 
-        {/* What happens next section */}
+        {/* Tenant Field - Only required for non-admin roles */}
+        <div className="space-y-3">
+          <Label htmlFor="tenant_id" className="text-gray-900 font-semibold text-base">
+            Tenant {!isAdminRole && <span className="text-red-500">*</span>}
+          </Label>          <select 
+            id="tenant_id" 
+            name="tenant_id"
+            disabled={isAdminRole || isCurrentUserManager}
+            required={!isAdminRole && !isCurrentUserManager}
+            value={isAdminRole ? "" : (isCurrentUserManager ? managerTenantId : "")}
+            className={`flex h-14 w-full rounded-xl border px-4 py-3 text-base transition-all duration-200 ${
+              isAdminRole || isCurrentUserManager
+                ? 'border-gray-200 bg-gray-100 text-gray-600 cursor-not-allowed' 
+                : 'border-gray-300 bg-gray-50 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2'
+            }`}
+          >
+            {isAdminRole ? (
+              <option value="">Not required for admin users</option>
+            ) : isCurrentUserManager && tenants.length === 1 ? (
+              <option value={tenants[0].id}>{tenants[0].name}</option>
+            ) : (
+              <>
+                <option value="">Select a tenant...</option>
+                {tenants.map((tenant) => (
+                  <option key={tenant.id} value={tenant.id}>
+                    {tenant.name}
+                  </option>
+                ))}
+              </>
+            )}
+          </select>          <div className="flex items-center gap-2 text-sm text-blue-600">
+            <div className="w-1 h-1 bg-blue-500 rounded-full"></div>
+            <p>
+              {isAdminRole 
+                ? "Admin users don't require a tenant assignment. They have system-wide access." 
+                : isCurrentUserManager 
+                  ? `Invited users will be assigned to your tenant: ${tenants[0]?.name || 'your tenant'}`
+                  : "Select the organization/tenant this user will belong to."
+              }
+            </p>
+          </div>
+        </div>        {/* What happens next section */}
         <div className="bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 rounded-2xl p-8 border border-blue-200">
           <div className="flex items-center gap-4 mb-6">
             <div className="bg-gradient-to-r from-blue-500 to-indigo-600 p-3 rounded-xl text-white">

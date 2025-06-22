@@ -1,7 +1,7 @@
 "use server";
 
 import { createClient } from "@/utils/supabase/server";
-import { isUserAdmin } from "@/lib/auth";
+import { isUserAdmin, isUserManagerOrAdmin, getCurrentUserProfile } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/utils/supabase/admin";
@@ -13,66 +13,211 @@ export async function updateUserRole(formData: FormData) {
   // Check if the current user is an admin
   const isAdmin = await isUserAdmin();
   if (!isAdmin) {
-    redirect("/protected");
+    return { error: "Unauthorized: Admin access required" };
   }
-  
-  const userId = formData.get("userId") as string;
+    const userId = formData.get("userId") as string;
   const newRole = formData.get("role") as string;
+  const tenantId = formData.get("tenant_id") as string; // Optional tenant assignment
   
   if (!userId || !newRole) {
     return { error: "User ID and role are required" };
   }
-  
+
   const supabase = await createClient();
+  const adminClient = createAdminClient();
   
   // Get current user to check if they're trying to change their own role
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) {
     return { error: "Unable to verify current user" };
   }
-    // Get current user's profile to compare IDs
+  
+  // Get current user's profile to compare IDs
   const { data: currentUserProfile, error: profileError } = await supabase
     .from('view_user_profiles')
     .select('id')
-    .eq('email', user.email)    .single();
+    .eq('email', user.email)
+    .single();
     
   if (profileError || !currentUserProfile) {
     console.error("Error getting current user profile:", profileError);
     return { error: "Unable to verify current user" };
   }
-    // Prevent admins from changing their own role (ensure string comparison)
+  
+  // Prevent admins from changing their own role (ensure string comparison)
   if (String(currentUserProfile.id) === String(userId)) {
     return { error: "You cannot change your own role" };
   }
-  
-  // Update the user's role in the profiles table
-  const { error } = await supabase
-    .from('profiles')
-    .update({ role: newRole })
-    .eq('id', userId);
-  
-  if (error) {
-    console.error("Error updating user role:", error);
-    return { error: "Failed to update user role" };
+
+  try {
+    console.log("updateUserRole called with userId:", userId, "newRole:", newRole);
+    
+    // First get the user_id from the view_user_profiles table
+    const { data: targetUser, error: targetUserError } = await supabase
+      .from('view_user_profiles')
+      .select('user_id, email, role')
+      .eq('id', userId)
+      .single();
+    
+    if (targetUserError || !targetUser) {
+      console.error("Error getting target user:", targetUserError);
+      return { error: "User not found" };
+    }
+    
+    console.log("Target user found:", targetUser);
+    
+    // Check current profile data before update (using admin client to bypass RLS)
+    const { data: beforeUpdate, error: beforeError } = await adminClient
+      .from('profiles')
+      .select('*')
+      .eq('user_id', targetUser.user_id);
+      console.log("Profile before update (admin client):", beforeUpdate, "Error:", beforeError);
+      // Validation: Non-admin users must have a tenant assignment
+    if (newRole !== 'admin') {
+      const currentProfile = beforeUpdate?.[0];
+      // Check if user currently has tenant OR if tenant is being provided in the update
+      if (!currentProfile?.tenant_id && !tenantId) {
+        console.error("Validation failed: Non-admin user requires tenant assignment");
+        return { 
+          error: `Cannot assign role "${newRole}" to a user without a tenant. Please assign a tenant first, or choose the admin role for system-wide access.` 
+        };
+      }
+      console.log("Validation passed: Non-admin user has tenant assignment:", currentProfile?.tenant_id || tenantId);
+    }
+    
+    // Prepare update data: handle both role and tenant changes
+    const updateData: { role: string; tenant_id?: number | null } = { role: newRole };
+    
+    if (newRole === 'admin') {
+      // Admin role: clear tenant assignment
+      updateData.tenant_id = null;
+      console.log("Admin role selected - will clear tenant assignment");
+    } else if (tenantId) {
+      // Non-admin role with tenant provided: set tenant
+      updateData.tenant_id = parseInt(tenantId);
+      console.log("Non-admin role selected - will set tenant to:", tenantId);
+    }
+    // If non-admin role and no tenant provided, leave existing tenant unchanged
+    
+    // Try update with regular client first
+    const { error: regularError, data: regularData, count: regularCount } = await supabase
+      .from('profiles')
+      .update(updateData)
+      .eq('user_id', targetUser.user_id)
+      .select();
+    
+    console.log("Regular client update result:", {
+      error: regularError,
+      data: regularData,
+      count: regularCount,
+      rowsAffected: regularData?.length || 0
+    });
+    
+    // If regular client fails or updates 0 rows, try with admin client
+    let finalError = regularError;
+    let finalData = regularData;
+    
+    if (regularError || !regularData || regularData.length === 0) {
+      console.log("Regular client failed, trying admin client...");
+        const { error: adminError, data: adminData, count: adminCount } = await adminClient
+        .from('profiles')
+        .update(updateData)
+        .eq('user_id', targetUser.user_id)
+        .select();
+      
+      console.log("Admin client update result:", {
+        error: adminError,
+        data: adminData,
+        count: adminCount,
+        rowsAffected: adminData?.length || 0
+      });
+      
+      finalError = adminError;
+      finalData = adminData;
+    }
+    
+    if (finalError) {
+      console.error("Error updating user role:", finalError);
+      return { error: `Failed to update user role: ${finalError.message}` };
+    }
+    
+    // Check if any rows were actually updated
+    if (!finalData || finalData.length === 0) {
+      console.error("No rows were updated even with admin client - possible data issue");
+      
+      // Try to get more info about the profile using admin client
+      const { data: profileCheck, error: profileCheckError } = await adminClient
+        .from('profiles')
+        .select('*')
+        .eq('user_id', targetUser.user_id);
+      
+      console.log("Profile check after failed update (admin):", profileCheck, "Error:", profileCheckError);
+      
+      return { error: "No rows were updated. The profile may not exist in the profiles table." };
+    }
+    
+    // Verify the update actually happened using admin client
+    const { data: afterUpdate, error: afterError } = await adminClient
+      .from('profiles')
+      .select('*')
+      .eq('user_id', targetUser.user_id);
+    
+    console.log("Profile after update (admin client):", afterUpdate, "Error:", afterError);
+    
+    console.log(`Successfully updated role for user ${targetUser.user_id} (${targetUser.email}) from ${targetUser.role} to ${newRole}`);
+    if (newRole === 'admin') {
+      console.log("Tenant assignment cleared for admin user");
+    }
+    
+    // Revalidate the relevant pages and cache
+    revalidatePath("/protected/user-management", "page");
+    revalidatePath(`/protected/user-management/${userId}/edit`, "page");
+    revalidatePath("/protected/user-management", "layout");
+    
+    return { success: true };
+  } catch (err) {
+    console.error("Unexpected error updating user role:", err);
+    return { error: "An unexpected error occurred" };
   }
-  
-  // Revalidate the user management page
-  revalidatePath("/protected/user-management");
-  
-  return { success: true };
 }
 
 export async function inviteUser(formData: FormData) {
-  // Check if the current user is an admin
-  const isAdmin = await isUserAdmin();
-  if (!isAdmin) {
+  // Check if the current user is a manager or admin
+  const isManagerOrAdmin = await isUserManagerOrAdmin();
+  if (!isManagerOrAdmin) {
     redirect("/protected");
+  }
+  
+  // Get current user profile to check role and tenant
+  const currentUserProfile = await getCurrentUserProfile();
+  if (!currentUserProfile) {
+    return { error: "Unable to verify current user profile" };
   }
   
   const email = formData.get("email") as string;
   const role = formData.get("role") as string;
-    if (!email || !role) {
+  const tenant_id = formData.get("tenant_id") as string;
+  
+  if (!email || !role) {
     return { error: "Email and role are required" };
+  }
+  
+  // Additional validation for managers
+  if (currentUserProfile.role === 'manager') {
+    // Managers cannot create admin users
+    if (role === 'admin') {
+      return { error: "Managers cannot create admin users" };
+    }
+    
+    // Managers can only assign users to their own tenant
+    if (role !== 'admin' && (!tenant_id || parseInt(tenant_id) !== currentUserProfile.tenant_id)) {
+      return { error: "Managers can only invite users to their own tenant" };
+    }
+  }
+  
+  // Tenant is only required for non-admin users
+  if (role !== 'admin' && !tenant_id) {
+    return { error: "Tenant is required for non-admin users" };
   }
   try {
     const supabase = await createClient();
@@ -99,13 +244,13 @@ export async function inviteUser(formData: FormData) {
     }
     
     // 2. Create profile in profiles table using the invited user's ID
-    if (inviteData?.user?.id) {
-      const { error: profileError } = await supabase
+    if (inviteData?.user?.id) {      const { error: profileError } = await supabase
         .from('profiles')
         .insert({ 
           user_id: inviteData.user.id, 
           role,
           full_name: '',
+          tenant_id: tenant_id ? parseInt(tenant_id) : null
         });
         
       if (profileError) {

@@ -1,8 +1,8 @@
 import { createServerClient } from "@supabase/ssr";
 import { type NextRequest, NextResponse } from "next/server";
 
-// Check if a path is an admin path
-const isAdminPath = (path: string) => {
+// Check if a path requires admin or manager access
+const isUserManagementPath = (path: string) => {
   return path.startsWith("/protected/user-management");
 };
 
@@ -78,9 +78,8 @@ export const updateSession = async (request: NextRequest) => {
         return response;
       }
     }
-    
-    // For admin paths, check if user is an admin
-    if (isAdminPath(request.nextUrl.pathname) && !user.error) {
+      // For user management paths, check if user is an admin or manager
+    if (isUserManagementPath(request.nextUrl.pathname) && !user.error) {
       // Fetch the user's role
       const { data: profile, error } = await supabase
         .from('view_user_profiles')
@@ -88,8 +87,8 @@ export const updateSession = async (request: NextRequest) => {
         .eq('email', user.data.user?.email)
         .single();
       
-      // If not admin, redirect to protected page
-      if (error || !profile || profile.role !== 'admin') {
+      // If not admin or manager, redirect to protected page
+      if (error || !profile || !['admin', 'manager'].includes(profile.role)) {
         return NextResponse.redirect(new URL("/protected", request.url));
       }
     }

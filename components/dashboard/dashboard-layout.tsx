@@ -27,6 +27,7 @@ interface NavigationItem {
   icon: any;
   adminOnly?: boolean;
   managerOnly?: boolean;
+  adminOrManagerOnly?: boolean;
   excludeForAdmin?: boolean;
 }
 
@@ -43,7 +44,8 @@ interface DashboardLayoutProps {
 
 const navigation = [
   { name: "Dashboard", href: "/protected", icon: Home },
-  { name: "User Management", href: "/protected/user-management", icon: Users, adminOnly: true },
+  { name: "User Management", href: "/protected/user-management", icon: Users, adminOrManagerOnly: true },
+  { name: "Tenant Management", href: "/protected/tenant", icon: Folder, adminOnly: true },
   { name: "Compliance", href: "/protected/compliance", icon: Shield },
   { name: "Checklists", href: "/protected/checklist", icon: FileText, managerOnly: true },
   { name: "Audits", href: "/protected/Audit", icon: CheckCircle, excludeForAdmin: true },
@@ -65,10 +67,12 @@ export default function DashboardLayout({ children, userProfile }: DashboardLayo
     if (item.adminOnly && !isAdmin) return false;
     // Show manager-only items only to managers
     if (item.managerOnly && !isManager) return false;
+    // Show admin or manager items only to admins or managers
+    if (item.adminOrManagerOnly && !isAdmin && !isManager) return false;
     // Hide excludeForAdmin items from admins
     if (item.excludeForAdmin && isAdmin) return false;
     return true;
-  });  return (
+  });return (
     <BreadcrumbProvider>
       <div className="h-screen bg-gradient-to-br from-sky-50 via-blue-50 to-indigo-50 relative overflow-hidden">
       {/* Background Pattern */}

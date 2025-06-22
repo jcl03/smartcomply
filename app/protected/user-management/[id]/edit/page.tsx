@@ -8,14 +8,18 @@ import { isUserAdmin } from "@/lib/auth";
 import { createAdminClient } from "@/utils/supabase/admin";
 import UpdateEmailForm from "./UpdateEmailForm";
 import UpdateRoleForm from "./UpdateRoleForm";
+import UpdateTenantForm from "./UpdateTenantForm";
 import RevokeAccessForm from "./RevokeAccessForm";
 import DashboardLayout from "@/components/dashboard/dashboard-layout";
-import { getUserProfile } from "@/lib/api";
+import { getUserProfile, getAllTenants } from "@/lib/api";
+import { getCurrentUserProfile } from "@/lib/auth";
 
 export default async function EditUserPage({ params }: { params: Promise<{ id: string }> }) {
-  // Check if the current user is an admin
-  const isAdmin = await isUserAdmin();
-  if (!isAdmin) {
+  // Get current user profile to check authorization
+  const fullCurrentUserProfile = await getCurrentUserProfile();
+  
+  // Check if the current user is a manager or admin
+  if (!fullCurrentUserProfile || !['admin', 'manager'].includes(fullCurrentUserProfile.role)) {
     redirect("/protected");
   }
   
@@ -42,17 +46,72 @@ export default async function EditUserPage({ params }: { params: Promise<{ id: s
     if (currentProfile && String(currentProfile.id) === String(userId)) {
       isCurrentUser = true;
     }
-  }
-    // Get user profile
+  }  // Get user profile
   const { data: profile, error } = await supabase
     .from('view_user_profiles')
     .select('*')
     .eq('id', userId)
     .single();
-    
-  if (error || !profile) {
+      if (error || !profile) {
     redirect("/protected/user-management");
-  }  // Check if user access is revoked by looking up their auth record
+  }
+  
+  // Additional authorization for managers - they can only edit users in their tenant
+  if (fullCurrentUserProfile.role === 'manager') {
+    // Managers cannot edit admin users
+    if (profile.role === 'admin') {
+      redirect("/protected/user-management");
+    }
+    
+    // Managers can only edit users in their own tenant
+    if (profile.tenant_id !== fullCurrentUserProfile.tenant_id) {
+      redirect("/protected/user-management");
+    }
+  }// Get tenant data if the user has a tenant_id
+  let tenant = null;
+  console.log("Profile tenant_id from view:", profile.tenant_id);
+  
+  // Also check the profiles table directly to see if there's a discrepancy
+  const adminClient = createAdminClient();
+  const { data: directProfile, error: directProfileError } = await adminClient
+    .from('profiles')
+    .select('tenant_id')
+    .eq('user_id', profile.user_id)
+    .single();
+  
+  console.log("Direct profile tenant_id:", directProfile?.tenant_id, "Error:", directProfileError);
+  
+  // Use the tenant_id from the direct profiles table if available, otherwise fall back to view
+  const effectiveTenantId = directProfile?.tenant_id || profile.tenant_id;
+  console.log("Effective tenant_id to use:", effectiveTenantId);
+  
+  if (effectiveTenantId) {
+    const { data: tenantData, error: tenantError } = await supabase
+      .from('tenant')
+      .select('id, name')
+      .eq('id', effectiveTenantId)
+      .single();
+    
+    console.log("Tenant fetch result:", { tenantData, tenantError });
+    
+    if (!tenantError && tenantData) {
+      tenant = tenantData;
+    }
+  } else {
+    console.log("No tenant_id found in either source");
+  }// Add tenant to profile
+  const profileWithTenant = { ...profile, tenant };
+
+  // Debug logging
+  console.log("Edit page - Profile data:", {
+    profileId: profile.id,
+    tenantId: profile.tenant_id,
+    tenant: tenant,
+    profileWithTenant: profileWithTenant
+  });
+
+  // Fetch all tenants for the tenant update form
+  const tenants = await getAllTenants();// Check if user access is revoked by looking up their auth record
   let isRevoked = false;
   let authUserId: string | null = null;
   
@@ -63,7 +122,7 @@ export default async function EditUserPage({ params }: { params: Promise<{ id: s
     const { data: authUsers, error: authError } = await adminClient.auth.admin.listUsers();
     
     if (!authError && authUsers) {
-      const authUser = authUsers.users.find(u => u.email === profile.email);
+      const authUser = authUsers.users.find(u => u.email === profileWithTenant.email);
       if (authUser) {
         authUserId = authUser.id;
         
@@ -73,7 +132,7 @@ export default async function EditUserPage({ params }: { params: Promise<{ id: s
         if (!userError && freshUserData) {
           // Check if user access is revoked based on metadata
           isRevoked = freshUserData.user.user_metadata?.revoked === true;
-          console.log(`Checking revocation status for ${profile.email} (using getUserById):`, {
+          console.log(`Checking revocation status for ${profileWithTenant.email} (using getUserById):`, {
             isRevoked,
             metadata: freshUserData.user.user_metadata
           });
@@ -81,7 +140,7 @@ export default async function EditUserPage({ params }: { params: Promise<{ id: s
           console.error("Error getting fresh user data:", userError);
           // Fallback to listUsers data
           isRevoked = authUser.user_metadata?.revoked === true;
-          console.log(`Fallback revocation check for ${profile.email}:`, {
+          console.log(`Fallback revocation check for ${profileWithTenant.email}:`, {
             isRevoked,
             metadata: authUser.user_metadata
           });
@@ -134,7 +193,7 @@ export default async function EditUserPage({ params }: { params: Promise<{ id: s
                   <Label className="text-sm font-medium text-sky-700">Full Name</Label>
                 </div>
                 <div className="bg-sky-50/50 p-3 rounded-lg border border-sky-200">
-                  <p className="font-semibold text-sky-900">{profile.full_name}</p>
+                  <p className="font-semibold text-sky-900">{profileWithTenant.full_name}</p>
                 </div>
               </div>
               
@@ -142,9 +201,20 @@ export default async function EditUserPage({ params }: { params: Promise<{ id: s
                 <div className="flex items-center gap-2 mb-1">
                   <Mail className="h-4 w-4 text-sky-600" />
                   <Label className="text-sm font-medium text-sky-700">Email Address</Label>
+                </div>                <div className="bg-sky-50/50 p-3 rounded-lg border border-sky-200">
+                  <p className="font-semibold text-sky-900">{profileWithTenant.email}</p>
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 mb-1">
+                  <Settings className="h-4 w-4 text-sky-600" />
+                  <Label className="text-sm font-medium text-sky-700">Tenant</Label>
                 </div>
                 <div className="bg-sky-50/50 p-3 rounded-lg border border-sky-200">
-                  <p className="font-semibold text-sky-900">{profile.email}</p>
+                  <p className="font-semibold text-sky-900">
+                    {profileWithTenant.tenant ? profileWithTenant.tenant.name : 'No Tenant Assigned'}
+                  </p>
                 </div>
               </div>
               
@@ -154,7 +224,7 @@ export default async function EditUserPage({ params }: { params: Promise<{ id: s
                   <Label className="text-sm font-medium text-sky-700">Member Since</Label>
                 </div>
                 <div className="bg-sky-50/50 p-3 rounded-lg border border-sky-200">
-                  <p className="font-semibold text-sky-900">{new Date(profile.created_at).toLocaleDateString()}</p>
+                  <p className="font-semibold text-sky-900">{new Date(profileWithTenant.created_at).toLocaleDateString()}</p>
                 </div>
               </div>
               
@@ -164,9 +234,8 @@ export default async function EditUserPage({ params }: { params: Promise<{ id: s
                   <Label className="text-sm font-medium text-sky-700">Last Sign In</Label>
                 </div>
                 <div className="bg-sky-50/50 p-3 rounded-lg border border-sky-200">
-                  <p className="font-semibold text-sky-900">
-                    {profile.last_sign_in_at 
-                      ? new Date(profile.last_sign_in_at).toLocaleDateString()
+                  <p className="font-semibold text-sky-900">                    {profileWithTenant.last_sign_in_at 
+                      ? new Date(profileWithTenant.last_sign_in_at).toLocaleDateString()
                       : 'Never signed in'}
                   </p>
                 </div>
@@ -196,11 +265,35 @@ export default async function EditUserPage({ params }: { params: Promise<{ id: s
                   <p className="text-sm mt-1 text-amber-700">For security reasons, administrators cannot modify their own role. Please ask another administrator to make changes if needed.</p>
                 </div>
               </div>
-            ) : (
-              <UpdateRoleForm userId={profile.id} currentRole={profile.role} />
+            ) : (              <UpdateRoleForm 
+                userId={profileWithTenant.id} 
+                currentRole={profileWithTenant.role} 
+                currentTenant={profileWithTenant.tenant}
+                tenants={tenants}
+              />
             )}
-          </CardContent>
-        </Card>
+          </CardContent>        </Card>
+
+        {/* Tenant Management Card - Only show for non-admin users */}
+        {profileWithTenant.role !== 'admin' && (
+          <Card className="bg-white/80 backdrop-blur-sm border-indigo-200 shadow-md hover:shadow-lg transition-all duration-300">
+            <CardHeader className="bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-t-xl">
+              <div className="flex items-center gap-3">
+                <div className="bg-white/20 p-2 rounded-lg">
+                  <Settings className="h-5 w-5" />
+                </div>
+                <CardTitle className="text-lg">Tenant Management</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent className="p-6">
+              <UpdateTenantForm 
+                userId={profileWithTenant.id} 
+                currentTenant={profileWithTenant.tenant} 
+                tenants={tenants}
+              />
+            </CardContent>
+          </Card>
+        )}
 
         {/* Email Management Card */}
         <Card className="bg-white/80 backdrop-blur-sm border-sky-200 shadow-md hover:shadow-lg transition-all duration-300">
@@ -212,7 +305,7 @@ export default async function EditUserPage({ params }: { params: Promise<{ id: s
               <CardTitle className="text-lg">Email Management</CardTitle>
             </div>
           </CardHeader>
-          <UpdateEmailForm userId={profile.id} currentEmail={profile.email} />
+          <UpdateEmailForm userId={profileWithTenant.id} currentEmail={profileWithTenant.email} />
         </Card>
 
         {/* Access Control Card */}
@@ -227,9 +320,8 @@ export default async function EditUserPage({ params }: { params: Promise<{ id: s
               </div>
             </CardHeader>
             <CardContent className="p-6">
-              <RevokeAccessForm 
-                userId={profile.id} 
-                userEmail={profile.email}
+              <RevokeAccessForm                userId={profileWithTenant.id} 
+                userEmail={profileWithTenant.email}
                 isRevoked={isRevoked}
               />
             </CardContent>

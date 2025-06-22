@@ -20,6 +20,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import ResendActivationButton from "./ResendActivationButton";
 import DashboardLayout from "@/components/dashboard/dashboard-layout";
 import { getUserProfile } from "@/lib/api";
+import { getCurrentUserProfile } from "@/lib/auth";
 import Link from "next/link";
 import { formatDistanceToNow } from "date-fns";
 
@@ -33,23 +34,49 @@ export default async function UserManagementPage() {
     return redirect("/sign-in");
   }
   
-  // Get current user profile for dashboard layout
+  // Get current user profile for dashboard layout and authorization
   const currentUserProfile = await getUserProfile();
+  const fullCurrentUserProfile = await getCurrentUserProfile();
   
-  // Check if user is admin
-  const { data: profile, error } = await supabase
-    .from('view_user_profiles')
-    .select('role')
-    .eq('email', user.email)
-    .single();
-    
-  // If not admin or error occurs, redirect to protected page
-  if (error || !profile || profile.role !== 'admin') {
+  // Check if user is admin or manager
+  if (!fullCurrentUserProfile || !['admin', 'manager'].includes(fullCurrentUserProfile.role)) {
     return redirect("/protected");
   }
   
-  // Fetch all user profiles for admin
-  const allProfiles = await getAllUserProfilesWithRevocationStatus();  return (
+  // Fetch user profiles based on role
+  let filteredProfiles;
+  if (fullCurrentUserProfile.role === 'admin') {
+    // Admins can see all users
+    filteredProfiles = await getAllUserProfilesWithRevocationStatus();  } else if (fullCurrentUserProfile.role === 'manager') {
+    // Managers can only see users in their tenant
+    const allProfiles = await getAllUserProfilesWithRevocationStatus();
+    
+    // Get manager's tenant_id and handle different data types
+    const managerTenantId = fullCurrentUserProfile.tenant_id;
+    
+    filteredProfiles = allProfiles.filter(profile => {
+      // Skip users with no tenant assigned
+      if (!profile.tenant_id || !managerTenantId) {
+        return false;
+      }
+      
+      // Try multiple comparison approaches to handle different data types
+      return (
+        profile.tenant_id === managerTenantId ||
+        String(profile.tenant_id) === String(managerTenantId) ||
+        Number(profile.tenant_id) === Number(managerTenantId)
+      );
+    });
+  } else {
+    filteredProfiles = [];
+  }
+  
+  console.log("User management page - Filtered profiles for", fullCurrentUserProfile.role, ":", filteredProfiles.map(p => ({
+    id: p.id,
+    email: p.email,
+    tenant_id: p.tenant_id,
+    tenant: p.tenant
+  })));return (
     <DashboardLayout userProfile={currentUserProfile}>
       <div className="space-y-8 p-6">
         {/* Hero Welcome Section */}
@@ -120,7 +147,7 @@ export default async function UserManagementPage() {
                   <Users className="h-6 w-6 text-blue-600" />
                 </div>
                 <div className="text-right">
-                  <p className="text-2xl lg:text-3xl font-bold text-blue-900">{allProfiles.length}</p>
+                  <p className="text-2xl lg:text-3xl font-bold text-blue-900">{filteredProfiles.length}</p>
                 </div>
               </div>
               <h3 className="text-sm font-semibold text-blue-700 uppercase tracking-wider mb-1">Total Users</h3>
@@ -141,7 +168,7 @@ export default async function UserManagementPage() {
                 </div>
                 <div className="text-right">
                   <p className="text-2xl lg:text-3xl font-bold text-emerald-900">
-                    {allProfiles.filter(p => !p.isRevoked).length}
+                    {filteredProfiles.filter((p: any) => !p.isRevoked).length}
                   </p>
                 </div>
               </div>
@@ -163,7 +190,7 @@ export default async function UserManagementPage() {
                 </div>
                 <div className="text-right">
                   <p className="text-2xl lg:text-3xl font-bold text-red-900">
-                    {allProfiles.filter(p => p.isRevoked).length}
+                    {filteredProfiles.filter((p: any) => p.isRevoked).length}
                   </p>
                 </div>
               </div>
@@ -184,7 +211,7 @@ export default async function UserManagementPage() {
                 </div>
                 <div className="text-right">
                   <p className="text-2xl lg:text-3xl font-bold text-amber-900">
-                    {allProfiles.filter(p => !p.last_sign_in_at).length}
+                    {filteredProfiles.filter((p: any) => !p.last_sign_in_at).length}
                   </p>
                 </div>
               </div>
@@ -212,18 +239,18 @@ export default async function UserManagementPage() {
                 </div>
               </div>
               <div className="bg-white/10 px-3 py-1 rounded-lg text-sm font-medium">
-                {allProfiles.length} Total
+                {filteredProfiles.length} Total
               </div>
             </div>
           </div>
           
           <div className="p-6">
             <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gradient-to-r from-slate-50 to-sky-50 border-b border-slate-200">
+              <table className="w-full">                <thead className="bg-gradient-to-r from-slate-50 to-sky-50 border-b border-slate-200">
                   <tr>
                     <th className="text-left p-4 font-semibold text-slate-700">User</th>
                     <th className="text-left p-4 font-semibold text-slate-700">Role</th>
+                    <th className="text-left p-4 font-semibold text-slate-700">Tenant</th>
                     <th className="text-left p-4 font-semibold text-slate-700">Status</th>
                     <th className="text-left p-4 font-semibold text-slate-700">Member Since</th>
                     <th className="text-left p-4 font-semibold text-slate-700">Last Active</th>
@@ -231,7 +258,7 @@ export default async function UserManagementPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {allProfiles.map((profile, index) => (
+                  {filteredProfiles.map((profile: any, index: number) => (
                     <tr 
                       key={profile.id} 
                       className={`group border-b border-slate-100 hover:bg-gradient-to-r hover:from-slate-50 hover:to-sky-50 transition-all duration-300 ${
@@ -270,10 +297,24 @@ export default async function UserManagementPage() {
                             profile.role === 'admin' ? 'bg-purple-500' :
                             profile.role === 'manager' ? 'bg-blue-500' :
                             profile.role === 'external_auditor' ? 'bg-orange-500' : 'bg-sky-500'
-                          }`}></div>
-                          {profile.role === 'external_auditor' ? 'External Auditor' : 
+                          }`}></div>                          {profile.role === 'external_auditor' ? 'External Auditor' : 
                            profile.role.charAt(0).toUpperCase() + profile.role.slice(1)}
                         </span>
+                      </td>
+                      <td className="p-4">
+                        <div className="flex items-center gap-2">
+                          {profile.tenant ? (
+                            <span className="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-semibold rounded-lg border bg-gradient-to-r from-slate-100 to-gray-100 text-slate-700 border-slate-200">
+                              <div className="w-2 h-2 rounded-full bg-slate-500"></div>
+                              {profile.tenant.name}
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-lg border bg-gradient-to-r from-yellow-100 to-amber-100 text-yellow-700 border-yellow-200">
+                              <div className="w-2 h-2 rounded-full bg-yellow-500"></div>
+                              No Tenant
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td className="p-4">
                         <span className={`inline-flex items-center gap-2 px-3 py-1.5 text-xs font-semibold rounded-lg border ${

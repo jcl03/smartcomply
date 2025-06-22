@@ -3,160 +3,201 @@ import { FormMessage, Message } from "@/components/form-message";
 import { SubmitButton } from "@/components/submit-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card } from "@/components/ui/card";
-import { CheckCircle } from "lucide-react";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { CheckCircle, Shield, Key, ArrowLeft } from "lucide-react";
 import { SuccessRedirect } from "@/components/success-redirect";
+import DashboardLayout from "@/components/dashboard/dashboard-layout";
+import { getUserProfile } from "@/lib/api";
+import Link from "next/link";
 
 export default async function ResetPassword(props: {
   searchParams: Promise<Message>;
 }) {
   const searchParams = await props.searchParams;
-    // Check if this is a success case
+  
+  // Get current user profile for dashboard layout
+  const currentUserProfile = await getUserProfile();
+  
+  // Check if this is a success case
   const isSuccess = searchParams && "success" in searchParams;
   
   if (isSuccess) {
     // Show success state and redirect after a delay
     return (
-      <div className="flex min-h-screen items-center justify-center p-4">
-        <div className="relative">
-          {/* Background decorative elements */}
-          <div className="absolute -top-10 -right-10 w-20 h-20 bg-gradient-to-br from-emerald-200/30 to-green-300/30 rounded-full blur-xl"></div>
-          <div className="absolute -bottom-10 -left-10 w-16 h-16 bg-gradient-to-br from-green-200/30 to-emerald-300/30 rounded-full blur-xl"></div>
-          
-          <Card className="relative p-8 shadow-2xl bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm border border-white/20 w-full max-w-md">
-            <div className="text-center">
-              <div className="mx-auto w-18 h-18 bg-gradient-to-r from-emerald-400 via-green-500 to-emerald-500 rounded-3xl flex items-center justify-center mb-6 shadow-xl">
-                <CheckCircle className="w-10 h-10 text-white drop-shadow-md" />
+      <DashboardLayout userProfile={currentUserProfile}>
+        <div className="max-w-2xl mx-auto space-y-8">
+          {/* Success Card */}
+          <Card className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
+            <CardContent className="p-8 text-center">
+              <div className="mx-auto w-20 h-20 bg-gradient-to-r from-emerald-500 to-green-600 rounded-full flex items-center justify-center mb-6 shadow-xl">
+                <CheckCircle className="w-10 h-10 text-white" />
               </div>
-              <h1 className="text-3xl font-bold bg-gradient-to-r from-emerald-600 to-green-600 bg-clip-text text-transparent mb-3">
-                Password Updated!
+              <h1 className="text-3xl font-bold text-gray-900 mb-3">
+                Password Updated Successfully!
               </h1>
-              <p className="text-slate-600 dark:text-slate-400 text-lg font-medium mb-6">
+              <p className="text-gray-600 text-lg mb-6">
                 Your password has been successfully updated. You will be redirected to the dashboard shortly.
-              </p>              <div className="flex items-center justify-center">
-                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-emerald-500"></div>
-                <span className="ml-2 text-emerald-600 font-medium">Redirecting...</span>
+              </p>
+              <div className="flex items-center justify-center gap-2 text-emerald-600">
+                <div className="animate-spin rounded-full h-5 w-5 border-2 border-emerald-500 border-t-transparent"></div>
+                <span className="font-medium">Redirecting...</span>
               </div>
-            </div>
-            <SuccessRedirect redirectUrl="/protected" delay={3000} />
+              <SuccessRedirect redirectUrl="/protected" delay={3000} />
+            </CardContent>
           </Card>
         </div>
-      </div>
+      </DashboardLayout>
     );
   }
+
   return (
-    <div className="flex min-h-screen items-center justify-center p-4">
-      <div className="relative">
-        {/* Background decorative elements */}
-        <div className="absolute -top-10 -right-10 w-20 h-20 bg-gradient-to-br from-sky-200/30 to-cyan-300/30 rounded-full blur-xl"></div>
-        <div className="absolute -bottom-10 -left-10 w-16 h-16 bg-gradient-to-br from-cyan-200/30 to-blue-300/30 rounded-full blur-xl"></div>
-        
-        <Card className="relative p-8 shadow-2xl bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm border border-white/20 w-full max-w-md">
-          <div className="text-center mb-8">
-            <div className="mx-auto w-18 h-18 bg-gradient-to-r from-sky-400 via-cyan-500 to-blue-500 rounded-3xl flex items-center justify-center mb-6 shadow-xl transform hover:scale-105 transition-all duration-300">
-              <svg
-                className="w-10 h-10 text-white drop-shadow-md"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"
-                />
-              </svg>
+    <DashboardLayout userProfile={currentUserProfile}>
+      <div className="max-w-4xl mx-auto space-y-8">
+        {/* Header Section */}
+        <div className="bg-gradient-to-r from-blue-600 via-purple-600 to-purple-700 rounded-2xl p-8 text-white shadow-xl">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+            <div className="flex items-start gap-6">
+              <div className="bg-white/20 backdrop-blur-sm p-4 rounded-xl shadow-sm">
+                <Key className="h-8 w-8 text-white" />
+              </div>
+              <div className="flex-1">
+                <h1 className="text-4xl font-bold text-white mb-3">Reset Password</h1>
+                <p className="text-white/90 text-lg leading-relaxed max-w-2xl">
+                  Update your account password with a secure new password to maintain account security
+                </p>
+              </div>
             </div>
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 dark:from-white dark:to-slate-300 bg-clip-text text-transparent mb-3">
-              Reset Password
-            </h1>
-            <p className="text-slate-600 dark:text-slate-400 text-lg font-medium">
-              Please enter your new password below
-            </p>
+            <Link 
+              href="/protected"
+              className="flex items-center gap-2 px-6 py-3 rounded-xl bg-white/20 backdrop-blur-sm text-white hover:bg-white/30 transition-all duration-200 font-medium shadow-sm hover:shadow-md"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Back to Dashboard
+            </Link>
+          </div>
+        </div>
+
+        {/* Main Content */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Reset Form - Takes 2 columns */}
+          <div className="lg:col-span-2">
+            <Card className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
+              <CardHeader className="bg-gradient-to-r from-gray-50 to-blue-50 p-6 border-b border-gray-200">
+                <div className="flex items-center gap-4">
+                  <div className="bg-blue-100 p-3 rounded-xl">
+                    <Shield className="h-6 w-6 text-blue-600" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-xl font-semibold text-gray-900">
+                      Password Reset
+                    </CardTitle>
+                    <p className="text-gray-600">Enter your new secure password below</p>
+                  </div>
+                </div>
+              </CardHeader>
+              
+              <CardContent className="p-8">
+                <form action={resetPasswordAction} className="space-y-6">
+                  {/* New Password Field */}
+                  <div className="space-y-3">
+                    <Label htmlFor="password" className="text-gray-900 font-semibold text-base">
+                      New Password <span className="text-red-500">*</span>
+                    </Label>
+                    <Input 
+                      name="password" 
+                      type="password"
+                      placeholder="Enter your new password"
+                      className="h-14 bg-gray-50 border-gray-300 focus:border-blue-500 focus:ring-blue-500 focus:ring-2 rounded-xl px-4 text-gray-900 placeholder:text-gray-400 text-base transition-all duration-200"
+                      required 
+                      minLength={8}
+                    />
+                    <div className="flex items-center gap-2 text-sm text-blue-600">
+                      <div className="w-1 h-1 bg-blue-500 rounded-full"></div>
+                      <p>Password must be at least 8 characters long</p>
+                    </div>
+                  </div>
+
+                  {/* Confirm Password Field */}
+                  <div className="space-y-3">
+                    <Label htmlFor="confirmPassword" className="text-gray-900 font-semibold text-base">
+                      Confirm Password <span className="text-red-500">*</span>
+                    </Label>
+                    <Input 
+                      name="confirmPassword" 
+                      type="password"
+                      placeholder="Confirm your new password"
+                      className="h-14 bg-gray-50 border-gray-300 focus:border-blue-500 focus:ring-blue-500 focus:ring-2 rounded-xl px-4 text-gray-900 placeholder:text-gray-400 text-base transition-all duration-200"
+                      required 
+                      minLength={8}
+                    />
+                    <div className="flex items-center gap-2 text-sm text-blue-600">
+                      <div className="w-1 h-1 bg-blue-500 rounded-full"></div>
+                      <p>Re-enter your password to confirm</p>
+                    </div>
+                  </div>
+
+                  {/* Submit Button */}
+                  <div className="pt-6">
+                    <SubmitButton className="w-full h-14 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 text-base">
+                      Update Password
+                    </SubmitButton>
+                  </div>
+                  
+                  <FormMessage message={searchParams} />
+                </form>
+              </CardContent>
+            </Card>
           </div>
 
-          <form className="space-y-6">
-            <div className="space-y-3">
-              <Label htmlFor="password" className="text-sm font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-2">
-                <svg className="w-4 h-4 text-sky-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                </svg>
-                New Password
-              </Label>
-              <div className="relative group">
-                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none z-10">
-                  <svg className="h-5 w-5 text-slate-400 group-focus-within:text-sky-500 transition-colors duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                  </svg>
+          {/* Sidebar Information */}
+          <div className="space-y-6">
+            {/* Security Tips Card */}
+            <Card className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
+              <CardHeader className="bg-gradient-to-r from-green-50 to-emerald-50 p-6 border-b border-gray-200">
+                <div className="flex items-center gap-3">
+                  <div className="bg-green-100 p-2 rounded-lg">
+                    <Shield className="h-5 w-5 text-green-600" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-lg font-semibold text-gray-900">
+                      Security Tips
+                    </CardTitle>
+                    <p className="text-gray-600 text-sm">Keep your account secure</p>
+                  </div>
                 </div>
-                <Input 
-                  name="password" 
-                  type="password"
-                  placeholder="Enter your new password"
-                  className="pl-12 pr-4 h-14 border-2 border-slate-200 dark:border-slate-600 focus:border-sky-400 focus:ring-4 focus:ring-sky-400/20 rounded-xl bg-white/80 dark:bg-slate-700/80 backdrop-blur-sm shadow-sm hover:shadow-md transition-all duration-200 text-base font-medium placeholder:text-slate-400 placeholder:font-normal" 
-                  required 
-                  minLength={8}
-                />
-                <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-sky-400/0 via-cyan-400/0 to-blue-400/0 group-focus-within:from-sky-400/5 group-focus-within:via-cyan-400/5 group-focus-within:to-blue-400/5 transition-all duration-300 pointer-events-none"></div>
-              </div>
-            </div>
-
-            <div className="space-y-3">
-              <Label htmlFor="confirmPassword" className="text-sm font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-2">
-                <svg className="w-4 h-4 text-sky-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                Confirm Password
-              </Label>
-              <div className="relative group">
-                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none z-10">
-                  <svg className="h-5 w-5 text-slate-400 group-focus-within:text-sky-500 transition-colors duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
+              </CardHeader>
+              
+              <CardContent className="p-6">
+                <div className="space-y-4">
+                  <div className="flex items-start gap-3">
+                    <div className="w-8 h-8 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-full flex items-center justify-center text-sm font-semibold">1</div>
+                    <div>
+                      <p className="font-semibold text-gray-900 mb-1">Strong Password</p>
+                      <p className="text-gray-600 text-sm">Use at least 8 characters with mixed case, numbers, and symbols</p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-start gap-3">
+                    <div className="w-8 h-8 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-full flex items-center justify-center text-sm font-semibold">2</div>
+                    <div>
+                      <p className="font-semibold text-gray-900 mb-1">Unique Password</p>
+                      <p className="text-gray-600 text-sm">Don't reuse passwords from other accounts</p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-start gap-3">
+                    <div className="w-8 h-8 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-full flex items-center justify-center text-sm font-semibold">3</div>
+                    <div>
+                      <p className="font-semibold text-gray-900 mb-1">Keep It Safe</p>
+                      <p className="text-gray-600 text-sm">Don't share your password with anyone</p>
+                    </div>
+                  </div>
                 </div>
-                <Input 
-                  name="confirmPassword" 
-                  type="password"
-                  placeholder="Confirm your new password"
-                  className="pl-12 pr-4 h-14 border-2 border-slate-200 dark:border-slate-600 focus:border-sky-400 focus:ring-4 focus:ring-sky-400/20 rounded-xl bg-white/80 dark:bg-slate-700/80 backdrop-blur-sm shadow-sm hover:shadow-md transition-all duration-200 text-base font-medium placeholder:text-slate-400 placeholder:font-normal" 
-                  required 
-                  minLength={8}
-                />
-                <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-sky-400/0 via-cyan-400/0 to-blue-400/0 group-focus-within:from-sky-400/5 group-focus-within:via-cyan-400/5 group-focus-within:to-blue-400/5 transition-all duration-300 pointer-events-none"></div>
-              </div>
-            </div>
-
-            <div className="pt-4">
-              <SubmitButton 
-                formAction={resetPasswordAction}
-                className="w-full h-14 bg-gradient-to-r from-sky-500 via-cyan-600 to-blue-600 hover:from-sky-600 hover:via-cyan-700 hover:to-blue-700 text-white font-bold rounded-xl shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 hover:scale-[1.02] text-base tracking-wide relative overflow-hidden group"
-              >
-                <span className="relative z-10 flex items-center justify-center gap-2">
-                  <svg className="w-5 h-5 group-hover:rotate-12 transition-transform duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  Update Password
-                </span>
-                <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
-              </SubmitButton>
-            </div>
-            
-            <FormMessage message={searchParams} />
-
-            <div className="mt-8 text-center">
-              <div className="bg-gradient-to-r from-sky-50 to-cyan-50 dark:from-sky-900/30 dark:to-cyan-900/30 rounded-xl p-4 border border-sky-200/50 dark:border-sky-700/50">
-                <div className="flex items-center justify-center gap-2 text-sm text-sky-800 dark:text-sky-200 font-medium">
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  Password must be at least 8 characters long
-                </div>
-              </div>
-            </div>
-          </form>
-        </Card>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
       </div>
-    </div>
+    </DashboardLayout>
   );
 }
