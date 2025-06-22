@@ -786,7 +786,7 @@ export default async function ProtectedPage() {
           {/* Active Frameworks Overview */}
           <div className="lg:col-span-2">
             <Card className="bg-white/90 backdrop-blur-md border-slate-200/50 rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-500 overflow-hidden">
-              <div className="bg-gradient-to-r from-slate-800 via-slate-700 to-slate-800 text-white p-6 relative overflow-hidden">
+              {/* <div className="bg-gradient-to-r from-slate-800 via-slate-700 to-slate-800 text-white p-6 relative overflow-hidden">
                 <div className="absolute inset-0 bg-gradient-to-r from-blue-600/10 via-sky-500/10 to-indigo-600/10"></div>
                 <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-white/5 to-transparent rounded-full -translate-y-16 translate-x-16"></div>
                 
@@ -866,14 +866,14 @@ export default async function ProtectedPage() {
                     </div>
                   )}
                 </div>
-              </div>
+              </div> */}
             </Card>
           </div>
 
           {/* Sidebar */}
           <div className="space-y-6">
             {/* User Profile Summary */}
-            {userProfile && (
+            {/* {userProfile && (
               <Card className="bg-white/90 backdrop-blur-md border-slate-200/50 rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-500 overflow-hidden">
                 <div className="bg-gradient-to-br from-sky-500 to-blue-600 text-white p-6 relative overflow-hidden">
                   <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-white/10 to-transparent rounded-full -translate-y-12 translate-x-12"></div>
@@ -931,10 +931,10 @@ export default async function ProtectedPage() {
                   )}
                 </div>
               </Card>
-            )}
+            )} */}
 
             {/* Quick Actions */}
-            <Card className="bg-gradient-to-br from-indigo-50 to-purple-50 border-indigo-200/50 rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-500 overflow-hidden">
+            {/* <Card className="bg-gradient-to-br from-indigo-50 to-purple-50 border-indigo-200/50 rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-500 overflow-hidden">
               <div className="p-6">
                 <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-3">
                   <div className="bg-indigo-100 p-2 rounded-lg">
@@ -986,7 +986,7 @@ export default async function ProtectedPage() {
                   </Link>
                 </div>
               </div>
-            </Card>
+            </Card> */}
           </div>
         </div>
       </div>

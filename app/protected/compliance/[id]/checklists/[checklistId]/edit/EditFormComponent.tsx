@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import Link from "next/link";
 import { useFormStatus } from "react-dom";
-import { Plus, Minus, Eye } from "lucide-react";
+import { Plus, Minus, Eye, AlertCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { updateForm } from "../../../../actions";
 import type { ActionResult } from "@/lib/types";
@@ -141,9 +141,12 @@ export default function EditFormComponent({ form, complianceId }: { form: Form; 
     updatedFields[fieldIndex].enhancedOptions!.splice(optionIndex, 1);
     setFields(updatedFields);
   };
-
   // Check if field should use enhanced options
   const shouldUseEnhancedOptions = (field: FormField) => {
+    // Text, textarea, and email fields should never use enhanced options
+    if (field.type === 'text' || field.type === 'textarea' || field.type === 'email') {
+      return false;
+    }
     return (field.weightage !== undefined && field.weightage > 0) || field.autoFail;
   };
   
@@ -390,12 +393,22 @@ export default function EditFormComponent({ form, complianceId }: { form: Form; 
                 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label>Field Type</Label>
-                    <select 
+                    <Label>Field Type</Label>                    <select 
                       value={field.type}
-                      onChange={(e) => updateField(index, { type: e.target.value })}
+                      onChange={(e) => {
+                        const newType = e.target.value;
+                        const updates: Partial<FormField> = { type: newType };
+                        
+                        // Clear scoring options for text, textarea, and email fields
+                        if (newType === 'text' || newType === 'textarea' || newType === 'email') {
+                          updates.weightage = undefined;
+                          updates.autoFail = false;
+                        }
+                        
+                        updateField(index, updates);
+                      }}
                       className="w-full p-2 border rounded-md"
-                    >                      <option value="text">Text Input</option>
+                    ><option value="text">Text Input</option>
                       <option value="textarea">Text Area</option>
                       <option value="select">Dropdown</option>
                       <option value="checkbox">Checkbox</option>
@@ -442,46 +455,61 @@ export default function EditFormComponent({ form, complianceId }: { form: Form; 
                     </div>
                     <Label className="cursor-pointer" onClick={() => updateField(index, { required: !field.required })}>Required Field</Label>
                   </div>
-                </div>
-                
-                {/* Scoring Options */}
-                <div className="space-y-4">
-                  <h5 className="text-sm font-medium text-muted-foreground">Scoring Options</h5>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Weightage (optional)</Label>
-                      <Input 
-                        type="number"
-                        min="0"
-                        step="0.1"
-                        value={field.weightage || ""}
-                        onChange={(e) => updateField(index, { weightage: e.target.value ? parseFloat(e.target.value) : undefined })}
-                        placeholder="e.g., 10, 5.5"
-                      />
-                      <p className="text-xs text-muted-foreground">Numerical weight for scoring</p>
-                    </div>
-                      <div className="flex items-center gap-2 pt-6">
-                      <div 
-                        onClick={() => updateField(index, { autoFail: !field.autoFail })}
-                        className={`h-4 w-4 rounded border-2 cursor-pointer transition-all duration-200 flex items-center justify-center ${
-                          field.autoFail 
-                            ? 'bg-sky-600 border-sky-600' 
-                            : 'bg-white border-sky-300 hover:border-sky-400'
-                        }`}
-                      >
-                        {field.autoFail && (
-                          <svg className="h-3 w-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                          </svg>
-                        )}
+                </div>                
+                {/* Scoring Options - Hidden for text, textarea, and email fields */}
+                {field.type !== 'text' && field.type !== 'textarea' && field.type !== 'email' && (
+                  <div className="space-y-4">
+                    <h5 className="text-sm font-medium text-muted-foreground">Scoring Options</h5>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Weightage (optional)</Label>
+                        <Input 
+                          type="number"
+                          min="0"
+                          step="0.1"
+                          value={field.weightage || ""}
+                          onChange={(e) => updateField(index, { weightage: e.target.value ? parseFloat(e.target.value) : undefined })}
+                          placeholder="e.g., 10, 5.5"
+                        />
+                        <p className="text-xs text-muted-foreground">Numerical weight for scoring</p>
                       </div>
-                      <div className="cursor-pointer" onClick={() => updateField(index, { autoFail: !field.autoFail })}>
-                        <Label className="cursor-pointer">Auto-fail</Label>
-                        <p className="text-xs text-muted-foreground">Failing this field fails entire audit</p>
+                        <div className="flex items-center gap-2 pt-6">
+                        <div 
+                          onClick={() => updateField(index, { autoFail: !field.autoFail })}
+                          className={`h-4 w-4 rounded border-2 cursor-pointer transition-all duration-200 flex items-center justify-center ${
+                            field.autoFail 
+                              ? 'bg-sky-600 border-sky-600' 
+                              : 'bg-white border-sky-300 hover:border-sky-400'
+                          }`}
+                        >
+                          {field.autoFail && (
+                            <svg className="h-3 w-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                            </svg>
+                          )}
+                        </div>
+                        <div className="cursor-pointer" onClick={() => updateField(index, { autoFail: !field.autoFail })}>
+                          <Label className="cursor-pointer">Auto-fail</Label>
+                          <p className="text-xs text-muted-foreground">Failing this field fails entire audit</p>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
+                )}
+                
+                {/* Info message for non-scoring field types */}
+                {(field.type === 'text' || field.type === 'textarea' || field.type === 'email') && (
+                  <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <div className="bg-blue-100 p-1 rounded">
+                        <AlertCircle className="h-4 w-4 text-blue-600" />
+                      </div>
+                      <p className="text-sm text-blue-700 font-medium">
+                        Text fields, text areas, and email fields do not support scoring or auto-fail options.
+                      </p>
+                    </div>
+                  </div>
+                )}
                   {(field.type === "select" || field.type === "radio") && (
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">

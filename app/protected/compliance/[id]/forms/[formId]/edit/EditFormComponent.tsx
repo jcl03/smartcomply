@@ -208,9 +208,12 @@ export default function EditFormComponent({ form, complianceId }: { form: Form; 
     updatedFields[fieldIndex].enhancedOptions!.splice(optionIndex, 1);
     setFields(updatedFields);
   };
-
   // Check if field should use enhanced options
   const shouldUseEnhancedOptions = (field: FormField) => {
+    // Text, textarea, and email fields should never use enhanced options
+    if (field.type === 'text' || field.type === 'textarea' || field.type === 'email') {
+      return false;
+    }
     return (field.weightage !== undefined && field.weightage > 0) || field.autoFail;
   };
   
@@ -413,10 +416,20 @@ const renderEditMode = () => {
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div className="space-y-2">
-                            <Label className="text-sky-700 font-medium">Field Type *</Label>
-                            <select
+                            <Label className="text-sky-700 font-medium">Field Type *</Label>                            <select
                               value={field.type}
-                              onChange={(e) => updateField(actualFieldIndex, { type: e.target.value })}
+                              onChange={(e) => {
+                                const newType = e.target.value;
+                                const updates: Partial<FormField> = { type: newType };
+                                
+                                // Clear scoring options for text, textarea, and email fields
+                                if (newType === 'text' || newType === 'textarea' || newType === 'email') {
+                                  updates.weightage = undefined;
+                                  updates.autoFail = false;
+                                }
+                                
+                                updateField(actualFieldIndex, updates);
+                              }}
                               className="w-full p-2 bg-white border border-sky-200 rounded-md focus:border-sky-400 focus:ring-sky-200 text-sky-900"
                             >
                               <option value="text">Text Input</option>
@@ -441,10 +454,9 @@ const renderEditMode = () => {
                               required
                             />
                           </div>
-                        </div>
-
-                        {!(field.type === 'checkbox' || field.type === 'radio' || field.type === 'image') && (
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                        </div>                        {/* Placeholder and Required Field options */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                          {!(field.type === 'checkbox' || field.type === 'radio' || field.type === 'image') && (
                             <div className="space-y-2">
                               <Label className="text-sky-700 font-medium">Placeholder Text</Label>
                               <Input
@@ -454,6 +466,8 @@ const renderEditMode = () => {
                                 className="bg-white border-sky-200 focus:border-sky-400 focus:ring-sky-200 text-sky-900 placeholder:text-sky-400"
                               />
                             </div>
+                          )}
+                          {!(field.type === 'checkbox' || field.type === 'image') && (
                             <div className="space-y-2">
                               <Label className="text-sky-700 font-medium">Required Field</Label>
                               <div className="flex items-center gap-2">
@@ -476,45 +490,59 @@ const renderEditMode = () => {
                                 </Label>
                               </div>
                             </div>
+                          )}
+                        </div>{/* Scoring Options - Hidden for text, textarea, and email fields */}
+                        {field.type !== 'text' && field.type !== 'textarea' && field.type !== 'email' && (
+                          <div className="mt-4">
+                            <h4 className="text-sm font-medium text-sky-800 mb-3">Scoring Options</h4>
+                            <div className="grid grid-cols-2 gap-4">
+                              <div className="space-y-2">
+                                <Label className="text-sky-800 font-medium">Weightage (optional)</Label>
+                                <Input 
+                                  type="number"
+                                  min="0"
+                                  step="0.1"
+                                  value={field.weightage || ""}
+                                  onChange={(e) => updateField(actualFieldIndex, { weightage: e.target.value ? parseFloat(e.target.value) : undefined })}
+                                  placeholder="e.g., 10, 5.5"
+                                  className="border-sky-200 focus:border-sky-400 focus:ring-sky-200 bg-white text-sky-900 placeholder:text-sky-400"
+                                />
+                                <p className="text-xs text-sky-600">Numerical weight for scoring</p>
+                              </div>
+                              <div className="flex items-center gap-2 pt-6">
+                                <div 
+                                  onClick={() => updateField(actualFieldIndex, { autoFail: !field.autoFail })}
+                                  className={`h-4 w-4 rounded border-2 cursor-pointer transition-all duration-200 flex items-center justify-center ${
+                                    field.autoFail 
+                                      ? 'bg-red-600 border-red-600' 
+                                      : 'bg-white border-sky-300 hover:border-sky-400'
+                                  }`}
+                                >
+                                  {field.autoFail && (
+                                    <svg className="h-3 w-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                    </svg>
+                                  )}
+                                </div>
+                                <Label className="text-sky-800 font-medium cursor-pointer" onClick={() => updateField(actualFieldIndex, { autoFail: !field.autoFail })}>Auto-fail</Label>
+                              </div>
+                            </div>
                           </div>
                         )}
-
-                        {/* Scoring Options */}
-                        <div className="mt-4">
-                          <h4 className="text-sm font-medium text-sky-800 mb-3">Scoring Options</h4>
-                          <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                              <Label className="text-sky-800 font-medium">Weightage (optional)</Label>
-                              <Input 
-                                type="number"
-                                min="0"
-                                step="0.1"
-                                value={field.weightage || ""}
-                                onChange={(e) => updateField(actualFieldIndex, { weightage: e.target.value ? parseFloat(e.target.value) : undefined })}
-                                placeholder="e.g., 10, 5.5"
-                                className="border-sky-200 focus:border-sky-400 focus:ring-sky-200 bg-white text-sky-900 placeholder:text-sky-400"
-                              />
-                              <p className="text-xs text-sky-600">Numerical weight for scoring</p>
-                            </div>
-                            <div className="flex items-center gap-2 pt-6">
-                              <div 
-                                onClick={() => updateField(actualFieldIndex, { autoFail: !field.autoFail })}
-                                className={`h-4 w-4 rounded border-2 cursor-pointer transition-all duration-200 flex items-center justify-center ${
-                                  field.autoFail 
-                                    ? 'bg-red-600 border-red-600' 
-                                    : 'bg-white border-sky-300 hover:border-sky-400'
-                                }`}
-                              >
-                                {field.autoFail && (
-                                  <svg className="h-3 w-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                                  </svg>
-                    )}
-                  </div>
-                              <Label className="text-sky-800 font-medium cursor-pointer" onClick={() => updateField(actualFieldIndex, { autoFail: !field.autoFail })}>Auto-fail</Label>
+                        
+                        {/* Info message for non-scoring field types */}
+                        {(field.type === 'text' || field.type === 'textarea' || field.type === 'email') && (
+                          <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                            <div className="flex items-center gap-2">
+                              <div className="bg-blue-100 p-1 rounded">
+                                <AlertCircle className="h-4 w-4 text-blue-600" />
+                              </div>
+                              <p className="text-sm text-blue-700 font-medium">
+                                Text fields, text areas, and email fields do not support scoring or auto-fail options.
+                              </p>
                             </div>
                           </div>
-                        </div>
+                        )}
 
                         {/* Options for select/radio/checkbox fields */}
                         {(field.type === "select" || field.type === "radio" || field.type === "checkbox") && (
