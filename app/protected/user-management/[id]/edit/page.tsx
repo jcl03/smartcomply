@@ -41,20 +41,23 @@ export default async function EditUserPage({ params }: { params: Promise<{ id: s
       .select('id')
       .eq('email', user.email)
       .single();
-      
-    // Check if the user is editing their own account (ensure string comparison)
+        // Check if the user is editing their own account (ensure string comparison)
     if (currentProfile && String(currentProfile.id) === String(userId)) {
       isCurrentUser = true;
     }
-  }  // Get user profile
+  }
+
+  // Get user profile
   const { data: profile, error } = await supabase
     .from('view_user_profiles')
     .select('*')
     .eq('id', userId)
     .single();
-      if (error || !profile) {
+
+  if (error || !profile) {
     redirect("/protected/user-management");
   }
+
   // Additional authorization for managers - they can only edit users in their tenant
   if (fullCurrentUserProfile.role === 'manager') {
     // Managers cannot edit admin users
@@ -62,15 +65,25 @@ export default async function EditUserPage({ params }: { params: Promise<{ id: s
       redirect("/protected/user-management");
     }
     
-    // Managers can only edit users in their own tenant
-    // Handle both string and number types for tenant_id comparison
-    const profileTenantId = profile.tenant_id ? String(profile.tenant_id) : null;
+    // Get fresh tenant data for the target user like we do for the current user
+    const adminClient = createAdminClient();
+    const { data: targetUserFreshProfile, error: targetFreshError } = await adminClient
+      .from('profiles')
+      .select('tenant_id')
+      .eq('user_id', profile.user_id)
+      .single();
+    
+    // Use fresh tenant data for comparison
+    const profileTenantId = targetUserFreshProfile?.tenant_id ? String(targetUserFreshProfile.tenant_id) : 
+                           (profile.tenant_id ? String(profile.tenant_id) : null);
     const currentUserTenantId = fullCurrentUserProfile.tenant_id ? String(fullCurrentUserProfile.tenant_id) : null;
     
     if (profileTenantId !== currentUserTenantId || !profileTenantId || !currentUserTenantId) {
       redirect("/protected/user-management");
     }
-  }  // Get tenant data if the user has a tenant_id
+  }
+
+  // Get tenant data if the user has a tenant_id
   let tenant = null;
   
   // Also check the profiles table directly to see if there's a discrepancy

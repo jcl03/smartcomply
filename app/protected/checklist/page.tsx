@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { getUserProfile } from "@/lib/api";
+import { getCurrentUserProfile } from "@/lib/auth";
 import ComplianceFilter from "@/components/checklist/basic-filter";
 import FilterIndicator from "@/components/checklist/filter-indicator";
 import FilterByCompliance from "@/components/checklist/filter-by-compliance";
@@ -49,17 +50,21 @@ export default async function Page(props: any) {
   if (!user) {
     return redirect("/sign-in");
   }
-
-  // Get user profile to check role
-  const { data: profile } = await supabase
-    .from('view_user_profiles')
-    .select('*')
-    .eq('email', user.email)
-    .single();
-  if (!profile) {
+  // Get user profile for dashboard layout
+  const profile = await getUserProfile();
+  
+  // Get full user profile to check role and tenant  
+  const fullUserProfile = await getCurrentUserProfile();
+  
+  if (!profile || !fullUserProfile) {
     return redirect("/sign-in");
+  }
+
+  // Check authorization
+  if (!['admin', 'manager', 'user', 'external_auditor'].includes(fullUserProfile.role)) {
+    return redirect("/protected");
   }  // Debug logging
-  console.log('User profile:', profile);
+  console.log('User profile:', fullUserProfile);
   console.log('Current user ID:', user.id);
   console.log('Active compliance filter:', complianceFilter);
   console.log('Active search query:', searchQuery);
@@ -69,11 +74,12 @@ export default async function Page(props: any) {
     .from('compliance')
     .select('id, name')
     .eq('status', 'active')
-    .order('name');
+    .order('name');  // Fetch checklist responses based on user role and tenant
+  let responses: any[] = [];
+  let error: any = null;
 
-  // Fetch checklist responses based on user role
-  let responses, error;  if (profile.role === 'manager') {
-    // Managers can view all checklist responses
+  if (fullUserProfile.role === 'admin') {
+    // Admins can view all checklist responses
     let query = supabase
       .from('checklist_responses')
       .select(`
@@ -85,12 +91,13 @@ export default async function Page(props: any) {
         last_edit_at,
         created_at,
         user_id,
-        response_data
+        response_data,
+        tenant_id
       `);
 
     // Apply compliance filter if needed through checklists
     if (complianceFilter) {
-      console.log('Manager: Applying filter for compliance ID:', complianceFilter);
+      console.log('Admin: Applying filter for compliance ID:', complianceFilter);
       // First fetch checklists that match the compliance ID if filter is active
       const { data: filteredChecklistIds, error: filterError } = await supabase
         .from('checklist')
@@ -114,7 +121,60 @@ export default async function Page(props: any) {
 
     const result = await query.order('created_at', { ascending: false });
     responses = result.data;
-    error = result.error;  } else {
+    error = result.error;
+    
+  } else if (fullUserProfile.role === 'manager') {
+    // SECURITY: Managers can only view checklist responses from their tenant
+    if (!fullUserProfile.tenant_id) {
+      // If manager has no tenant, they see no responses
+      responses = [];
+      error = null;
+    } else {
+      let query = supabase
+        .from('checklist_responses')
+        .select(`
+          id,
+          checklist_id,
+          status,
+          result,
+          title,
+          last_edit_at,
+          created_at,
+          user_id,
+          response_data,
+          tenant_id
+        `)
+        .eq('tenant_id', fullUserProfile.tenant_id); // SECURITY: Filter by tenant at SQL level
+
+      // Apply compliance filter if needed through checklists
+      if (complianceFilter) {
+        console.log('Manager: Applying filter for compliance ID:', complianceFilter);
+        // First fetch checklists that match the compliance ID if filter is active
+        const { data: filteredChecklistIds, error: filterError } = await supabase
+          .from('checklist')
+          .select('id')
+          .eq('compliance_id', complianceFilter);
+        
+        if (filterError) {
+          console.error('Error fetching checklists for compliance filter:', filterError);
+        }
+        
+        if (filteredChecklistIds && filteredChecklistIds.length > 0) {
+          const checklistIds = filteredChecklistIds.map(c => c.id);
+          console.log('Found checklist IDs for filter:', checklistIds);
+          query = query.in('checklist_id', checklistIds);
+        } else {
+          console.log('No checklists found for compliance ID:', complianceFilter);
+          // If no checklists match the filter, add an impossible condition to return no results
+          query = query.eq('id', -1);
+        }
+      }
+
+      const result = await query.order('created_at', { ascending: false });
+      responses = result.data;
+      error = result.error;
+    }
+  } else {
     // Regular users can only view their own checklist responses
     let query = supabase
       .from('checklist_responses')
@@ -127,7 +187,8 @@ export default async function Page(props: any) {
         last_edit_at,
         created_at,
         user_id,
-        response_data
+        response_data,
+        tenant_id
       `)
       .eq('user_id', user.id);
     
@@ -157,20 +218,30 @@ export default async function Page(props: any) {
 
     const result = await query.order('created_at', { ascending: false });
     responses = result.data;
-    error = result.error;
-  }
+    error = result.error;  }
+  
   // Debug logging
   console.log('Responses query result:', { responses, error });
   console.log('Raw response data:', responses);
 
   // Also try a simple count to see if there are any responses at all
   let countQuery = supabase.from('checklist_responses').select('*', { count: 'exact', head: true });
-  if (profile.role !== 'manager') {
+  if (fullUserProfile.role === 'admin') {
+    // Admins see all
+  } else if (fullUserProfile.role === 'manager') {
+    // Managers see only their tenant
+    if (fullUserProfile.tenant_id) {
+      countQuery = countQuery.eq('tenant_id', fullUserProfile.tenant_id);
+    } else {
+      countQuery = countQuery.eq('id', -1); // No results if no tenant
+    }
+  } else {
+    // Regular users see only their own
     countQuery = countQuery.eq('user_id', user.id);
   }
   const { count, error: countError } = await countQuery;
 
-  console.log(`Total count in checklist_responses table for ${profile.role}:`, count, countError);
+  console.log(`Total count in checklist_responses table for ${fullUserProfile.role}:`, count, countError);
 
   // Fetch checklist info separately if needed
   let checklistInfo: Record<string, any> = {};
@@ -195,10 +266,9 @@ export default async function Page(props: any) {
         return acc;
       }, {} as Record<string, any>);
     }
-  }
-  // Fetch user profiles for all unique user_ids (only needed for managers)
+  }  // Fetch user profiles for all unique user_ids (only needed for managers and admins)
   let userProfiles: Record<string, any> = {};
-  if (responses && responses.length > 0 && profile.role === 'manager') {
+  if (responses && responses.length > 0 && ['admin', 'manager'].includes(fullUserProfile.role)) {
     const userIds = Array.from(new Set(responses.map(r => r.user_id)));
     const { data: profiles } = await supabase
       .from('view_user_profiles')
@@ -227,7 +297,7 @@ export default async function Page(props: any) {
       if (frameworkName.toLowerCase().includes(searchLower)) return true;
 
       // For managers, also search in user names and emails
-      if (profile.role === 'manager') {
+      if (fullUserProfile.role === 'manager') {
         const userProfile = userProfiles[response.user_id];
         if (userProfile) {
           const fullName = userProfile.full_name || '';
@@ -354,13 +424,12 @@ export default async function Page(props: any) {
                   <div>
                     <p className="text-sm font-medium text-slate-600 mb-1">Checklist Management</p>
                     <h1 className="text-3xl lg:text-4xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent">
-                      {profile.role === 'manager' ? 'All Submissions' : 'My Submissions'}
+                      {['admin', 'manager'].includes(fullUserProfile.role) ? 'All Submissions' : 'My Submissions'}
                     </h1>
                   </div>
-                </div>
-                <p className="text-lg text-slate-600 max-w-2xl">
-                  {profile.role === 'manager' 
-                    ? "Monitor all checklist submissions across your organization and track compliance progress."
+                </div>                <p className="text-lg text-slate-600 max-w-2xl">
+                  {['admin', 'manager'].includes(fullUserProfile.role) 
+                    ? `Monitor all checklist submissions ${fullUserProfile.role === 'admin' ? 'across all organizations' : 'within your organization'} and track compliance progress.`
                     : "View your submitted checklists and track your compliance completion status."
                   }
                 </p>
@@ -372,11 +441,10 @@ export default async function Page(props: any) {
                   <div className="flex items-center gap-2 text-sm text-slate-500">
                     <ClipboardList className="h-4 w-4" />
                     <span>{responses?.length || 0} Total Submissions</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-sm text-slate-500">
-                    {profile.role === 'manager' ? <Shield className="h-4 w-4" /> : <User className="h-4 w-4" />}
-                    <span>{profile.role === 'manager' ? 'Manager Access' : 'User Access'}</span>
-                  </div>                  <FilterIndicator 
+                  </div>                  <div className="flex items-center gap-2 text-sm text-slate-500">
+                    {['admin', 'manager'].includes(fullUserProfile.role) ? <Shield className="h-4 w-4" /> : <User className="h-4 w-4" />}
+                    <span>{['admin', 'manager'].includes(fullUserProfile.role) ? `${fullUserProfile.role.charAt(0).toUpperCase() + fullUserProfile.role.slice(1)} Access` : 'User Access'}</span>
+                  </div><FilterIndicator 
                     complianceFilter={complianceFilter} 
                     frameworkName={complianceFrameworks?.find(f => f.id.toString() === complianceFilter)?.name} 
                   />
@@ -419,13 +487,12 @@ export default async function Page(props: any) {
                   <p className="text-2xl lg:text-3xl font-bold text-blue-900">{responses?.length || 0}</p>
                   <FilteredIndicator isFiltered={!!complianceFilter} />
                 </div>
-              </div>
-              <h3 className="text-sm font-semibold text-blue-700 uppercase tracking-wider mb-1">
-                {profile.role === 'manager' ? 'Total Submissions' : 'My Submissions'}
+              </div>              <h3 className="text-sm font-semibold text-blue-700 uppercase tracking-wider mb-1">
+                {['admin', 'manager'].includes(fullUserProfile.role) ? 'Total Submissions' : 'My Submissions'}
               </h3>
               <p className="text-blue-600 text-sm flex items-center gap-1">
                 <Activity className="h-4 w-4" />
-                {profile.role === 'manager' ? 'All team responses' : 'Your responses'}
+                {['admin', 'manager'].includes(fullUserProfile.role) ? `All ${fullUserProfile.role === 'admin' ? 'system' : 'team'} responses` : 'Your responses'}
               </p>
             </div>
           </Card>
@@ -514,9 +581,8 @@ export default async function Page(props: any) {
                 <ComplianceFilter 
                   complianceFrameworks={complianceFrameworks || []} 
                   activeFilterId={complianceFilter}
-                />
-                <SearchFilter placeholder={
-                  profile.role === 'manager' 
+                />                <SearchFilter placeholder={
+                  ['admin', 'manager'].includes(fullUserProfile.role) 
                     ? "Search checklists, frameworks, or users..." 
                     : "Search your checklists or frameworks..."
                 } />
@@ -538,8 +604,7 @@ export default async function Page(props: any) {
                       <th className="text-left p-4 font-semibold text-sky-700">Checklist</th>
                       <th className="text-left p-4 font-semibold text-sky-700">Status</th>
                       <th className="text-left p-4 font-semibold text-sky-700">Progress</th>
-                      <th className="text-left p-4 font-semibold text-sky-700">Framework</th>
-                      {profile.role === 'manager' && (
+                      <th className="text-left p-4 font-semibold text-sky-700">Framework</th>                      {['admin', 'manager'].includes(fullUserProfile.role) && (
                         <th className="text-left p-4 font-semibold text-sky-700">Submitted By</th>
                       )}
                       <th className="text-left p-4 font-semibold text-sky-700">Submitted</th>
@@ -604,7 +669,7 @@ export default async function Page(props: any) {
                             frameworkName={checklistInfo[response.checklist_id]?.compliance?.name || 'Unknown Framework'}
                           />
                         </td>
-                        {profile.role === 'manager' && (
+                        {['admin', 'manager'].includes(fullUserProfile.role) && (
                           <td className="p-4">
                             <div>
                               <p className="font-medium text-slate-700">
@@ -656,9 +721,8 @@ export default async function Page(props: any) {
                   {searchQuery ? (
                     `No checklists match your search "${searchQuery}". Try adjusting your search terms or clearing the search filter.`
                   ) : complianceFilter ? (
-                    "No submissions found for the selected compliance framework. Try selecting a different framework or clearing the filter."
-                  ) : profile.role === 'manager' 
-                    ? "No checklist submissions have been made yet. Team members can start submitting compliance checklists to track organizational progress."
+                    "No submissions found for the selected compliance framework. Try selecting a different framework or clearing the filter."                  ) : ['admin', 'manager'].includes(fullUserProfile.role) 
+                    ? `No checklist submissions have been made yet. ${fullUserProfile.role === 'admin' ? 'Users' : 'Team members'} can start submitting compliance checklists to track ${fullUserProfile.role === 'admin' ? 'system-wide' : 'organizational'} progress.`
                     : "You haven't submitted any checklists yet. Start by completing your first compliance checklist to track your progress."
                   }
                 </p>

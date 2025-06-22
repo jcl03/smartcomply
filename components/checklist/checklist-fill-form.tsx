@@ -229,9 +229,11 @@ export function ChecklistFillForm({ complianceId, checklistId, checklist, framew
             checklist_id: parseInt(checklistId),
             user_id: user.id,
             status: status,
-            result: result,            title: uploadedFormData['checklist_title']?.trim(),
+            result: result,
+            title: uploadedFormData['checklist_title']?.trim(),
             response_data: uploadedFormData,
             last_edit_at: new Date().toISOString(),
+            tenant_id: userProfile?.tenant_id || null, // Include tenant_id for multi-tenancy
           },
         ]);
 
