@@ -1,4 +1,4 @@
-import { getAllUserProfilesWithRevocationStatus } from "@/lib/api";
+import { getAllUserProfilesWithRevocationStatus, getTenantUserProfilesWithRevocationStatus } from "@/lib/api";
 import { createClient } from "@/utils/supabase/server";
 import { 
   Shield, 
@@ -42,41 +42,24 @@ export default async function UserManagementPage() {
   if (!fullCurrentUserProfile || !['admin', 'manager'].includes(fullCurrentUserProfile.role)) {
     return redirect("/protected");
   }
-  
-  // Fetch user profiles based on role
+    // Fetch user profiles based on role
   let filteredProfiles;
   if (fullCurrentUserProfile.role === 'admin') {
     // Admins can see all users
-    filteredProfiles = await getAllUserProfilesWithRevocationStatus();  } else if (fullCurrentUserProfile.role === 'manager') {
-    // Managers can only see users in their tenant
-    const allProfiles = await getAllUserProfilesWithRevocationStatus();
-    
-    // Get manager's tenant_id and handle different data types
-    const managerTenantId = fullCurrentUserProfile.tenant_id;
-    
-    filteredProfiles = allProfiles.filter(profile => {
-      // Skip users with no tenant assigned
-      if (!profile.tenant_id || !managerTenantId) {
-        return false;
-      }
-      
-      // Try multiple comparison approaches to handle different data types
-      return (
-        profile.tenant_id === managerTenantId ||
-        String(profile.tenant_id) === String(managerTenantId) ||
-        Number(profile.tenant_id) === Number(managerTenantId)
-      );
-    });
+    filteredProfiles = await getAllUserProfilesWithRevocationStatus();
+  } else if (fullCurrentUserProfile.role === 'manager') {
+    // SECURITY: Managers only fetch users from their tenant at SQL level
+    if (!fullCurrentUserProfile.tenant_id) {
+      // If manager has no tenant, they see no users
+      filteredProfiles = [];
+    } else {
+      // Fetch only users from manager's tenant - SQL level filtering for security
+      filteredProfiles = await getTenantUserProfilesWithRevocationStatus(fullCurrentUserProfile.tenant_id);
+    }
   } else {
     filteredProfiles = [];
-  }
-  
-  console.log("User management page - Filtered profiles for", fullCurrentUserProfile.role, ":", filteredProfiles.map(p => ({
-    id: p.id,
-    email: p.email,
-    tenant_id: p.tenant_id,
-    tenant: p.tenant
-  })));return (
+  }  
+  return (
     <DashboardLayout userProfile={currentUserProfile}>
       <div className="space-y-8 p-6">
         {/* Hero Welcome Section */}

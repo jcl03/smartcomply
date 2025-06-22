@@ -55,7 +55,6 @@ export default async function EditUserPage({ params }: { params: Promise<{ id: s
       if (error || !profile) {
     redirect("/protected/user-management");
   }
-  
   // Additional authorization for managers - they can only edit users in their tenant
   if (fullCurrentUserProfile.role === 'manager') {
     // Managers cannot edit admin users
@@ -64,12 +63,15 @@ export default async function EditUserPage({ params }: { params: Promise<{ id: s
     }
     
     // Managers can only edit users in their own tenant
-    if (profile.tenant_id !== fullCurrentUserProfile.tenant_id) {
+    // Handle both string and number types for tenant_id comparison
+    const profileTenantId = profile.tenant_id ? String(profile.tenant_id) : null;
+    const currentUserTenantId = fullCurrentUserProfile.tenant_id ? String(fullCurrentUserProfile.tenant_id) : null;
+    
+    if (profileTenantId !== currentUserTenantId || !profileTenantId || !currentUserTenantId) {
       redirect("/protected/user-management");
     }
-  }// Get tenant data if the user has a tenant_id
+  }  // Get tenant data if the user has a tenant_id
   let tenant = null;
-  console.log("Profile tenant_id from view:", profile.tenant_id);
   
   // Also check the profiles table directly to see if there's a discrepancy
   const adminClient = createAdminClient();
@@ -79,36 +81,22 @@ export default async function EditUserPage({ params }: { params: Promise<{ id: s
     .eq('user_id', profile.user_id)
     .single();
   
-  console.log("Direct profile tenant_id:", directProfile?.tenant_id, "Error:", directProfileError);
-  
   // Use the tenant_id from the direct profiles table if available, otherwise fall back to view
   const effectiveTenantId = directProfile?.tenant_id || profile.tenant_id;
-  console.log("Effective tenant_id to use:", effectiveTenantId);
   
   if (effectiveTenantId) {
     const { data: tenantData, error: tenantError } = await supabase
       .from('tenant')
       .select('id, name')
       .eq('id', effectiveTenantId)
-      .single();
-    
-    console.log("Tenant fetch result:", { tenantData, tenantError });
-    
+      .single();    
     if (!tenantError && tenantData) {
       tenant = tenantData;
     }
-  } else {
-    console.log("No tenant_id found in either source");
-  }// Add tenant to profile
-  const profileWithTenant = { ...profile, tenant };
+  }
 
-  // Debug logging
-  console.log("Edit page - Profile data:", {
-    profileId: profile.id,
-    tenantId: profile.tenant_id,
-    tenant: tenant,
-    profileWithTenant: profileWithTenant
-  });
+  // Add tenant to profile
+  const profileWithTenant = { ...profile, tenant };
 
   // Fetch all tenants for the tenant update form
   const tenants = await getAllTenants();// Check if user access is revoked by looking up their auth record
@@ -128,16 +116,10 @@ export default async function EditUserPage({ params }: { params: Promise<{ id: s
         
         // Now get fresh user data directly by ID to avoid caching issues
         const { data: freshUserData, error: userError } = await adminClient.auth.admin.getUserById(authUser.id);
-        
-        if (!userError && freshUserData) {
+          if (!userError && freshUserData) {
           // Check if user access is revoked based on metadata
           isRevoked = freshUserData.user.user_metadata?.revoked === true;
-          console.log(`Checking revocation status for ${profileWithTenant.email} (using getUserById):`, {
-            isRevoked,
-            metadata: freshUserData.user.user_metadata
-          });
         } else {
-          console.error("Error getting fresh user data:", userError);
           // Fallback to listUsers data
           isRevoked = authUser.user_metadata?.revoked === true;
           console.log(`Fallback revocation check for ${profileWithTenant.email}:`, {
@@ -272,10 +254,8 @@ export default async function EditUserPage({ params }: { params: Promise<{ id: s
                 tenants={tenants}
               />
             )}
-          </CardContent>        </Card>
-
-        {/* Tenant Management Card - Only show for non-admin users */}
-        {profileWithTenant.role !== 'admin' && (
+          </CardContent>        </Card>        {/* Tenant Management Card - Only show for admin users and non-admin target users */}
+        {fullCurrentUserProfile.role === 'admin' && profileWithTenant.role !== 'admin' && (
           <Card className="bg-white/80 backdrop-blur-sm border-indigo-200 shadow-md hover:shadow-lg transition-all duration-300">
             <CardHeader className="bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-t-xl">
               <div className="flex items-center gap-3">

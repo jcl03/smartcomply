@@ -10,10 +10,11 @@ import { refreshUserSession } from "@/lib/session-utils";
 // Force recompilation - fixed clean metadata approach
 
 export async function updateUserRole(formData: FormData) {
-  // Check if the current user is an admin
-  const isAdmin = await isUserAdmin();
-  if (!isAdmin) {
-    return { error: "Unauthorized: Admin access required" };
+  // Check if the current user is an admin or manager
+  const currentUserProfile = await getCurrentUserProfile();
+  
+  if (!currentUserProfile || !['admin', 'manager'].includes(currentUserProfile.role)) {
+    return { error: "Unauthorized: Admin or Manager access required" };
   }
     const userId = formData.get("userId") as string;
   const newRole = formData.get("role") as string;
@@ -31,21 +32,20 @@ export async function updateUserRole(formData: FormData) {
   if (!user) {
     return { error: "Unable to verify current user" };
   }
-  
-  // Get current user's profile to compare IDs
-  const { data: currentUserProfile, error: profileError } = await supabase
+    // Get current user's profile to compare IDs
+  const { data: currentUserViewProfile, error: profileError } = await supabase
     .from('view_user_profiles')
-    .select('id')
+    .select('id, tenant_id, role')
     .eq('email', user.email)
     .single();
     
-  if (profileError || !currentUserProfile) {
+  if (profileError || !currentUserViewProfile) {
     console.error("Error getting current user profile:", profileError);
     return { error: "Unable to verify current user" };
   }
   
-  // Prevent admins from changing their own role (ensure string comparison)
-  if (String(currentUserProfile.id) === String(userId)) {
+  // Prevent users from changing their own role (ensure string comparison)
+  if (String(currentUserViewProfile.id) === String(userId)) {
     return { error: "You cannot change your own role" };
   }
 
@@ -63,9 +63,39 @@ export async function updateUserRole(formData: FormData) {
       console.error("Error getting target user:", targetUserError);
       return { error: "User not found" };
     }
+      console.log("Target user found:", targetUser);
     
-    console.log("Target user found:", targetUser);
-    
+    // Additional authorization for managers - they can only update users in their tenant
+    if (currentUserProfile.role === 'manager') {
+      // Managers cannot update admin users
+      if (targetUser.role === 'admin') {
+        return { error: "Managers cannot update admin users" };
+      }
+      
+      // Get target user's full profile including tenant_id
+      const { data: targetUserFullProfile, error: targetProfileError } = await supabase
+        .from('view_user_profiles')
+        .select('tenant_id')
+        .eq('id', userId)
+        .single();
+      
+      if (targetProfileError || !targetUserFullProfile) {
+        return { error: "Unable to verify target user" };
+      }
+      
+      // Check tenant match using string comparison
+      const targetTenantId = targetUserFullProfile.tenant_id ? String(targetUserFullProfile.tenant_id) : null;
+      const currentTenantId = currentUserProfile.tenant_id ? String(currentUserProfile.tenant_id) : null;
+      
+      if (targetTenantId !== currentTenantId || !targetTenantId || !currentTenantId) {
+        return { error: "Managers can only update users within their own tenant" };
+      }
+      
+      // Managers cannot promote users to admin or manager roles
+      if (['admin', 'manager'].includes(newRole)) {
+        return { error: "Managers cannot assign admin or manager roles" };
+      }
+    }
     // Check current profile data before update (using admin client to bypass RLS)
     const { data: beforeUpdate, error: beforeError } = await adminClient
       .from('profiles')

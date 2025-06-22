@@ -719,3 +719,87 @@ export async function getAllTenants() {
   
   return data;
 }
+
+export async function getTenantUserProfilesWithRevocationStatus(tenantId: number | string) {
+  const supabase = await createClient();
+  
+  // Convert tenantId to number for consistent comparison
+  const normalizedTenantId = typeof tenantId === 'string' ? parseInt(tenantId) : tenantId;
+  
+  // Get user profiles filtered by tenant at SQL level - SECURITY: Only fetch users from specified tenant
+  const { data: profiles, error: profilesError } = await supabase
+    .from('view_user_profiles')
+    .select('*')
+    .eq('tenant_id', normalizedTenantId); // Filter at SQL level for security
+  
+  if (profilesError) {
+    console.error("Error fetching tenant user profiles:", profilesError);
+    return [];
+  }
+  
+  // Get the specific tenant data
+  const { data: tenant, error: tenantError } = await supabase
+    .from('tenant')
+    .select('id, name')
+    .eq('id', normalizedTenantId)
+    .single();
+
+  if (tenantError) {
+    console.error("Error fetching tenant:", tenantError);
+  }
+
+  // Get fresh tenant_id data directly from profiles table using admin client for the specific tenant
+  const adminClient = createAdminClient();
+  const { data: freshProfiles, error: freshProfilesError } = await adminClient
+    .from('profiles')
+    .select('user_id, tenant_id')
+    .eq('tenant_id', normalizedTenantId); // Also filter fresh data by tenant
+  
+  const freshTenantMap = new Map();
+  if (freshProfiles) {
+    freshProfiles.forEach(p => freshTenantMap.set(p.user_id, p.tenant_id));
+  }
+
+  // Merge tenant data with profiles, using fresh data when available
+  const profilesWithTenants = profiles.map(profile => {
+    const freshTenantId = freshTenantMap.get(profile.user_id) || profile.tenant_id;
+    
+    return {
+      ...profile,
+      tenant_id: freshTenantId, // Use fresh data
+      tenant
+    };
+  });
+
+  // Get revocation status for all users in this tenant
+  try {
+    const adminClient = createAdminClient();
+    const { data: authUsers, error: authError } = await adminClient.auth.admin.listUsers();
+    
+    if (authError || !authUsers) {
+      console.error("Error fetching auth users:", authError);
+      return profilesWithTenants.map(profile => ({ ...profile, isRevoked: false }));
+    }
+
+    // Map profiles with revocation status - only for users in this tenant
+    const profilesWithRevocationStatus = profilesWithTenants.map(profile => {
+      const authUser = authUsers.users.find(u => u.email === profile.email);
+      let isRevoked = false;
+      
+      if (authUser) {
+        // Check if user access is revoked based on metadata
+        isRevoked = authUser.user_metadata?.revoked === true;
+      }
+      
+      return {
+        ...profile,
+        isRevoked
+      };
+    });
+    
+    return profilesWithRevocationStatus;
+  } catch (error) {
+    console.error("Error checking revocation status:", error);
+    return profilesWithTenants.map(profile => ({ ...profile, isRevoked: false }));
+  }
+}
