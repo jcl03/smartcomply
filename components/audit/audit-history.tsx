@@ -35,6 +35,11 @@ interface AuditData {
   percentage: number;
   comments: string;
   title: string;
+  verification_status: 'pending' | 'accepted' | 'rejected' | null;
+  verified_by: string | null;
+  verified_at: string | null;
+  corrective_action: string | null;
+  tenant_id: number;
   form?: {
     id: number;
     form_schema: any;
@@ -46,6 +51,14 @@ interface AuditData {
   user_profile?: {
     full_name: string;
     email: string;
+  };
+  verified_by_profile?: {
+    full_name: string;
+    email: string;
+  };
+  tenant?: {
+    id: number;
+    name: string;
   };
 }
 
@@ -281,7 +294,20 @@ export default function AuditHistoryComponent({ audits, isManager, currentUserId
         printWindow.print();
       }
     }
-  };return (
+  };
+  const getVerificationBadge = (verificationStatus: string | null) => {
+    if (verificationStatus === 'accepted') {
+      return <Badge className="bg-gradient-to-r from-green-100 to-emerald-100 text-green-800 border-green-200/60 font-semibold px-2 py-1 text-xs shadow-sm">VERIFIED</Badge>;
+    } else if (verificationStatus === 'rejected') {
+      return <Badge className="bg-gradient-to-r from-red-100 to-rose-100 text-red-800 border-red-200/60 font-semibold px-2 py-1 text-xs shadow-sm">REJECTED</Badge>;
+    } else if (verificationStatus === 'pending') {
+      return <Badge className="bg-gradient-to-r from-yellow-100 to-amber-100 text-yellow-800 border-yellow-200/60 font-semibold px-2 py-1 text-xs shadow-sm">PENDING REVIEW</Badge>;
+    } else {
+      return <Badge className="bg-gradient-to-r from-gray-100 to-slate-100 text-gray-600 border-gray-200/60 font-semibold px-2 py-1 text-xs shadow-sm">NOT REVIEWED</Badge>;
+    }
+  };
+
+  return (
     <div className="space-y-6">
       {/* Audit Summary Section */}
       {sortedAudits.length > 0 && (
@@ -713,8 +739,7 @@ export default function AuditHistoryComponent({ audits, isManager, currentUserId
                                   {compliance?.name || `Form #${audit.form_id}` || 'General Audit'}
                                 </p>
                               </div>
-                            </div>
-                            <div className="flex items-center gap-4 text-xs text-slate-600 mb-2">
+                            </div>                            <div className="flex items-center gap-4 text-xs text-slate-600 mb-2">
                               <div className="flex items-center gap-1">
                                 <Calendar className="h-3 w-3" />
                                 <span>{format(new Date(audit.created_at), 'MMM d, yyyy')}</span>
@@ -725,10 +750,17 @@ export default function AuditHistoryComponent({ audits, isManager, currentUserId
                                   <span>{audit.user_profile.full_name}</span>
                                 </div>
                               )}
+                              {audit.tenant && (
+                                <div className="flex items-center gap-1">
+                                  <span className="text-slate-500">•</span>
+                                  <span>{audit.tenant.name}</span>
+                                </div>
+                              )}
                             </div>
                             <div className="flex items-center justify-between">
                               <div className="flex items-center gap-3">
                                 {getResultBadge(audit.result, audit.percentage)}
+                                {getVerificationBadge(audit.verification_status)}
                                 {audit.result && (
                                   <span className={`text-sm font-semibold ${getPercentageColor(audit.percentage)}`}>
                                     {audit.percentage.toFixed(1)}%
@@ -837,12 +869,16 @@ export default function AuditHistoryComponent({ audits, isManager, currentUserId
                               </div>
                             </div>
                           </div>
-                          
-                          {/* Result */}
+                            {/* Result */}
                           <div className={`${isManager ? 'col-span-2' : 'col-span-2'}`}>
-                            <div className="flex items-center gap-2">
-                              {getResultIcon(audit.result)}
-                              {getResultBadge(audit.result, audit.percentage)}
+                            <div className="flex flex-col gap-1">
+                              <div className="flex items-center gap-2">
+                                {getResultIcon(audit.result)}
+                                {getResultBadge(audit.result, audit.percentage)}
+                              </div>
+                              <div>
+                                {getVerificationBadge(audit.verification_status)}
+                              </div>
                             </div>
                           </div>
                           

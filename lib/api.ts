@@ -176,6 +176,11 @@ export async function getAuditById(id: string) {
       comments,
       title,
       audit_data,
+      verification_status,
+      verified_by,
+      verified_at,
+      corrective_action,
+      tenant_id,
       form:form_id (
         id,
         form_schema,
@@ -187,6 +192,10 @@ export async function getAuditById(id: string) {
           name,
           description
         )
+      ),
+      tenant:tenant_id (
+        id,
+        name
       )
     `)
     .eq('id', id)
@@ -195,6 +204,32 @@ export async function getAuditById(id: string) {
   if (error) {
     console.error("Error fetching audit:", error);
     return null;
+  }
+
+  // Get user profile information
+  if (data?.user_id) {
+    const { data: userProfile } = await supabase
+      .from('view_user_profiles')
+      .select('full_name, email')
+      .eq('user_id', data.user_id)
+      .single();
+    
+    if (userProfile) {
+      data.user_profile = userProfile;
+    }
+  }
+
+  // Get verified_by user profile information
+  if (data?.verified_by) {
+    const { data: verifiedByProfile } = await supabase
+      .from('view_user_profiles')
+      .select('full_name, email')
+      .eq('user_id', data.verified_by)
+      .single();
+    
+    if (verifiedByProfile) {
+      data.verified_by_profile = verifiedByProfile;
+    }
   }
 
   return data;
@@ -217,6 +252,11 @@ export async function getUserAudits(userId: string) {
       percentage,
       comments,
       title,
+      verification_status,
+      verified_by,
+      verified_at,
+      corrective_action,
+      tenant_id,
       form:form_id (
         id,
         form_schema,
@@ -224,6 +264,10 @@ export async function getUserAudits(userId: string) {
         compliance:compliance_id (
           name
         )
+      ),
+      tenant:tenant_id (
+        id,
+        name
       )
     `)
     .eq('user_id', userId)
@@ -254,6 +298,11 @@ export async function getAllAudits() {
       percentage,
       comments,
       title,
+      verification_status,
+      verified_by,
+      verified_at,
+      corrective_action,
+      tenant_id,
       form:form_id (
         id,
         form_schema,
@@ -261,6 +310,10 @@ export async function getAllAudits() {
         compliance:compliance_id (
           name
         )
+      ),
+      tenant:tenant_id (
+        id,
+        name
       )
     `)
     .order('created_at', { ascending: false });
@@ -802,4 +855,89 @@ export async function getTenantUserProfilesWithRevocationStatus(tenantId: number
     console.error("Error checking revocation status:", error);
     return profilesWithTenants.map(profile => ({ ...profile, isRevoked: false }));
   }
+}
+
+export async function getTenantAudits(tenantId: number) {
+  const supabase = await createClient();
+  
+  const { data, error } = await supabase
+    .from('audit')
+    .select(`
+      id,
+      form_id,
+      user_id,
+      status,
+      created_at,
+      last_edit_at,
+      result,
+      marks,
+      percentage,
+      comments,
+      title,
+      verification_status,
+      verified_by,
+      verified_at,
+      corrective_action,
+      tenant_id,
+      form:form_id (
+        id,
+        form_schema,
+        compliance_id,
+        compliance:compliance_id (
+          name
+        )
+      ),
+      tenant:tenant_id (
+        id,
+        name
+      )
+    `)
+    .eq('tenant_id', tenantId)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error("Error fetching tenant audits:", error);
+    return [];
+  }
+
+  return data;
+}
+
+export async function updateAuditVerification(
+  auditId: number, 
+  verificationStatus: 'pending' | 'accepted' | 'rejected',
+  verifiedBy: string,
+  correctiveAction?: string
+) {
+  const supabase = await createClient();
+  
+  const updateData: any = {
+    verification_status: verificationStatus,
+    verified_by: verifiedBy,
+    verified_at: new Date().toISOString()
+  };
+
+  if (correctiveAction) {
+    updateData.corrective_action = correctiveAction;
+  }
+
+  const { data, error } = await supabase
+    .from('audit')
+    .update(updateData)
+    .eq('id', auditId)
+    .select()
+    .single();
+
+  if (error) {
+    console.error("Error updating audit verification:", error);
+    return { success: false, error: error.message };
+  }
+
+  return { success: true, data };
+}
+
+export async function createVerificationActions() {
+  // This could be used to create action buttons for verification
+  // For now, we'll use the updateAuditVerification function defined earlier
+  return true;
 }

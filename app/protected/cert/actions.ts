@@ -17,11 +17,10 @@ export async function deleteCertificate(id: number): Promise<ActionResult> {
   if (!user) {
     return { error: "Unauthorized" };
   }
-  
-  // Check if user has manager or admin role
+    // Check if user has manager or admin role
   const { data: profile } = await supabase
     .from('view_user_profiles')
-    .select('role')
+    .select('role, tenant_id')
     .eq('email', user.email)
     .single();
     
@@ -30,12 +29,27 @@ export async function deleteCertificate(id: number): Promise<ActionResult> {
   }
 
   try {
+    // For non-admin users, ensure they can only delete certs from their tenant
+    let deleteQuery = supabase
+      .from('cert')
+      .delete()
+      .eq('id', id);
+    
+    if (profile.role !== 'admin' && profile.tenant_id) {
+      deleteQuery = deleteQuery.eq('tenant_id', profile.tenant_id);
+    }
+
     // Get certificate info before deleting to clean up file
     const { data: cert } = await supabase
       .from('cert')
-      .select('link, folder')
+      .select('link, folder, tenant_id')
       .eq('id', id)
       .single();
+
+    // Check tenant access for non-admin users
+    if (profile.role !== 'admin' && profile.tenant_id && cert?.tenant_id !== profile.tenant_id) {
+      return { error: "Access denied" };
+    }
 
     if (cert?.link) {
       try {
@@ -54,13 +68,8 @@ export async function deleteCertificate(id: number): Promise<ActionResult> {
         console.error("Error deleting file from storage:", fileError);
         // Continue with database deletion even if file deletion fails
       }
-    }
-
-    // Delete certificate record
-    const { error } = await supabase
-      .from('cert')
-      .delete()
-      .eq('id', id);
+    }    // Delete certificate record
+    const { error } = await deleteQuery;
 
     if (error) throw error;
 
@@ -81,11 +90,10 @@ export async function updateCertificate(formData: FormData): Promise<ActionResul
   if (!user) {
     return { error: "Unauthorized" };
   }
-  
-  // Check if user has manager or admin role
+    // Check if user has manager or admin role
   const { data: profile } = await supabase
     .from('view_user_profiles')
-    .select('role')
+    .select('role, tenant_id')
     .eq('email', user.email)
     .single();
     
@@ -101,6 +109,15 @@ export async function updateCertificate(formData: FormData): Promise<ActionResul
 
     if (!id || !folder) {
       return { error: "Certificate ID and folder are required" };
+    }    // Check tenant access for non-admin users  
+    const { data: cert } = await supabase
+      .from('cert')
+      .select('tenant_id')
+      .eq('id', parseInt(id))
+      .single();
+
+    if (profile.role !== 'admin' && profile.tenant_id && cert?.tenant_id !== profile.tenant_id) {
+      return { error: "Access denied" };
     }
 
     const updateData: any = {
@@ -110,10 +127,17 @@ export async function updateCertificate(formData: FormData): Promise<ActionResul
       checklist_responses_id: checklist_responses_id ? parseInt(checklist_responses_id) : null,
     };
 
-    const { error } = await supabase
+    let updateQuery = supabase
       .from('cert')
       .update(updateData)
       .eq('id', parseInt(id));
+    
+    // For non-admin users, ensure they can only update certs from their tenant
+    if (profile.role !== 'admin' && profile.tenant_id) {
+      updateQuery = updateQuery.eq('tenant_id', profile.tenant_id);
+    }
+
+    const { error } = await updateQuery;
 
     if (error) throw error;
 
@@ -128,8 +152,7 @@ export async function updateCertificate(formData: FormData): Promise<ActionResul
 
 export async function getCertificateStats() {
   const supabase = await createClient();
-  
-  try {
+    try {
     // Get current user
     const { data: { user } } = await supabase.auth.getUser();
     
@@ -137,10 +160,25 @@ export async function getCertificateStats() {
       return { error: "Unauthorized" };
     }
 
-    // Get all certificates
-    const { data: certificates, error } = await supabase
+    // Get user profile to check tenant
+    const { data: profile } = await supabase
+      .from('view_user_profiles')
+      .select('role, tenant_id')
+      .eq('email', user.email)
+      .single();
+
+    // Build query for certificates
+    let query = supabase
       .from('cert')
-      .select('id, expiration, created_at');
+      .select('id, expiration, created_at, tenant_id')
+      .eq('status', 'active');
+
+    // Filter by tenant for non-admin users
+    if (profile?.role !== 'admin' && profile?.tenant_id) {
+      query = query.eq('tenant_id', profile.tenant_id);
+    }
+
+    const { data: certificates, error } = await query;
 
     if (error) throw error;
 
@@ -184,24 +222,51 @@ export async function archiveCertificate(id: number): Promise<ActionResult> {
   if (!user) {
     return { error: "Unauthorized" };
   }
+
   // Check if user has manager or admin role
   const { data: profile } = await supabase
     .from('view_user_profiles')
-    .select('role')
+    .select('role, tenant_id')
     .eq('email', user.email)
     .single();
+    
   if (!profile || !['admin', 'manager'].includes(profile.role)) {
     return { error: "Insufficient permissions" };
   }
-  const { error } = await supabase
-    .from('cert')
-    .update({ status: 'archive' })
-    .eq('id', id);
-  if (error) {
+
+  try {
+    // Check tenant access for non-admin users
+    const { data: cert } = await supabase
+      .from('cert')
+      .select('tenant_id')
+      .eq('id', id)
+      .single();
+
+    if (profile.role !== 'admin' && profile.tenant_id && cert?.tenant_id !== profile.tenant_id) {
+      return { error: "Access denied" };
+    }
+
+    let updateQuery = supabase
+      .from('cert')
+      .update({ status: 'archived' })
+      .eq('id', id);
+    
+    // For non-admin users, ensure they can only archive certs from their tenant
+    if (profile.role !== 'admin' && profile.tenant_id) {
+      updateQuery = updateQuery.eq('tenant_id', profile.tenant_id);
+    }
+
+    const { error } = await updateQuery;    if (error) {
+      console.error("Error archiving certificate:", error);
+      return { error: "Failed to archive certificate" };
+    }
+
+    revalidatePath('/protected/cert');
+    return { success: true };
+  } catch (error: any) {
     console.error("Error archiving certificate:", error);
     return { error: "Failed to archive certificate" };
   }
-  return { success: true };
 }
 
 export async function reactivateCertificate(id: number): Promise<ActionResult> {
@@ -212,22 +277,51 @@ export async function reactivateCertificate(id: number): Promise<ActionResult> {
   if (!user) {
     return { error: "Unauthorized" };
   }
+  
   // Check if user has manager or admin role
   const { data: profile } = await supabase
     .from('view_user_profiles')
-    .select('role')
+    .select('role, tenant_id')
     .eq('email', user.email)
     .single();
+    
   if (!profile || !['admin', 'manager'].includes(profile.role)) {
     return { error: "Insufficient permissions" };
   }
-  const { error } = await supabase
-    .from('cert')
-    .update({ status: 'active' })
-    .eq('id', id);
-  if (error) {
+
+  try {
+    // Check tenant access for non-admin users
+    const { data: cert } = await supabase
+      .from('cert')
+      .select('tenant_id')
+      .eq('id', id)
+      .single();
+
+    if (profile.role !== 'admin' && profile.tenant_id && cert?.tenant_id !== profile.tenant_id) {
+      return { error: "Access denied" };
+    }
+
+    let updateQuery = supabase
+      .from('cert')
+      .update({ status: 'active' })
+      .eq('id', id);
+    
+    // For non-admin users, ensure they can only reactivate certs from their tenant
+    if (profile.role !== 'admin' && profile.tenant_id) {
+      updateQuery = updateQuery.eq('tenant_id', profile.tenant_id);
+    }
+
+    const { error } = await updateQuery;
+
+    if (error) {
+      console.error("Error reactivating certificate:", error);
+      return { error: "Failed to reactivate certificate" };
+    }
+
+    revalidatePath('/protected/cert');
+    return { success: true };
+  } catch (error: any) {
     console.error("Error reactivating certificate:", error);
     return { error: "Failed to reactivate certificate" };
   }
-  return { success: true };
 }

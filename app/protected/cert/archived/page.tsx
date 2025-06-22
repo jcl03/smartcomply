@@ -13,22 +13,30 @@ export default async function ArchivedCertificatesPage() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return redirect("/sign-in");
   // Get current user profile for dashboard layout
-  const currentUserProfile = await getUserProfile();
-  // Check if user is admin or manager
+  const currentUserProfile = await getUserProfile();  // Check if user is admin or manager
   const { data: profile } = await supabase
     .from('view_user_profiles')
-    .select('role')
+    .select('role, tenant_id')
     .eq('email', user.email)
     .single();
+    
   if (!profile || !['admin', 'manager'].includes(profile.role)) {
     return redirect("/protected");
   }
-  // Fetch archived certificates
-  const { data: certificates, error } = await supabase
+  
+  // Fetch archived certificates with tenant filtering
+  let query = supabase
     .from('cert')
     .select('*')
-    .eq('status', 'archive')
+    .eq('status', 'archived')
     .order('created_at', { ascending: false });
+
+  // Filter by tenant for non-admin users
+  if (profile.role !== 'admin' && profile.tenant_id) {
+    query = query.eq('tenant_id', profile.tenant_id);
+  }
+
+  const { data: certificates, error } = await query;
   if (error) {
     console.error("Error fetching archived certificates:", error);
   }

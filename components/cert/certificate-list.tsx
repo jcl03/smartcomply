@@ -18,17 +18,7 @@ import Link from "next/link";
 import { format } from "date-fns";
 import { archiveCertificate } from "@/app/protected/cert/actions";
 import { useRouter } from "next/navigation";
-
-interface Certificate {
-  id: number;
-  link: any;
-  created_at: string;
-  folder: string | null;
-  expiration: string | null;
-  upload_date: string | null;
-  audit_id: number | null;
-  checklist_responses_id: number | null;
-}
+import { Certificate } from "@/lib/types";
 
 interface CertificateListProps {
   certificates: Certificate[];
@@ -223,7 +213,7 @@ export function CertificateList({ certificates, canManage }: CertificateListProp
                         <div>
                           <span className="font-medium text-gray-700">Created:</span>
                           <span className="ml-2 text-gray-600">
-                            {format(new Date(cert.created_at), "MMM d, yyyy 'at' h:mm a")}
+                            {cert.created_at ? format(new Date(cert.created_at), "MMM d, yyyy 'at' h:mm a") : 'N/A'}
                           </span>
                         </div>
                         

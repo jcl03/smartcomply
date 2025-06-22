@@ -9,7 +9,8 @@ import {
   Calendar,
   FileText,
   XCircle,
-  Users
+  Users,
+  Info
 } from "lucide-react";
 
 export default async function AuditPage() {
@@ -31,7 +32,9 @@ export default async function AuditPage() {
   }
 
   // Check if user is admin/manager
-  const isManager = userProfile?.role === 'admin' || userProfile?.role === 'manager';  try {
+  const isManager = userProfile?.role === 'admin' || userProfile?.role === 'manager';
+
+  try {
     // Check if audit table exists first with better error handling
     const { data: tableCheck, error: tableError } = await supabase
       .from('audit')
@@ -46,7 +49,7 @@ export default async function AuditPage() {
         hint: tableError.hint,
         code: tableError.code
       });
-      // Table doesn't exist or has issues, use sample data
+      // Table doesn't exist or has issues, use empty array
       throw new Error("Audit table not accessible");
     }
 
@@ -64,12 +67,28 @@ export default async function AuditPage() {
         marks,
         percentage,
         comments,
-        title
+        title,
+        verification_status,
+        verified_by,
+        verified_at,
+        corrective_action,
+        tenant_id
       `)
       .order('created_at', { ascending: false });
 
-    // If not manager, only show user's own audits
-    if (!isManager) {
+    // Apply filtering based on user role
+    if (userProfile?.role === 'admin') {
+      // Admins can see all audits - no additional filter needed
+    } else if (userProfile?.role === 'manager') {
+      // Managers can only see audits from their tenant
+      if (userProfile.tenant_id) {
+        auditsQuery = auditsQuery.eq('tenant_id', userProfile.tenant_id);
+      } else {
+        // If manager has no tenant, they see no audits
+        auditsQuery = auditsQuery.eq('tenant_id', -1); // This will return no results
+      }
+    } else {
+      // Regular users only see their own audits
       auditsQuery = auditsQuery.eq('user_id', user.id);
     }
     
@@ -92,65 +111,8 @@ export default async function AuditPage() {
     let auditsWithProfiles: any[] = [];
 
     if (!audits || audits.length === 0) {
-      console.log("No audits found, using sample data for demonstration");
-      
-      // If table doesn't exist, provide sample data for UI demonstration
-      const sampleAudits = [
-        {
-          id: 1,
-          form_id: 1,
-          user_id: user.id,
-          status: 'completed',
-          created_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-          last_edit_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-          result: 'pass' as const,
-          marks: 85,
-          percentage: 85,
-          comments: 'All security protocols are functioning correctly. Minor recommendations for improvement.',
-          title: 'Security Compliance Audit - Q4 2024',
-          user_profile: {
-            full_name: userProfile?.full_name || 'Current User',
-            email: userProfile?.email || user.email || 'user@example.com'
-          }
-        },
-        {
-          id: 2,
-          form_id: 2,
-          user_id: user.id,
-          status: 'completed',
-          created_at: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-          last_edit_at: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-          result: 'failed' as const,
-          marks: 45,
-          percentage: 45,
-          comments: 'Several critical issues found. Immediate action required on data encryption.',
-          title: 'Data Protection Audit - Q3 2024',
-          user_profile: {
-            full_name: userProfile?.full_name || 'Current User',
-            email: userProfile?.email || user.email || 'user@example.com'
-          }
-        },
-        {
-          id: 3,
-          form_id: 3,
-          user_id: user.id,
-          status: 'draft',
-          created_at: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
-          last_edit_at: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
-          result: null,
-          marks: 0,
-          percentage: 0,
-          comments: 'Audit in progress. Scheduled for completion by end of week.',
-          title: 'Network Security Assessment - In Progress',
-          user_profile: {
-            full_name: userProfile?.full_name || 'Current User',
-            email: userProfile?.email || user.email || 'user@example.com'
-          }
-        }
-      ];
-      
-      // Use sample data for demonstration
-      auditsWithProfiles = sampleAudits;
+      console.log("No audit records found in database");
+      auditsWithProfiles = [];
     } else {
       // Process real audits with user profiles
       console.log(`Processing ${audits.length} real audit records`);
@@ -184,111 +146,125 @@ export default async function AuditPage() {
         id: a.id, 
         user_id: a.user_id, 
         user_name: a.user_profile?.full_name,
-        user_email: a.user_profile?.email
+        has_profile: !!a.user_profile
       })));
     }
 
-  return (
-    <DashboardLayout userProfile={userProfile}>
-      <div className="space-y-8 p-6">
-        {/* Hero Welcome Section */}
-        <div className="relative overflow-hidden bg-gradient-to-br from-slate-50 via-sky-50 to-blue-50 rounded-3xl border border-slate-200/50 shadow-2xl">
-          {/* Background Pattern */}
-          <div className="absolute inset-0 bg-gradient-to-r from-blue-600/5 via-sky-500/5 to-indigo-600/5"></div>
-          <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-br from-sky-400/10 to-blue-600/10 rounded-full -translate-y-48 translate-x-48"></div>
-          <div className="absolute bottom-0 left-0 w-80 h-80 bg-gradient-to-tr from-indigo-400/10 to-sky-500/10 rounded-full translate-y-40 -translate-x-40"></div>
-          
-          <div className="relative z-10 p-8 lg:p-12">
-            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-              <div className="space-y-4">
-                <div className="flex items-center gap-4">
-                  <div className="relative">
-                    <div className="bg-gradient-to-br from-sky-500 to-blue-600 p-4 rounded-2xl shadow-lg">
-                      <Activity className="h-8 w-8 text-white" />
+    return (
+      <DashboardLayout userProfile={userProfile}>
+        <div className="space-y-8 p-6">
+          {/* Hero Welcome Section */}
+          <div className="relative overflow-hidden bg-gradient-to-br from-slate-50 via-sky-50 to-blue-50 rounded-3xl border border-slate-200/50 shadow-2xl">
+            {/* Background Pattern */}
+            <div className="absolute inset-0 bg-gradient-to-r from-blue-600/5 via-sky-500/5 to-indigo-600/5"></div>
+            <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-br from-sky-400/10 to-blue-600/10 rounded-full -translate-y-48 translate-x-48"></div>
+            <div className="absolute bottom-0 left-0 w-80 h-80 bg-gradient-to-tr from-indigo-400/10 to-sky-500/10 rounded-full translate-y-40 -translate-x-40"></div>
+            
+            <div className="relative z-10 p-8 lg:p-12">
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+                <div className="space-y-4">
+                  <div className="flex items-center gap-4">
+                    <div className="relative">
+                      <div className="bg-gradient-to-br from-sky-500 to-blue-600 p-4 rounded-2xl shadow-lg">
+                        <FileText className="h-8 w-8 text-white" />
+                      </div>
+                      <div className="absolute -top-1 -right-1 w-4 h-4 bg-emerald-500 rounded-full border-2 border-white animate-pulse"></div>
                     </div>
-                    <div className="absolute -top-1 -right-1 w-4 h-4 bg-emerald-500 rounded-full border-2 border-white animate-pulse"></div>
+                    <div>
+                      <p className="text-sm font-medium text-slate-600 mb-1">Audit Management</p>
+                      <h1 className="text-3xl lg:text-4xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent">
+                        Audit History
+                      </h1>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-sm font-medium text-slate-600 mb-1">Audit Management</p>
-                    <h1 className="text-3xl lg:text-4xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent">
-                      Audit History
-                    </h1>
+                  <p className="text-lg text-slate-600 max-w-2xl">
+                    Track and manage audit records with verification workflow and tenant-based access control.
+                  </p>
+                  
+                  <div className="flex items-center gap-6 pt-2">
+                    <div className="flex items-center gap-2 text-sm text-slate-500">
+                      <div className="w-2 h-2 bg-emerald-500 rounded-full"></div>
+                      <span>System Operational</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm text-slate-500">
+                      <Calendar className="h-4 w-4" />
+                      <span>{new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm text-slate-500">
+                      <Activity className="h-4 w-4" />
+                      <span>{auditsWithProfiles.length} Records</span>
+                    </div>
                   </div>
                 </div>
-                <p className="text-lg text-slate-600 max-w-2xl">
-                  {isManager 
-                    ? "Monitor all audit activities across your organization and track compliance performance."
-                    : "Review your audit history, track progress, and monitor compliance performance."
-                  }
-                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Empty State Notice */}
+          {(!audits || audits.length === 0) && (
+            <Card className="bg-gradient-to-r from-slate-50 to-gray-50 border border-slate-200 rounded-2xl shadow-lg">
+              <div className="p-6">
+                <div className="flex items-start gap-4">
+                  <div className="bg-slate-100 p-3 rounded-xl">
+                    <FileText className="h-6 w-6 text-slate-600" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-lg font-semibold text-slate-900 mb-2">No Audit Records Found</h3>
+                    <p className="text-slate-700 mb-4">
+                      There are currently no audit records in the database. Audit records will appear here once they are created.
+                    </p>
+                    <div className="bg-white/50 rounded-lg p-4 border border-slate-200">
+                      <h4 className="font-medium text-slate-800 mb-2">Audit Management Features:</h4>
+                      <ul className="text-sm text-slate-700 space-y-1">
+                        <li>• <strong>Tenant Support:</strong> Audits are associated with specific tenants</li>
+                        <li>• <strong>Verification Workflow:</strong> Audits can be verified, accepted, or rejected by managers</li>
+                        <li>• <strong>Corrective Actions:</strong> Track required actions for failed audits</li>
+                        <li>• <strong>Access Control:</strong> Managers see only audits from their tenant</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </Card>
+          )}
+
+          {/* Audits Table */}
+          {auditsWithProfiles.length > 0 && (
+            <Card className="bg-white/90 backdrop-blur-md border-slate-200/50 rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-500 overflow-hidden">
+              <div className="bg-gradient-to-r from-slate-800 via-slate-700 to-slate-800 text-white p-6 relative overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-r from-blue-600/10 via-sky-500/10 to-indigo-600/10"></div>
+                <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-white/5 to-transparent rounded-full -translate-y-16 translate-x-16"></div>
                 
-                <div className="flex items-center gap-6 pt-2">
-                  <div className="flex items-center gap-2 text-sm text-slate-500">
-                    <div className="w-2 h-2 bg-emerald-500 rounded-full"></div>
-                    <span>System Operational</span>
+                <div className="relative z-10 flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="bg-white/20 backdrop-blur-sm p-3 rounded-xl border border-white/30">
+                      <FileText className="h-6 w-6" />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold">Audit Records</h3>
+                      <p className="text-slate-300 text-sm">View and manage audit history</p>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2 text-sm text-slate-500">
-                    <Calendar className="h-4 w-4" />
-                    <span>{new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-sm text-slate-500">
-                    <FileText className="h-4 w-4" />
-                    <span>{auditsWithProfiles?.length || 0} Total Audits</span>
+                  <div className="bg-white/10 px-3 py-1 rounded-lg text-sm font-medium">
+                    {auditsWithProfiles.length} Total
                   </div>
                 </div>
               </div>
               
-              <div className="lg:text-right">
-                <div className="inline-flex items-center gap-3 bg-white/90 backdrop-blur-sm rounded-2xl p-4 border border-slate-200 shadow-lg">
-                  <div className="text-right">
-                    <p className="text-xs text-slate-500 uppercase tracking-wider">Your Role</p>
-                    <p className="text-lg font-bold text-slate-800">{isManager ? 'Manager' : 'User'}</p>
-                  </div>
-                  <div className="w-12 h-12 bg-gradient-to-br from-sky-400 to-blue-500 rounded-xl flex items-center justify-center">
-                    <Users className="h-6 w-6 text-white" />
-                  </div>
-                </div>
+              <div className="p-6">
+                <AuditHistoryComponent
+                  audits={auditsWithProfiles || []} 
+                  isManager={isManager}
+                  currentUserId={user.id}
+                />
               </div>
-            </div>
-          </div>
-        </div>{/* Audit History Section */}
-        <Card className="bg-white/95 backdrop-blur-md border-slate-200/60 rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-500 overflow-hidden">
-          <div className="bg-gradient-to-r from-slate-800 via-slate-700 to-slate-800 text-white p-6 lg:p-8 relative overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-r from-blue-600/10 via-sky-500/10 to-indigo-600/10"></div>
-            <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-white/5 to-transparent rounded-full -translate-y-16 translate-x-16"></div>
-            
-            <div className="relative z-10 flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="bg-white/20 backdrop-blur-sm p-3 rounded-xl border border-white/30 shadow-lg">
-                  <Activity className="h-6 w-6" />
-                </div>
-                <div>
-                  <h3 className="text-xl lg:text-2xl font-bold">Audit History</h3>
-                  <p className="text-slate-300 text-sm">
-                    {isManager 
-                      ? "All organizational audits and compliance records" 
-                      : "Your personal audit records and compliance history"
-                    }
-                  </p>
-                </div>
-              </div>
-              <div className="bg-white/10 backdrop-blur-sm px-4 py-2 rounded-xl text-sm font-semibold border border-white/20">
-                {auditsWithProfiles?.length || 0} Records
-              </div>
-            </div>
-          </div>
-          
-          <div className="p-6">
-            <AuditHistoryComponent
-              audits={auditsWithProfiles || []} 
-              isManager={isManager}
-              currentUserId={user.id}
-            />
-          </div>
-        </Card>
-      </div>
-    </DashboardLayout>
-  );  } catch (err) {
+            </Card>
+          )}
+        </div>
+      </DashboardLayout>
+    );
+
+  } catch (err) {
     console.error("Unexpected error in audit page:", err);
     const auditsWithProfiles: any[] = [];
       return (
@@ -334,35 +310,6 @@ export default async function AuditPage() {
               </div>
             </div>
           </div>
-
-          {/* Error State Audit Component */}
-          <Card className="bg-white/95 backdrop-blur-md border-red-200/60 rounded-2xl shadow-xl overflow-hidden">
-            <div className="bg-gradient-to-r from-red-800 via-red-700 to-red-800 text-white p-6 lg:p-8 relative overflow-hidden">
-              <div className="absolute inset-0 bg-gradient-to-r from-orange-600/10 via-red-500/10 to-red-600/10"></div>
-              
-              <div className="relative z-10 flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="bg-white/20 backdrop-blur-sm p-3 rounded-xl border border-white/30 shadow-lg">
-                    <XCircle className="h-6 w-6" />
-                  </div>
-                  <div>
-                    <h3 className="text-xl lg:text-2xl font-bold">Unable to Load Audits</h3>
-                    <p className="text-red-200 text-sm">
-                      Please try again later or contact support
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-            
-            <div className="p-6">
-              <AuditHistoryComponent 
-                audits={auditsWithProfiles} 
-                isManager={isManager}
-                currentUserId={user.id}
-              />
-            </div>
-          </Card>
         </div>
       </DashboardLayout>
     );

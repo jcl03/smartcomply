@@ -26,16 +26,9 @@ import {
 import Link from "next/link";
 import { format } from "date-fns";
 import { updateCertificate, deleteCertificate } from "@/app/protected/cert/actions";
+import { Certificate } from "@/lib/types";
 
-interface CertificateData {
-  id: number;
-  link: any;
-  created_at: string;
-  folder: string | null;
-  expiration: string | null;
-  upload_date: string | null;
-  audit_id: number | null;
-  checklist_responses_id: number | null;
+interface CertificateData extends Certificate {
   audit?: {
     id: number;
     title: string | null;
@@ -388,7 +381,7 @@ export function CertificateDetailView({
                     <Calendar className="h-4 w-4 text-gray-500" />
                     <span className="font-medium">Created:</span>
                   </div>
-                  <span>{format(new Date(certificate.created_at), "MMM d, yyyy 'at' h:mm a")}</span>
+                  <span>{certificate.created_at ? format(new Date(certificate.created_at), "MMM d, yyyy 'at' h:mm a") : 'N/A'}</span>
                 </div>
               </>
             )}

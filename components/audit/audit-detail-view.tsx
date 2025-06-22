@@ -36,7 +36,12 @@ interface AuditDetailData {
   percentage: number;
   comments: string;
   title: string;
-  audit_data: any;  
+  audit_data: any;
+  verification_status: 'pending' | 'accepted' | 'rejected' | null;
+  verified_by: string | null;
+  verified_at: string | null;
+  corrective_action: string | null;
+  tenant_id: number;
   form?: {
     id: number;
     form_schema: any;
@@ -51,6 +56,14 @@ interface AuditDetailData {
   user_profile?: {
     full_name: string;
     email: string;
+  } | null;
+  verified_by_profile?: {
+    full_name: string;
+    email: string;
+  } | null;
+  tenant?: {
+    id: number;
+    name: string;
   } | null;
 }
 
@@ -630,8 +643,7 @@ export default function AuditDetailView({ audit, isManager, currentUserId }: Aud
       </div>
 
       {/* Tab Content */}
-      <div className="space-y-6">
-        {activeTab === 'overview' && (
+      <div className="space-y-6">        {activeTab === 'overview' && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Form Information */}
             <Card className="p-6 bg-white border-slate-200">
@@ -655,6 +667,10 @@ export default function AuditDetailView({ audit, isManager, currentUserId }: Aud
                       : 'N/A'
                     }
                   </p>
+                </div>
+                <div>
+                  <span className="text-sm text-slate-600">Tenant:</span>
+                  <p className="font-medium text-slate-900">{audit.tenant?.name || 'N/A'}</p>
                 </div>
               </div>
             </Card>
@@ -688,6 +704,57 @@ export default function AuditDetailView({ audit, isManager, currentUserId }: Aud
                   <span className="text-slate-600">Status:</span>
                   <Badge variant="outline">{audit.status}</Badge>
                 </div>
+              </div>
+            </Card>
+
+            {/* Verification Status */}
+            <Card className="p-6 bg-white border-slate-200 lg:col-span-2">
+              <h3 className="text-lg font-semibold text-slate-900 mb-4">Verification Status</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <span className="text-sm text-slate-600">Verification Status:</span>
+                  <div className="mt-1">
+                    {audit.verification_status ? (
+                      <Badge 
+                        className={`
+                          ${audit.verification_status === 'accepted' ? 'bg-green-100 text-green-800 border-green-200' : ''}
+                          ${audit.verification_status === 'rejected' ? 'bg-red-100 text-red-800 border-red-200' : ''}
+                          ${audit.verification_status === 'pending' ? 'bg-yellow-100 text-yellow-800 border-yellow-200' : ''}
+                        `}
+                      >
+                        {audit.verification_status.charAt(0).toUpperCase() + audit.verification_status.slice(1)}
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline">Not Yet Verified</Badge>
+                    )}
+                  </div>
+                </div>
+                
+                {audit.verified_by_profile && (
+                  <div>
+                    <span className="text-sm text-slate-600">Verified By:</span>
+                    <p className="font-medium text-slate-900">{audit.verified_by_profile.full_name}</p>
+                    <p className="text-sm text-slate-500">{audit.verified_by_profile.email}</p>
+                  </div>
+                )}
+                
+                {audit.verified_at && (
+                  <div>
+                    <span className="text-sm text-slate-600">Verified At:</span>
+                    <p className="text-slate-900">
+                      {format(new Date(audit.verified_at), 'MMM d, yyyy HH:mm')}
+                    </p>
+                  </div>
+                )}
+                
+                {audit.corrective_action && (
+                  <div className="md:col-span-2">
+                    <span className="text-sm text-slate-600">Corrective Action:</span>
+                    <div className="mt-1 bg-slate-50 rounded-lg p-3 border border-slate-200">
+                      <p className="text-slate-900 whitespace-pre-wrap">{audit.corrective_action}</p>
+                    </div>
+                  </div>
+                )}
               </div>
             </Card>
           </div>

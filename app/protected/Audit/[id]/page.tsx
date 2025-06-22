@@ -32,8 +32,7 @@ export default async function AuditDetailPage({ params }: AuditDetailPageProps) 
   }
   // Check if user is admin/manager
   const isManager = userProfile?.role === 'admin' || userProfile?.role === 'manager';
-  
-  // Fetch the specific audit
+    // Fetch the specific audit
   let auditQuery = supabase
     .from('audit')
     .select(`
@@ -48,7 +47,12 @@ export default async function AuditDetailPage({ params }: AuditDetailPageProps) 
       percentage,
       comments,
       title,
-      audit_data
+      audit_data,
+      verification_status,
+      verified_by,
+      verified_at,
+      corrective_action,
+      tenant_id
     `)
     .eq('id', id)
     .single();
@@ -58,7 +62,18 @@ export default async function AuditDetailPage({ params }: AuditDetailPageProps) 
   if (error || !audit) {
     console.error("Error fetching audit:", error);
     return notFound();
-  }  // Fetch form data separately
+  }
+
+  // Authorization check: ensure user can access this audit
+  if (!isManager && audit.user_id !== user.id) {
+    // Regular users can only view their own audits
+    return notFound();
+  }
+
+  if (userProfile.role === 'manager' && userProfile.tenant_id && audit.tenant_id !== userProfile.tenant_id) {
+    // Managers can only view audits from their tenant
+    return notFound();
+  }// Fetch form data separately
   const { data: formData, error: formError } = await supabase
     .from('form')
     .select(`
@@ -133,13 +148,70 @@ export default async function AuditDetailPage({ params }: AuditDetailPageProps) 
   } catch (err) {
     console.error("Exception while fetching user data:", err instanceof Error ? err.message : "Unknown error");
   }
+  // Fetch tenant data if available
+  let tenantData = null;
+  if (audit.tenant_id) {
+    try {
+      const { data, error: tenantError } = await supabase
+        .from('tenant')
+        .select('id, name')
+        .eq('id', audit.tenant_id)
+        .single();
+      
+      if (tenantError) {
+        console.error("Error fetching tenant data:", tenantError?.message || "Unknown tenant error");
+      } else {
+        tenantData = data;
+      }
+    } catch (err) {
+      console.error("Exception while fetching tenant data:", err instanceof Error ? err.message : "Unknown error");
+    }
+  }
+
+  // Fetch verified_by user profile if available
+  let verifiedByProfile = null;
+  if (audit.verified_by) {
+    try {
+      const { data: verifierProfileData, error: verifierProfileError } = await supabase
+        .from('view_user_profiles')
+        .select('id, full_name, email')
+        .eq('user_id', audit.verified_by)
+        .single();
+      
+      if (verifierProfileError) {
+        console.error("Error fetching verifier profile:", verifierProfileError?.message || "Unknown verifier error");
+        
+        // Fallback: try to get user data using admin client
+        try {
+          const adminClient = createAdminClient();
+          const { data: authUser } = await adminClient.auth.admin.getUserById(audit.verified_by);
+          if (authUser?.user) {
+            verifiedByProfile = {
+              id: authUser.user.id,
+              full_name: authUser.user.user_metadata?.full_name || authUser.user.email,
+              email: authUser.user.email
+            };
+          }
+        } catch (adminErr) {
+          console.error("Error fetching verifier via admin client:", adminErr instanceof Error ? adminErr.message : "Unknown error");
+        }
+      } else {
+        verifiedByProfile = verifierProfileData;
+      }
+    } catch (err) {
+      console.error("Exception while fetching verifier data:", err instanceof Error ? err.message : "Unknown error");
+    }
+  }
+
   const auditWithProfile = {
     ...audit,
     form: formData ? {
       ...formData,
       compliance: complianceData
     } : null,
-    user_profile: auditUserProfile || null
+    user_profile: auditUserProfile || null,
+    tenant: tenantData || null,
+    verified_by_profile: verifiedByProfile || null
   };  // Debug logging (remove in production)
   if (process.env.NODE_ENV === 'development') {
     console.log("Debug - Audit data:", {

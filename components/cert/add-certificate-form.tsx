@@ -40,6 +40,7 @@ export function AddCertificateForm({ audits, checklistResponses }: AddCertificat
     upload_date: new Date().toISOString().split('T')[0], // Always today's date
     audit_id: "",
     checklist_responses_id: "",
+    status: "active" as const,
   });
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
@@ -125,9 +126,19 @@ export function AddCertificateForm({ audits, checklistResponses }: AddCertificat
       return;
     }
 
-    setIsLoading(true);
+    setIsLoading(true);    try {
+      // Get current user profile to get tenant_id
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("User not authenticated");
 
-    try {
+      const { data: profile } = await supabase
+        .from('view_user_profiles')
+        .select('tenant_id')
+        .eq('email', user.email)
+        .single();
+
+      if (!profile?.tenant_id) throw new Error("User tenant not found");
+
       // Upload file to Supabase storage
       const fileUrl = await uploadFile(selectedFile);
         // Prepare certificate data
@@ -143,6 +154,8 @@ export function AddCertificateForm({ audits, checklistResponses }: AddCertificat
         upload_date: new Date().toISOString().split('T')[0], // Always use today's date
         audit_id: formData.audit_id ? parseInt(formData.audit_id) : null,
         checklist_responses_id: formData.checklist_responses_id ? parseInt(formData.checklist_responses_id) : null,
+        status: formData.status,
+        tenant_id: profile.tenant_id,
       };
 
       // Insert certificate record

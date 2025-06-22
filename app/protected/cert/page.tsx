@@ -31,19 +31,17 @@ export default async function CertificatesPage({
   if (!user) {
     return redirect("/sign-in");
   }
-
   // Get current user profile for dashboard layout
   const currentUserProfile = await getUserProfile();
   
   // Check if user has manager or admin role to add certificates
   const { data: profile } = await supabase
     .from('view_user_profiles')
-    .select('role')
+    .select('role, tenant_id')
     .eq('email', user.email)
     .single();
     
-  const canManageCerts = profile && ['admin', 'manager'].includes(profile.role);
-  // Build query filters
+  const canManageCerts = profile && ['admin', 'manager'].includes(profile.role);// Build query filters
   let query = supabase
     .from('cert')
     .select(`
@@ -54,10 +52,16 @@ export default async function CertificatesPage({
       expiration,
       upload_date,
       audit_id,
-      checklist_responses_id
-    `)
-    .eq('status', 'active') // Only show active certificates
+      checklist_responses_id,
+      status,
+      tenant_id
+    `)    .eq('status', 'active') // Only show active certificates
     .order('created_at', { ascending: false });
+
+  // Filter by tenant_id if user is not admin
+  if (profile?.role !== 'admin' && profile?.tenant_id) {
+    query = query.eq('tenant_id', profile.tenant_id);
+  }
 
   // Apply search filter
   if (params.search) {
@@ -81,12 +85,22 @@ export default async function CertificatesPage({
   if (certsError) {
     console.error("Error fetching certificates:", certsError);
   }
-
   // Get unique folders for filter dropdown
   const { data: folders } = await supabase
     .from('cert')
     .select('folder')
+    .eq('status', 'active')
     .not('folder', 'is', null);
+
+  // Apply tenant filter for folders as well
+  if (profile?.role !== 'admin' && profile?.tenant_id) {
+    await supabase
+      .from('cert')
+      .select('folder')
+      .eq('status', 'active')
+      .eq('tenant_id', profile.tenant_id)
+      .not('folder', 'is', null);
+  }
 
   const uniqueFolders = Array.from(new Set(folders?.map(f => f.folder).filter(Boolean))) || [];
 

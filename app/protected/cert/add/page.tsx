@@ -16,11 +16,10 @@ export default async function AddCertificatePage() {
 
   // Get current user profile for dashboard layout
   const currentUserProfile = await getUserProfile();
-  
-  // Check if user has manager or admin role
+    // Check if user has manager or admin role
   const { data: profile } = await supabase
     .from('view_user_profiles')
-    .select('role')
+    .select('role, tenant_id')
     .eq('email', user.email)
     .single();
     
@@ -28,17 +27,26 @@ export default async function AddCertificatePage() {
     return redirect("/protected/cert");
   }
 
-  // Fetch related audits and checklist responses for dropdowns
-  const { data: audits } = await supabase
+  // Fetch related audits and checklist responses for dropdowns with tenant filtering
+  let auditQuery = supabase
     .from('audit')
     .select('id, title, status')
     .eq('status', 'completed')
     .order('created_at', { ascending: false });
 
-  const { data: checklistResponses } = await supabase
+  let checklistQuery = supabase
     .from('checklist_responses')
     .select('id, title, status')
     .order('created_at', { ascending: false });
+
+  // Filter by tenant for non-admin users
+  if (profile.role !== 'admin' && profile.tenant_id) {
+    auditQuery = auditQuery.eq('tenant_id', profile.tenant_id);
+    checklistQuery = checklistQuery.eq('tenant_id', profile.tenant_id);
+  }
+
+  const { data: audits } = await auditQuery;
+  const { data: checklistResponses } = await checklistQuery;
 
   return (
     <DashboardLayout userProfile={currentUserProfile}>

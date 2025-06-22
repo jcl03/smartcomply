@@ -21,15 +21,15 @@ export default async function CertificateDetailPage({
 
   // Get current user profile for dashboard layout
   const currentUserProfile = await getUserProfile();
-  
-  // Check if user has manager or admin role for edit permissions
+    // Check if user has manager or admin role for edit permissions
   const { data: profile } = await supabase
     .from('view_user_profiles')
-    .select('role')
+    .select('role, tenant_id')
     .eq('email', user.email)
     .single();
     
   const canManage = profile && ['admin', 'manager'].includes(profile.role);
+  
   // Fetch certificate with related data
   const { data: certificate, error } = await supabase
     .from('cert')
@@ -41,10 +41,17 @@ export default async function CertificateDetailPage({
       expiration,
       upload_date,
       audit_id,
-      checklist_responses_id
+      checklist_responses_id,
+      status,
+      tenant_id
     `)
     .eq('id', id)
     .single();
+
+  // Check tenant access for non-admin users
+  if (certificate && profile?.role !== 'admin' && profile?.tenant_id && certificate.tenant_id !== profile.tenant_id) {
+    return redirect("/protected/cert");
+  }
 
   // Fetch related audit data separately if audit_id exists
   let audit = null;
