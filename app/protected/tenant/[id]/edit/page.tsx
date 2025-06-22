@@ -3,7 +3,8 @@ import { redirect } from "next/navigation";
 import DashboardLayout from "@/components/dashboard/dashboard-layout";
 import { getUserProfile } from "@/lib/api";
 
-export default async function EditTenantPage({ params }: { params: { id: string } }) {
+export default async function EditTenantPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return redirect("/sign-in");
@@ -16,16 +17,15 @@ export default async function EditTenantPage({ params }: { params: { id: string 
   const { data: tenant, error } = await supabase
     .from("tenant")
     .select("id, name")
-    .eq("id", params.id)
+    .eq("id", id)
     .single();
   if (error || !tenant) return redirect("/protected/tenant");
-
   async function handleEditTenant(formData: FormData) {
     "use server";
     const name = formData.get("name") as string;
     if (!name) return;
     const supabase = await createClient();
-    await supabase.from("tenant").update({ name }).eq("id", params.id);
+    await supabase.from("tenant").update({ name }).eq("id", id);
     redirect("/protected/tenant");
   }
 

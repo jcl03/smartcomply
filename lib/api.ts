@@ -205,7 +205,6 @@ export async function getAuditById(id: string) {
     console.error("Error fetching audit:", error);
     return null;
   }
-
   // Get user profile information
   if (data?.user_id) {
     const { data: userProfile } = await supabase
@@ -215,7 +214,7 @@ export async function getAuditById(id: string) {
       .single();
     
     if (userProfile) {
-      data.user_profile = userProfile;
+      (data as any).user_profile = userProfile;
     }
   }
 
@@ -228,7 +227,7 @@ export async function getAuditById(id: string) {
       .single();
     
     if (verifiedByProfile) {
-      data.verified_by_profile = verifiedByProfile;
+      (data as any).verified_by_profile = verifiedByProfile;
     }
   }
 

@@ -3,7 +3,8 @@ import { redirect } from "next/navigation";
 import DashboardLayout from "@/components/dashboard/dashboard-layout";
 import { getUserProfile } from "@/lib/api";
 
-export default async function DeleteTenantPage({ params }: { params: { id: string } }) {
+export default async function DeleteTenantPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return redirect("/sign-in");
@@ -16,14 +17,14 @@ export default async function DeleteTenantPage({ params }: { params: { id: strin
   const { data: tenant, error } = await supabase
     .from("tenant")
     .select("id, name")
-    .eq("id", params.id)
+    .eq("id", id)
     .single();
   if (error || !tenant) return redirect("/protected/tenant");
 
   async function handleDeleteTenant() {
     "use server";
     const supabase = await createClient();
-    await supabase.from("tenant").delete().eq("id", params.id);
+    await supabase.from("tenant").delete().eq("id", id);
     redirect("/protected/tenant");
   }
 

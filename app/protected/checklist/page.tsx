@@ -117,10 +117,8 @@ export default async function Page(props: any) {
         // If no checklists match the filter, add an impossible condition to return no results
         query = query.eq('id', -1);
       }
-    }
-
-    const result = await query.order('created_at', { ascending: false });
-    responses = result.data;
+    }    const result = await query.order('created_at', { ascending: false });
+    responses = result.data || [];
     error = result.error;
     
   } else if (fullUserProfile.role === 'manager') {
@@ -168,10 +166,8 @@ export default async function Page(props: any) {
           // If no checklists match the filter, add an impossible condition to return no results
           query = query.eq('id', -1);
         }
-      }
-
-      const result = await query.order('created_at', { ascending: false });
-      responses = result.data;
+      }      const result = await query.order('created_at', { ascending: false });
+      responses = result.data || [];
       error = result.error;
     }
   } else {
@@ -214,11 +210,9 @@ export default async function Page(props: any) {
         // If no checklists match the filter, add an impossible condition to return no results
         query = query.eq('id', -1);
       }
-    }
-
-    const result = await query.order('created_at', { ascending: false });
-    responses = result.data;
-    error = result.error;  }
+    }    const result = await query.order('created_at', { ascending: false });
+    responses = result.data || [];
+    error = result.error;}
   
   // Debug logging
   console.log('Responses query result:', { responses, error });
