@@ -114,6 +114,35 @@ export default function AuditHistoryComponent({ audits, isManager, currentUserId
   const [isCorrectiveActionDialogOpen, setIsCorrectiveActionDialogOpen] = useState(false);
   const [correctiveAction, setCorrectiveAction] = useState("");
   const { toast } = useToast();
+
+  // Helper function to recursively search through JSON objects
+  const searchInObject = (obj: any, query: string): boolean => {
+    if (!obj || !query) return false;
+    
+    const lowerQuery = query.toLowerCase();
+    
+    // If it's a string, check if it contains the query
+    if (typeof obj === 'string') {
+      return obj.toLowerCase().includes(lowerQuery);
+    }
+    
+    // If it's a number, convert to string and check
+    if (typeof obj === 'number') {
+      return obj.toString().toLowerCase().includes(lowerQuery);
+    }
+    
+    // If it's an array, search through each element
+    if (Array.isArray(obj)) {
+      return obj.some(item => searchInObject(item, query));
+    }
+    
+    // If it's an object, search through all values
+    if (typeof obj === 'object' && obj !== null) {
+      return Object.values(obj).some(value => searchInObject(value, query));
+    }
+    
+    return false;
+  };
   
   // Debug: Log audit data to see what user profiles we have
   useEffect(() => {
@@ -123,7 +152,7 @@ export default function AuditHistoryComponent({ audits, isManager, currentUserId
       user_id: a.user_id,
       user_profile: a.user_profile
     })));
-  }, [audits]);  // Filter audits based on status filter and search query
+  }, [audits]);// Filter audits based on status filter and search query
   const filteredAudits = audits.filter(audit => {
     let matchesStatus = false;
     
@@ -139,12 +168,21 @@ export default function AuditHistoryComponent({ audits, isManager, currentUserId
       // Exact match for other filters (completed, draft)
       matchesStatus = audit.status === statusFilter;
     }
-    
-    const auditTitle = audit.title || `Audit #${audit.id}`;
+      const auditTitle = audit.title || `Audit #${audit.id}`;
     const matchesSearch = searchQuery === "" || 
+      // Search in basic audit fields
       auditTitle.toLowerCase().includes(searchQuery.toLowerCase()) ||
       audit.comments.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (audit.user_profile?.full_name || '').toLowerCase().includes(searchQuery.toLowerCase());
+      (audit.user_profile?.full_name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (audit.user_profile?.email || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (audit.tenant?.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      // Search in form schema and compliance data
+      searchInObject(audit.form, searchQuery) ||
+      // Search in corrective action
+      (audit.corrective_action || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      // Search in verification status and related fields
+      (audit.verification_status || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (audit.verified_by_profile?.full_name || '').toLowerCase().includes(searchQuery.toLowerCase());
     
     return matchesStatus && matchesSearch;
   });
@@ -557,97 +595,106 @@ export default function AuditHistoryComponent({ audits, isManager, currentUserId
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      
-      {/* Audit Summary Section */}
+        {/* Filter Section - Always Visible */}
+      <div className="bg-white/80 backdrop-blur-sm p-4 rounded-xl border border-slate-200/70 mb-6 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center gap-1 text-sm font-medium text-slate-700">
+            <Filter className="h-4 w-4 text-slate-500" />
+            <span>Status:</span>
+          </div>
+          <div className="flex flex-wrap gap-1">
+            <Button 
+              size="sm" 
+              variant={statusFilter === "all" ? "default" : "outline"}
+              className="h-7 text-xs font-medium"
+              onClick={() => setStatusFilter("all")}
+            >
+              All
+            </Button>
+            <Button 
+              size="sm" 
+              variant={statusFilter === "completed" ? "default" : "outline"}
+              className="h-7 text-xs font-medium"
+              onClick={() => setStatusFilter("completed")}
+            >
+              Completed
+            </Button>
+            <Button 
+              size="sm" 
+              variant={statusFilter === "draft" ? "default" : "outline"}
+              className="h-7 text-xs font-medium"
+              onClick={() => setStatusFilter("draft")}
+            >
+              Draft
+            </Button>
+            <Button 
+              size="sm" 
+              variant={statusFilter === "pending" ? "default" : "outline"}
+              className="h-7 text-xs font-medium"
+              onClick={() => setStatusFilter("pending")}
+            >
+              Pending
+            </Button>
+            <Button 
+              size="sm" 
+              variant={statusFilter === "in_progress" ? "default" : "outline"}
+              className="h-7 text-xs font-medium"
+              onClick={() => setStatusFilter("in_progress")}
+            >
+              In Progress
+            </Button>
+            {/* Clear Filter Button */}
+            {(statusFilter !== "all" || searchQuery) && (
+              <Button 
+                size="sm" 
+                variant="ghost"
+                className="h-7 text-xs font-medium text-slate-500 hover:text-slate-700"
+                onClick={() => {
+                  setStatusFilter("all");
+                  setSearchQuery("");
+                }}
+              >
+                <Undo2 className="h-3 w-3 mr-1" />
+                Clear All
+              </Button>
+            )}
+          </div>
+        </div>
+        
+        <div className="relative w-full lg:w-64">
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />          <input
+            type="text"
+            placeholder="Search audits, forms, users, comments..."
+            className="w-full rounded-lg border border-slate-200 bg-white pl-9 pr-4 py-2 text-sm focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </div>
+      </div>
+
+      {/* Action Buttons - Only show when there are audits */}
       {sortedAudits.length > 0 && (
-        <div>
-          {/* Action Buttons */}
-          <div className="flex justify-end mb-6 gap-2">
-            <Button
-              onClick={() => downloadAuditReport('csv')}
-              variant="outline"
-              size="sm"
-              className="flex items-center gap-1.5"
-            >
-              <Download className="h-4 w-4" />
-              CSV
-            </Button>
-            <Button
-              onClick={() => downloadAuditReport('pdf')}
-              variant="outline"
-              size="sm"
-              className="flex items-center gap-1.5"
-            >
-              <Download className="h-4 w-4" />
-              PDF
-            </Button>
-          </div>
-
-          {/* Filter Section */}
-          <div className="bg-white/80 backdrop-blur-sm p-4 rounded-xl border border-slate-200/70 mb-6 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
-            <div className="flex flex-wrap items-center gap-2">
-              <div className="flex items-center gap-1 text-sm font-medium text-slate-700">
-                <Filter className="h-4 w-4 text-slate-500" />
-                <span>Status:</span>
-              </div>
-                <div className="flex flex-wrap gap-1">
-                <Button 
-                  size="sm" 
-                  variant={statusFilter === "all" ? "default" : "outline"}
-                  className="h-7 text-xs font-medium"
-                  onClick={() => setStatusFilter("all")}
-                >
-                  All
-                </Button>
-                <Button 
-                  size="sm" 
-                  variant={statusFilter === "completed" ? "default" : "outline"}
-                  className="h-7 text-xs font-medium"
-                  onClick={() => setStatusFilter("completed")}
-                >
-                  Completed
-                </Button>
-                <Button 
-                  size="sm" 
-                  variant={statusFilter === "draft" ? "default" : "outline"}
-                  className="h-7 text-xs font-medium"
-                  onClick={() => setStatusFilter("draft")}
-                >
-                  Draft
-                </Button>
-                <Button 
-                  size="sm" 
-                  variant={statusFilter === "pending" ? "default" : "outline"}
-                  className="h-7 text-xs font-medium"
-                  onClick={() => setStatusFilter("pending")}
-                >
-                  Pending
-                </Button>
-                <Button 
-                  size="sm" 
-                  variant={statusFilter === "in_progress" ? "default" : "outline"}
-                  className="h-7 text-xs font-medium"
-                  onClick={() => setStatusFilter("in_progress")}
-                >
-                  In Progress
-                </Button>
-              </div>
-            </div>
-            
-            <div className="relative w-full lg:w-64">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
-              <input
-                type="text"
-                placeholder="Search audits..."
-                className="w-full rounded-lg border border-slate-200 bg-white pl-9 pr-4 py-2 text-sm focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-            </div>
-          </div>
-
-          {/* Audit Cards */}
-          <Card className="overflow-hidden border border-slate-200/80">
+        <div className="flex justify-end mb-6 gap-2">
+          <Button
+            onClick={() => downloadAuditReport('csv')}
+            variant="outline"
+            size="sm"
+            className="flex items-center gap-1.5"
+          >
+            <Download className="h-4 w-4" />
+            CSV
+          </Button>
+          <Button
+            onClick={() => downloadAuditReport('pdf')}
+            variant="outline"
+            size="sm"
+            className="flex items-center gap-1.5"
+          >
+            <Download className="h-4 w-4" />
+            PDF
+          </Button>
+        </div>      )}      {/* Audit Summary Section */}
+      <Card className="overflow-hidden border border-slate-200/80">
             {/* Table Header */}
             <div className="bg-slate-50 border-b border-slate-100">
               <div className="grid grid-cols-12 gap-4 px-6 py-3">
@@ -713,11 +760,53 @@ export default function AuditHistoryComponent({ audits, isManager, currentUserId
                   <span className="font-semibold text-slate-700">Actions</span>
                 </div>
               </div>
-            </div>
-
-            {/* Table Body */}
+            </div>            {/* Table Body */}
             <div className="divide-y divide-slate-100">
-              {sortedAudits.map((audit, index) => {
+              {sortedAudits.length === 0 ? (
+                <div className="px-6 py-16 text-center">
+                  <div className="flex flex-col items-center gap-4">
+                    <div className="p-4 bg-slate-100 rounded-full">
+                      <FileText className="h-8 w-8 text-slate-400" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-slate-900 mb-2">
+                        No audits found
+                      </h3>
+                      <p className="text-slate-500 mb-4">
+                        {statusFilter === "all" 
+                          ? "There are no audits to display."
+                          : `No audits found with status "${statusFilter}".`
+                        }
+                        {searchQuery && (
+                          <span className="block mt-1">
+                            Try adjusting your search or filter criteria.
+                          </span>
+                        )}
+                      </p>
+                      {statusFilter !== "all" && (
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={() => setStatusFilter("all")}
+                          className="mr-2"
+                        >
+                          Show All Audits
+                        </Button>
+                      )}
+                      {searchQuery && (
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={() => setSearchQuery("")}
+                        >
+                          Clear Search
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                sortedAudits.map((audit, index) => {
                 const form = Array.isArray(audit.form) ? audit.form[0] : audit.form;
                 const compliance = Array.isArray(form?.compliance) ? form?.compliance[0] : form?.compliance;
                 
@@ -1021,16 +1110,14 @@ export default function AuditHistoryComponent({ audits, isManager, currentUserId
                               )}
                             </div>
                           )}
-                        </div>
-                      </div>
+                        </div>                      </div>
                     </div>
                   </div>
                 );
-              })}
+              })
+              )}
             </div>
           </Card>
-        </div>
-      )}
     </div>
   );
 }
