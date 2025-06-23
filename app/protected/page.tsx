@@ -24,11 +24,12 @@ import {
   AlertTriangle,
   CheckSquare, 
   ListChecks,
-  XCircle
+  XCircle,
+  Plus
 } from "lucide-react";
 import { redirect } from "next/navigation";
 import { Card } from "@/components/ui/card";
-import { formatDistanceToNow } from "date-fns";
+import { formatDistanceToNow, isValid } from "date-fns";
 import DashboardLayout from "@/components/dashboard/dashboard-layout";
 import AuditorPerformanceChart from "@/components/dashboard/auditor-performance-chart";
 import ComplianceTrendsChart from "@/components/dashboard/compliance-trends-chart";
@@ -47,6 +48,21 @@ import {
   processPerformanceRadarData
 } from "@/utils/dashboard-utils";
 import Link from "next/link";
+import RealtimeDashboardWrapper from "@/components/dashboard/realtime-dashboard-wrapper";
+
+// Helper function to safely format dates
+const safeFormatDistanceToNow = (date: string | Date | null | undefined) => {
+  if (!date) return 'Unknown';
+  
+  try {
+    const dateObj = typeof date === 'string' ? new Date(date) : date;
+    if (!isValid(dateObj)) return 'Unknown';
+    return formatDistanceToNow(dateObj, { addSuffix: true });
+  } catch (error) {
+    console.warn('Error formatting date:', error);
+    return 'Unknown';
+  }
+};
 
 export default async function ProtectedPage() {
   const supabase = await createClient();
@@ -424,7 +440,312 @@ export default async function ProtectedPage() {
                 </div>
                 Manager Dashboard - Operational Oversight & Team Performance
               </h2>
-                {/* Team Performance Overview */}
+
+              {/* Quick Actions for Manager */}
+              <div className="bg-gradient-to-r from-purple-500 to-indigo-600 rounded-2xl p-6 text-white">
+                <div className="flex items-center justify-between mb-6">
+                  <div>
+                    <h3 className="text-xl font-bold">Manager Quick Actions</h3>
+                    <p className="text-purple-100">Manage your team's compliance efficiently</p>
+                  </div>
+                  <div className="bg-white/20 p-3 rounded-xl">
+                    <Target className="h-6 w-6" />
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <Link 
+                    href="/protected/checklist/new"
+                    className="bg-white/10 hover:bg-white/20 backdrop-blur-sm rounded-xl p-4 transition-all duration-300 group"
+                  >
+                    <div className="flex items-center gap-3">
+                      <Plus className="h-5 w-5 group-hover:scale-110 transition-transform" />
+                      <span className="font-medium">New Form</span>
+                    </div>
+                  </Link>
+                  
+                  <Link 
+                    href="/protected/user-management"
+                    className="bg-white/10 hover:bg-white/20 backdrop-blur-sm rounded-xl p-4 transition-all duration-300 group"
+                  >
+                    <div className="flex items-center gap-3">
+                      <Users className="h-5 w-5 group-hover:scale-110 transition-transform" />
+                      <span className="font-medium">Team</span>
+                    </div>
+                  </Link>
+                  
+                  <Link 
+                    href="/protected/Audit"
+                    className="bg-white/10 hover:bg-white/20 backdrop-blur-sm rounded-xl p-4 transition-all duration-300 group"
+                  >
+                    <div className="flex items-center gap-3">
+                      <BarChart3 className="h-5 w-5 group-hover:scale-110 transition-transform" />
+                      <span className="font-medium">Reports</span>
+                    </div>
+                  </Link>
+                  
+                  <Link 
+                    href="/protected/compliance"
+                    className="bg-white/10 hover:bg-white/20 backdrop-blur-sm rounded-xl p-4 transition-all duration-300 group"
+                  >
+                    <div className="flex items-center gap-3">
+                      <Shield className="h-5 w-5 group-hover:scale-110 transition-transform" />
+                      <span className="font-medium">Compliance</span>
+                    </div>
+                  </Link>
+                </div>
+              </div>
+
+              {/* Manager's Forms Management */}
+              <div className="space-y-6">
+                <h3 className="text-xl font-semibold text-slate-700">My Team's Forms & Assignments</h3>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <Card className="p-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <h4 className="text-lg font-semibold">Assigned Forms</h4>
+                      <span className="bg-purple-100 text-purple-700 px-3 py-1 rounded-lg text-sm font-medium">
+                        {formsData?.filter(form => 
+                          // Filter forms that are assigned to this manager's team
+                          dashboardData.audits.some(audit => 
+                            audit.form_id === form.id && 
+                            dashboardData.userProfiles.some(profile => 
+                              profile.id === audit.auditor_id && profile.manager_id === user.id
+                            )
+                          )
+                        ).length || 0} Forms
+                      </span>
+                    </div>
+                    <div className="space-y-3 max-h-64 overflow-y-auto">
+                      {formsData?.filter(form => 
+                        // Filter forms that are assigned to this manager's team
+                        dashboardData.audits.some(audit => 
+                          audit.form_id === form.id && 
+                          dashboardData.userProfiles.some(profile => 
+                            profile.id === audit.auditor_id && profile.manager_id === user.id
+                          )
+                        )
+                      ).slice(0, 6).map((form, index) => (
+                        <div key={index} className="flex items-center justify-between p-3 bg-purple-50 rounded-lg">
+                          <div>
+                            <div className="font-medium text-purple-900">{form.name}</div>
+                            <div className="text-sm text-purple-600">
+                              Created {safeFormatDistanceToNow(form.created_at)}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="bg-purple-100 text-purple-700 px-2 py-1 rounded text-xs">
+                              Active
+                            </span>
+                            <Link 
+                              href={`/protected/checklist/${form.id}`}
+                              className="text-purple-600 hover:text-purple-800"
+                            >
+                              <ArrowUpRight className="h-4 w-4" />
+                            </Link>
+                          </div>
+                        </div>
+                      )) || (
+                        <div className="text-center py-8">
+                          <FileText className="h-12 w-12 text-purple-300 mx-auto mb-3" />
+                          <p className="text-purple-600">No forms assigned to your team yet</p>
+                        </div>
+                      )}
+                    </div>
+                  </Card>
+                  
+                  <Card className="p-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <h4 className="text-lg font-semibold">Team Compliance Status</h4>
+                      <span className="bg-emerald-100 text-emerald-700 px-3 py-1 rounded-lg text-sm font-medium">
+                        {(() => {
+                          const teamAudits = dashboardData.audits.filter(audit => 
+                            dashboardData.userProfiles.some(profile => 
+                              profile.id === audit.auditor_id && profile.manager_id === user.id
+                            )
+                          );
+                          const completedAudits = teamAudits.filter(audit => audit.status === 'completed');
+                          const rate = teamAudits.length > 0 ? (completedAudits.length / teamAudits.length) * 100 : 0;
+                          return rate.toFixed(0);
+                        })()}% Complete
+                      </span>
+                    </div>
+                    <div className="space-y-4">
+                      {/* Team Member Performance Summary */}
+                      {dashboardData.userProfiles
+                        .filter(profile => profile.manager_id === user.id)
+                        .slice(0, 5)
+                        .map((teamMember, index) => {
+                          const memberAudits = dashboardData.audits.filter(audit => audit.auditor_id === teamMember.id);
+                          const completedAudits = memberAudits.filter(audit => audit.status === 'completed');
+                          const completionRate = memberAudits.length > 0 ? (completedAudits.length / memberAudits.length) * 100 : 0;
+                          
+                          return (
+                            <div key={index} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                              <div className="flex items-center gap-3">
+                                <div className="w-8 h-8 bg-gradient-to-br from-purple-100 to-indigo-100 rounded-full flex items-center justify-center">
+                                  <span className="text-purple-600 font-semibold text-sm">
+                                    {teamMember.full_name?.charAt(0) || 'U'}
+                                  </span>
+                                </div>
+                                <div>
+                                  <div className="font-medium">{teamMember.full_name || 'Unknown User'}</div>
+                                  <div className="text-sm text-slate-600">{teamMember.role || 'Team Member'}</div>
+                                </div>
+                              </div>
+                              <div className="text-right">
+                                <div className={`font-semibold ${
+                                  completionRate >= 90 ? 'text-emerald-600' : 
+                                  completionRate >= 70 ? 'text-blue-600' : 
+                                  completionRate >= 50 ? 'text-amber-600' : 'text-red-600'
+                                }`}>
+                                  {completionRate.toFixed(0)}%
+                                </div>
+                                <div className="text-xs text-slate-500">
+                                  {completedAudits.length}/{memberAudits.length} tasks
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      
+                      {dashboardData.userProfiles.filter(profile => profile.manager_id === user.id).length === 0 && (
+                        <div className="text-center py-8">
+                          <Users className="h-12 w-12 text-slate-300 mx-auto mb-3" />
+                          <p className="text-slate-600">No team members assigned yet</p>
+                        </div>
+                      )}
+                    </div>
+                  </Card>
+                </div>
+              </div>
+
+              {/* Forms Creation & Assignment for Managers */}
+              <div className="space-y-6">
+                <h3 className="text-xl font-semibold text-slate-700">Form Management & Assignment</h3>
+                <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+                  <Card className="p-6 bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="bg-blue-100 p-2 rounded-lg">
+                        <Plus className="h-5 w-5 text-blue-600" />
+                      </div>
+                      <h4 className="text-lg font-semibold text-blue-900">Create New Form</h4>
+                    </div>
+                    <p className="text-blue-700 mb-4">Create compliance forms for your team</p>
+                    <Link 
+                      href="/protected/checklist/new"
+                      className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
+                    >
+                      <Plus className="h-4 w-4" />
+                      Create Form
+                    </Link>
+                  </Card>
+
+                  <Card className="p-6 bg-gradient-to-br from-emerald-50 to-green-50 border-emerald-200">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="bg-emerald-100 p-2 rounded-lg">
+                        <Users className="h-5 w-5 text-emerald-600" />
+                      </div>
+                      <h4 className="text-lg font-semibold text-emerald-900">Assign to Team</h4>
+                    </div>
+                    <p className="text-emerald-700 mb-4">Assign forms to team members</p>
+                    <Link 
+                      href="/protected/user-management"
+                      className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg transition-colors"
+                    >
+                      <Users className="h-4 w-4" />
+                      Manage Team
+                    </Link>
+                  </Card>
+
+                  <Card className="p-6 bg-gradient-to-br from-amber-50 to-orange-50 border-amber-200">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="bg-amber-100 p-2 rounded-lg">
+                        <BarChart3 className="h-5 w-5 text-amber-600" />
+                      </div>
+                      <h4 className="text-lg font-semibold text-amber-900">Track Progress</h4>
+                    </div>
+                    <p className="text-amber-700 mb-4">Monitor team form completion</p>
+                    <Link 
+                      href="/protected/Audit"
+                      className="inline-flex items-center gap-2 bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-lg transition-colors"
+                    >
+                      <BarChart3 className="h-4 w-4" />
+                      View Reports
+                    </Link>
+                  </Card>
+                </div>
+              </div>
+
+              {/* Recent Form Activity for Manager */}
+              <div className="space-y-6">
+                <h3 className="text-xl font-semibold text-slate-700">Recent Form Activity</h3>
+                <Card className="p-6">
+                  <div className="space-y-4">
+                    {dashboardData.checklistResponses
+                      .filter(response => 
+                        // Filter responses from team members under this manager
+                        dashboardData.userProfiles.some(profile => 
+                          profile.id === response.user_id && profile.manager_id === user.id
+                        )
+                      )
+                      .slice(0, 8)
+                      .map((response, index) => {
+                        const user = dashboardData.userProfiles.find(profile => profile.id === response.user_id);
+                        const form = formsData?.find(form => form.id === response.form_id);
+                        
+                        return (
+                          <div key={index} className="flex items-center justify-between p-4 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors">
+                            <div className="flex items-center gap-4">
+                              <div className="w-10 h-10 bg-gradient-to-br from-purple-100 to-indigo-100 rounded-full flex items-center justify-center">
+                                <span className="text-purple-600 font-semibold text-sm">
+                                  {user?.full_name?.charAt(0) || 'U'}
+                                </span>
+                              </div>
+                              <div>
+                                <div className="font-medium text-slate-900">
+                                  {user?.full_name || 'Unknown User'} completed {form?.name || 'a form'}
+                                </div>
+                                <div className="text-sm text-slate-600">
+                                  {safeFormatDistanceToNow(response.created_at)}
+                                </div>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <span className={`px-3 py-1 rounded-lg text-sm font-medium ${
+                                response.result === 'pass' 
+                                  ? 'bg-emerald-100 text-emerald-700' 
+                                  : response.result === 'failed'
+                                  ? 'bg-red-100 text-red-700'
+                                  : 'bg-amber-100 text-amber-700'
+                              }`}>
+                                {response.result || response.status}
+                              </span>
+                              <Link 
+                                href={`/protected/checklist-responses/${response.id}`}
+                                className="text-slate-400 hover:text-purple-600 transition-colors"
+                              >
+                                <ArrowUpRight className="h-4 w-4" />
+                              </Link>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    
+                    {dashboardData.checklistResponses.filter(response => 
+                      dashboardData.userProfiles.some(profile => 
+                        profile.id === response.user_id && profile.manager_id === user.id
+                      )
+                    ).length === 0 && (
+                      <div className="text-center py-8">
+                        <CheckSquare className="h-12 w-12 text-slate-300 mx-auto mb-3" />
+                        <p className="text-slate-600">No recent form activity from your team</p>
+                      </div>
+                    )}
+                  </div>
+                </Card>
+              </div>
+
+              {/* Team Performance Overview */}
               <div className="space-y-6">
                 <h3 className="text-xl font-semibold text-slate-700">Team Performance & Workload</h3>
                 
@@ -830,9 +1151,8 @@ export default async function ProtectedPage() {
                     .map((response, index) => (
                       <div key={index} className="flex items-center justify-between p-3 bg-white rounded-lg border border-sky-200">
                         <div>
-                          <p className="font-medium text-slate-900">Checklist Response</p>
-                          <p className="text-sm text-slate-600">
-                            {formatDistanceToNow(new Date(response.created_at), { addSuffix: true })}
+                          <p className="font-medium text-slate-900">Checklist Response</p>                          <p className="text-sm text-slate-600">
+                            {safeFormatDistanceToNow(response.created_at)}
                           </p>
                         </div>
                         <span className={`px-3 py-1 rounded-lg text-sm font-medium ${
@@ -857,6 +1177,22 @@ export default async function ProtectedPage() {
               </Card>
             </div>
           )}
+        </div>
+
+        {/* Real-time Dashboard Section */}
+        <div className="space-y-8">
+          <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-3">
+            <div className="bg-emerald-100 p-2 rounded-lg">
+              <Activity className="h-6 w-6 text-emerald-600" />
+            </div>
+            Real-time Dashboard - Live Data Updates
+          </h2>
+          
+          <RealtimeDashboardWrapper 
+            initialDashboardData={dashboardData}
+            userRole={userRole}
+            userProfile={userProfile}
+          />
         </div>
 
         {/* Main Dashboard Content */}
@@ -894,9 +1230,8 @@ export default async function ProtectedPage() {
                             <span className="text-sky-600 font-bold text-sm">#{index + 1}</span>
                           </div>
                           <div>
-                            <h4 className="font-semibold text-slate-900 group-hover:text-sky-900 transition-colors">{framework.name}</h4>
-                            <p className="text-sm text-slate-500">
-                              Created {formatDistanceToNow(new Date(framework.created_at), { addSuffix: true })}
+                            <h4 className="font-semibold text-slate-900 group-hover:text-sky-900 transition-colors">{framework.name}</h4>                            <p className="text-sm text-slate-600">
+                              Created {safeFormatDistanceToNow(framework.created_at)}
                             </p>
                           </div>
                         </div>
@@ -958,7 +1293,7 @@ export default async function ProtectedPage() {
                   
                   <div className="relative z-10">
                     <div className="flex items-center gap-4 mb-4">
-                      <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center border border-white/30">
+                      <div className="bg-white/20 backdrop-blur-sm p-3 rounded-xl border border-white/30">
                         <Users className="h-6 w-6" />
                       </div>
                       <div>
@@ -986,10 +1321,9 @@ export default async function ProtectedPage() {
                   </div>
                   
                   <div className="flex items-center justify-between p-3 bg-slate-50 rounded-xl">
-                    <span className="text-sm font-medium text-slate-700">Last active</span>
-                    <span className="text-sm font-semibold text-slate-900">
+                    <span className="text-sm font-medium text-slate-700">Last active</span>                    <span className="text-sm font-semibold text-slate-900">
                       {userProfile.last_sign_in_at 
-                        ? formatDistanceToNow(new Date(userProfile.last_sign_in_at), { addSuffix: true })
+                        ? safeFormatDistanceToNow(userProfile.last_sign_in_at)
                         : 'Never'}
                     </span>
                   </div>
