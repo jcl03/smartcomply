@@ -446,13 +446,13 @@ export default function AuditHistoryComponent({ audits, isManager, currentUserId
               </table>
             </body>
           </html>
-        `;
-        printWindow.document.write(htmlContent);
+        `;        printWindow.document.write(htmlContent);
         printWindow.document.close();
         printWindow.print();
       }
     }
   };
+
   const getVerificationBadge = (verificationStatus: string | null) => {
     if (verificationStatus === 'accepted') {
       return <Badge className="bg-gradient-to-r from-green-100 to-emerald-100 text-green-800 border-green-200/60 font-semibold px-2 py-1 text-xs shadow-sm">VERIFIED</Badge>;
@@ -464,6 +464,7 @@ export default function AuditHistoryComponent({ audits, isManager, currentUserId
       return <Badge className="bg-gradient-to-r from-gray-100 to-slate-100 text-gray-600 border-gray-200/60 font-semibold px-2 py-1 text-xs shadow-sm">NOT REVIEWED</Badge>;
     }
   };
+
   return (
     <div className="space-y-6">
       {/* Reject Audit Dialog */}
@@ -1000,18 +1001,25 @@ export default function AuditHistoryComponent({ audits, isManager, currentUserId
                                         </Button>
                                       </>
                                     ) : (
-                                      <>
-                                        {/* Show corrective action if rejected */}
-                                        {audit.verification_status === 'rejected' && audit.corrective_action && (                                          <Dialog>
+                                      <>                                        {/* Show corrective action if rejected */}
+                                        {audit.verification_status === 'rejected' && audit.corrective_action && (
+                                          <Dialog>
                                             <DialogTrigger asChild>
                                               <Button
                                                 size="sm"
                                                 variant="outline"
                                                 className="bg-yellow-50 hover:bg-yellow-100 text-yellow-700 border-yellow-200 p-1 h-8 w-8"
                                               >
-                                          >
-                                            <AlertTriangle className="h-4 w-4" />
-                                          </Button>
+                                                <AlertTriangle className="h-4 w-4" />
+                                              </Button>
+                                            </DialogTrigger>
+                                            <DialogContent>
+                                              <DialogHeader>
+                                                <DialogTitle>Corrective Action Required</DialogTitle>
+                                              </DialogHeader>
+                                              <p className="text-sm text-gray-600">{audit.corrective_action}</p>
+                                            </DialogContent>
+                                          </Dialog>
                                         )}
                                         
                                         {/* Reset Button */}
