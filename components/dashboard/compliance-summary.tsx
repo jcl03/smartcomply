@@ -17,6 +17,7 @@ interface ComplianceSummaryData {
   totalAudits: number;
   completedAudits: number;
   pendingAudits: number;
+  draftAudits: number;
   overdueAudits: number;
   passedAudits: number;
   failedAudits: number;
@@ -41,11 +42,17 @@ interface ComplianceSummaryProps {
 const PIE_COLORS = ['#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
 
 export default function ComplianceSummary({ data, userRole }: ComplianceSummaryProps) {
-  const pieData = [
+  // Chart 1: Audit Results Distribution (from result column)
+  const resultData = [
     { name: 'Passed', value: data.passedAudits, color: '#10b981' },
-    { name: 'Pending', value: data.pendingAudits, color: '#f59e0b' },
     { name: 'Failed', value: data.failedAudits, color: '#ef4444' },
+  ].filter(item => item.value > 0);
+  // Chart 2: Audit Status Distribution (from status column)
+  const statusData = [
+    { name: 'Pending', value: data.pendingAudits, color: '#f59e0b' },
+    { name: 'Draft', value: data.draftAudits, color: '#94a3b8' },
     { name: 'Overdue', value: data.overdueAudits, color: '#8b5cf6' },
+    { name: 'Completed', value: data.completedAudits, color: '#6366f1' },
   ].filter(item => item.value > 0);
 
   const getTrendIcon = () => {
@@ -169,8 +176,66 @@ export default function ComplianceSummary({ data, userRole }: ComplianceSummaryP
       </div>
 
       {/* Charts Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Audit Status Distribution */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">        {/* Audit Results Distribution (from result column) */}
+        <Card className="bg-white/90 backdrop-blur-md border-slate-200/50 rounded-2xl shadow-xl overflow-hidden">
+          <div className="p-6 border-b border-slate-200">
+            <h3 className="text-lg font-bold text-slate-800 flex items-center gap-3">
+              <div className="bg-green-100 p-2 rounded-lg">
+                <CheckCircle className="h-5 w-5 text-green-600" />
+              </div>
+              Audit Results Distribution
+            </h3>
+          </div>
+          
+          <div className="p-6">
+            {resultData.length > 0 ? (
+              <div className="flex flex-col lg:flex-row items-center gap-6">
+                <div className="w-full lg:w-1/2">
+                  <ResponsiveContainer width="100%" height={200}>
+                    <PieChart>
+                      <Pie
+                        data={resultData}
+                        cx="50%"
+                        cy="50%"
+                        outerRadius={80}
+                        dataKey="value"
+                        label={({ name, value }) => `${name}: ${value}`}
+                        labelLine={false}
+                      >
+                        {resultData.map((entry, index) => (
+                          <Cell key={`result-cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <Tooltip />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+                
+                <div className="w-full lg:w-1/2 space-y-3">
+                  {resultData.map((item, index) => (
+                    <div key={`result-legend-${index}`} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <div 
+                          className="w-4 h-4 rounded-full" 
+                          style={{ backgroundColor: item.color }}
+                        />
+                        <span className="font-medium text-slate-700">{item.name}</span>
+                      </div>
+                      <span className="font-bold text-slate-900">{item.value}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <CheckCircle className="h-12 w-12 text-slate-300 mx-auto mb-3" />
+                <p className="text-slate-500">No audit results available</p>
+              </div>
+            )}
+          </div>
+        </Card>
+
+        {/* Audit Status Distribution (from status column) */}
         <Card className="bg-white/90 backdrop-blur-md border-slate-200/50 rounded-2xl shadow-xl overflow-hidden">
           <div className="p-6 border-b border-slate-200">
             <h3 className="text-lg font-bold text-slate-800 flex items-center gap-3">
@@ -182,13 +247,13 @@ export default function ComplianceSummary({ data, userRole }: ComplianceSummaryP
           </div>
           
           <div className="p-6">
-            {pieData.length > 0 ? (
+            {statusData.length > 0 ? (
               <div className="flex flex-col lg:flex-row items-center gap-6">
                 <div className="w-full lg:w-1/2">
                   <ResponsiveContainer width="100%" height={200}>
                     <PieChart>
                       <Pie
-                        data={pieData}
+                        data={statusData}
                         cx="50%"
                         cy="50%"
                         outerRadius={80}
@@ -196,8 +261,8 @@ export default function ComplianceSummary({ data, userRole }: ComplianceSummaryP
                         label={({ name, value }) => `${name}: ${value}`}
                         labelLine={false}
                       >
-                        {pieData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        {statusData.map((entry, index) => (
+                          <Cell key={`status-cell-${index}`} fill={entry.color} />
                         ))}
                       </Pie>
                       <Tooltip />
@@ -206,8 +271,8 @@ export default function ComplianceSummary({ data, userRole }: ComplianceSummaryP
                 </div>
                 
                 <div className="w-full lg:w-1/2 space-y-3">
-                  {pieData.map((item, index) => (
-                    <div key={index} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                  {statusData.map((item, index) => (
+                    <div key={`status-legend-${index}`} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
                       <div className="flex items-center gap-3">
                         <div 
                           className="w-4 h-4 rounded-full" 
@@ -223,7 +288,7 @@ export default function ComplianceSummary({ data, userRole }: ComplianceSummaryP
             ) : (
               <div className="text-center py-8">
                 <Activity className="h-12 w-12 text-slate-300 mx-auto mb-3" />
-                <p className="text-slate-500">No audit data available</p>
+                <p className="text-slate-500">No audit status data available</p>
               </div>
             )}
           </div>

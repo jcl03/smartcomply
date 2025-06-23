@@ -12,7 +12,7 @@ interface BreadcrumbWrapperProps {
 export default function ChecklistAddBreadcrumbWrapper({ children, complianceId, complianceName }: BreadcrumbWrapperProps) {
   useBreadcrumbSetter([
     { label: "Compliance", href: "/protected/compliance" },
-    { label: complianceName || "Framework", href: `/protected/compliance/${complianceId}` },
+    { label: complianceName || "Framework", href: "/protected/compliance" },
     { label: "Checklists", href: `/protected/compliance/${complianceId}/checklists` },
     { label: "Add Checklist", href: `/protected/compliance/${complianceId}/checklists/add` }
   ]);

@@ -123,23 +123,11 @@ export default function AuditHistoryComponent({ audits, isManager, currentUserId
       user_id: a.user_id,
       user_profile: a.user_profile
     })));
-  }, [audits]);  // Filter audits based on status filter and search query
+  }, [audits]);
+
+  // Filter audits based on status filter and search query
   const filteredAudits = audits.filter(audit => {
-    let matchesStatus = false;
-    
-    if (statusFilter === "all") {
-      matchesStatus = true;
-    } else if (statusFilter === "pending") {
-      // Include both "pending" and "in_progress" statuses for pending filter
-      matchesStatus = audit.status === "pending" || audit.status === "in_progress";
-    } else if (statusFilter === "in_progress") {
-      // Show only in_progress audits
-      matchesStatus = audit.status === "in_progress";
-    } else {
-      // Exact match for other filters (completed, draft)
-      matchesStatus = audit.status === statusFilter;
-    }
-    
+    const matchesStatus = statusFilter === "all" || audit.status === statusFilter;
     const auditTitle = audit.title || `Audit #${audit.id}`;
     const matchesSearch = searchQuery === "" || 
       auditTitle.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -590,7 +578,8 @@ export default function AuditHistoryComponent({ audits, isManager, currentUserId
                 <Filter className="h-4 w-4 text-slate-500" />
                 <span>Status:</span>
               </div>
-                <div className="flex flex-wrap gap-1">
+              
+              <div className="flex flex-wrap gap-1">
                 <Button 
                   size="sm" 
                   variant={statusFilter === "all" ? "default" : "outline"}
@@ -622,14 +611,6 @@ export default function AuditHistoryComponent({ audits, isManager, currentUserId
                   onClick={() => setStatusFilter("pending")}
                 >
                   Pending
-                </Button>
-                <Button 
-                  size="sm" 
-                  variant={statusFilter === "in_progress" ? "default" : "outline"}
-                  className="h-7 text-xs font-medium"
-                  onClick={() => setStatusFilter("in_progress")}
-                >
-                  In Progress
                 </Button>
               </div>
             </div>

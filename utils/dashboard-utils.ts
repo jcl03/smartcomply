@@ -25,6 +25,7 @@ export interface ProcessedSummaryData {
   totalAudits: number;
   completedAudits: number;
   pendingAudits: number;
+  draftAudits: number;
   overdueAudits: number;
   passedAudits: number;
   failedAudits: number;
@@ -170,21 +171,25 @@ export function processComplianceSummaryData(
   audits: any[], 
   checklistResponses: any[], 
   compliance: any[]
-): ProcessedSummaryData {
-  // Combine all compliance items
+): ProcessedSummaryData {  // Combine all compliance items
   const allItems = [...audits, ...checklistResponses];
+  // Use only audits for status distribution counts
+  const auditItems = audits;
   
   const totalAudits = allItems.length;
-  const completedAudits = allItems.filter(item => 
-    item.status === 'completed' || item.result === 'pass' || item.result === 'failed'
+  const completedAudits = auditItems.filter(item => 
+    item.status === 'completed'
   ).length;
   
-  const pendingAudits = allItems.filter(item => 
+  const pendingAudits = auditItems.filter(item => 
     item.status === 'pending' || item.status === 'in_progress'
   ).length;
   
-  const now = new Date();
-  const overdueAudits = allItems.filter(item => {
+  const draftAudits = auditItems.filter(item => 
+    item.status === 'draft'
+  ).length;
+    const now = new Date();
+  const overdueAudits = auditItems.filter(item => {
     const createdDate = parseISO(item.created_at);
     const daysDiff = Math.floor((now.getTime() - createdDate.getTime()) / (1000 * 60 * 60 * 24));
     return item.status !== 'completed' && daysDiff > 14;
@@ -267,11 +272,11 @@ export function processComplianceSummaryData(
     : trendPercentage > 0 
       ? 'up' 
       : 'down';
-
   return {
     totalAudits,
     completedAudits,
     pendingAudits,
+    draftAudits,
     overdueAudits,
     passedAudits,
     failedAudits,

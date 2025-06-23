@@ -338,45 +338,49 @@ export default async function ProtectedPage() {
                       </div>
                     </div>
                   </Card>
-                  
-                  <Card className="p-6">
-                    <h4 className="text-lg font-semibold mb-4">Schema Performance</h4>
-                    <div className="space-y-3">                      <div className="flex justify-between">
-                        <span className="text-sm">Active Templates</span>
+                    <Card className="p-6">
+                    <h4 className="text-lg font-semibold mb-4">Compliance Performance</h4>
+                    <div className="space-y-3">
+                      <div className="flex justify-between">
+                        <span className="text-sm">Active Compliance Frameworks</span>
                         <span className="font-semibold">{dashboardData.compliance.length}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-sm">Completion Rate</span>
-                        <span className="font-semibold text-green-600">94%</span>
+                        <span className={`font-semibold ${complianceSummaryData.complianceRate >= 90 ? 'text-green-600' : complianceSummaryData.complianceRate >= 70 ? 'text-blue-600' : 'text-amber-600'}`}>
+                          {complianceSummaryData.complianceRate.toFixed(1)}%
+                        </span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-sm">Schema Updates</span>
-                        <span className="font-semibold">12 this month</span>
+                        <span className="text-sm">Passed Audits</span>
+                        <span className="font-semibold text-green-600">{complianceSummaryData.passedAudits}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-sm">User Feedback Score</span>
-                        <span className="font-semibold text-blue-600">4.8/5</span>
+                        <span className="text-sm">Average Score</span>
+                        <span className={`font-semibold ${complianceSummaryData.averageScore >= 90 ? 'text-green-600' : complianceSummaryData.averageScore >= 70 ? 'text-blue-600' : 'text-amber-600'}`}>
+                          {complianceSummaryData.averageScore.toFixed(1)}%
+                        </span>
                       </div>
                     </div>
                   </Card>
-                  
-                  <Card className="p-6">
+                    <Card className="p-6">
                     <h4 className="text-lg font-semibold mb-4">System Health</h4>
                     <div className="space-y-3">
                       <div className="flex justify-between">
-                        <span className="text-sm">Uptime</span>
-                        <span className="font-semibold text-green-600">99.9%</span>
-                      </div>                      <div className="flex justify-between">
                         <span className="text-sm">Active Users</span>
                         <span className="font-semibold">{dashboardData.userProfiles.length}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-sm">API Calls/min</span>
-                        <span className="font-semibold">145</span>
+                        <span className="text-sm">Total Audits</span>
+                        <span className="font-semibold">{dashboardData.audits.length}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-sm">Storage Used</span>
-                        <span className="font-semibold">2.4 GB</span>
+                        <span className="text-sm">Total Compliance Items</span>
+                        <span className="font-semibold">{dashboardData.compliance.length}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-sm">Checklist Responses</span>
+                        <span className="font-semibold">{dashboardData.checklistResponses.length}</span>
                       </div>
                     </div>
                   </Card>
