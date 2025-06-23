@@ -23,7 +23,8 @@ import {
   Users,
   AlertTriangle,
   CheckSquare, 
-  ListChecks
+  ListChecks,
+  XCircle
 } from "lucide-react";
 import { redirect } from "next/navigation";
 import { Card } from "@/components/ui/card";
@@ -423,17 +424,90 @@ export default async function ProtectedPage() {
                 </div>
                 Manager Dashboard - Operational Oversight & Team Performance
               </h2>
-              
-              {/* Team Performance Overview */}
+                {/* Team Performance Overview */}
               <div className="space-y-6">
                 <h3 className="text-xl font-semibold text-slate-700">Team Performance & Workload</h3>
-                <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
-                  <AuditorPerformanceChart 
-                    data={auditorPerformanceData} 
-                    showDetails={true}
-                  />
-                  <WorkloadBalance data={workloadData} userRole={userRole} viewType="team" />
-                </div>
+                
+                {/* Auditor Performance Metrics */}
+                <Card className="p-6 bg-gradient-to-r from-slate-50 to-slate-100 border-slate-200">
+                  <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center gap-3">
+                      <div className="bg-slate-600 p-2 rounded-lg">
+                        <TrendingUp className="h-6 w-6 text-white" />
+                      </div>
+                      <div>
+                        <h4 className="text-lg font-semibold text-slate-800">Auditor Performance</h4>
+                        <p className="text-sm text-slate-600">Audit completion and quality metrics</p>
+                      </div>
+                    </div>
+                    <div className="bg-slate-600 text-white px-3 py-1 rounded-lg text-sm font-medium">
+                      {auditorPerformanceData.length} Auditors
+                    </div>
+                  </div>
+                  
+                  {/* Performance Metrics Grid */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                    <div className="bg-white p-4 rounded-lg border border-emerald-200 text-center">
+                      <div className="flex items-center justify-center mb-2">
+                        <CheckCircle className="h-5 w-5 text-emerald-600" />
+                      </div>
+                      <div className="text-2xl font-bold text-emerald-900">
+                        {auditorPerformanceData.reduce((sum, auditor) => sum + auditor.completed, 0)}
+                      </div>
+                      <div className="text-sm text-emerald-600 font-medium">Completed</div>
+                    </div>
+                    
+                    <div className="bg-white p-4 rounded-lg border border-amber-200 text-center">
+                      <div className="flex items-center justify-center mb-2">
+                        <Clock className="h-5 w-5 text-amber-600" />
+                      </div>
+                      <div className="text-2xl font-bold text-amber-900">
+                        {auditorPerformanceData.reduce((sum, auditor) => sum + auditor.overdue, 0)}
+                      </div>
+                      <div className="text-sm text-amber-600 font-medium">Overdue</div>
+                    </div>
+                    
+                    <div className="bg-white p-4 rounded-lg border border-red-200 text-center">
+                      <div className="flex items-center justify-center mb-2">
+                        <XCircle className="h-5 w-5 text-red-600" />
+                      </div>
+                      <div className="text-2xl font-bold text-red-900">
+                        {auditorPerformanceData.reduce((sum, auditor) => sum + auditor.rejected, 0)}
+                      </div>
+                      <div className="text-sm text-red-600 font-medium">Rejected</div>
+                    </div>
+                    
+                    <div className="bg-white p-4 rounded-lg border border-blue-200 text-center">
+                      <div className="flex items-center justify-center mb-2">
+                        <Users className="h-5 w-5 text-blue-600" />
+                      </div>
+                      <div className="text-2xl font-bold text-blue-900">
+                        {auditorPerformanceData.length > 0 
+                          ? Math.round(auditorPerformanceData.reduce((sum, auditor) => 
+                              sum + (auditor.completed / (auditor.completed + auditor.overdue + auditor.rejected) * 100 || 0), 0
+                            ) / auditorPerformanceData.length) 
+                          : 0}%
+                      </div>
+                      <div className="text-sm text-blue-600 font-medium">Avg Pass Rate</div>
+                    </div>
+                  </div>
+                  
+                  {auditorPerformanceData.length === 0 ? (
+                    <div className="text-center py-8">
+                      <Users className="h-12 w-12 text-slate-300 mx-auto mb-3" />
+                      <h3 className="text-lg font-medium text-slate-600 mb-2">No Auditor Data</h3>
+                      <p className="text-slate-500">No auditor performance data available yet. Data will appear as audits are completed.</p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                      <AuditorPerformanceChart 
+                        data={auditorPerformanceData} 
+                        showDetails={true}
+                      />
+                      <WorkloadBalance data={workloadData} userRole={userRole} viewType="team" />
+                    </div>
+                  )}
+                </Card>
               </div>
 
               {/* Audit Pipeline & Compliance Status */}

@@ -592,13 +592,14 @@ export default async function Page(props: any) {
 
           <CardContent className="p-0">
             {responses && responses.length > 0 ? (
-              <div className="overflow-hidden">
-                <table className="w-full">
-                  <thead className="bg-sky-50 border-b border-sky-100">                    <tr>
+              <div className="overflow-hidden">                <table className="w-full">
+                  <thead className="bg-sky-50 border-b border-sky-100">
+                    <tr>
                       <th className="text-left p-4 font-semibold text-sky-700">Checklist</th>
                       <th className="text-left p-4 font-semibold text-sky-700">Status</th>
                       <th className="text-left p-4 font-semibold text-sky-700">Progress</th>
-                      <th className="text-left p-4 font-semibold text-sky-700">Framework</th>                      {['admin', 'manager'].includes(fullUserProfile.role) && (
+                      <th className="text-left p-4 font-semibold text-sky-700">Framework</th>
+                      {['admin', 'manager'].includes(fullUserProfile.role) && (
                         <th className="text-left p-4 font-semibold text-sky-700">Submitted By</th>
                       )}
                       <th className="text-left p-4 font-semibold text-sky-700">Submitted</th>
@@ -619,9 +620,9 @@ export default async function Page(props: any) {
                                  checklistInfo[response.checklist_id]?.checklist_schema?.title || 
                                  `Checklist ${response.checklist_id}`}
                               </p>
-                              <p className="text-xs text-slate-500">ID: {response.id}</p>
-                            </div>
-                          </div>                        </td>
+                              <p className="text-xs text-slate-500">ID: {response.id}</p>                            </div>
+                          </div>
+                        </td>
                         <td className="p-4">
                           {getStatusBadge(response.status)}
                         </td>
@@ -656,7 +657,8 @@ export default async function Page(props: any) {
                               </div>
                             );
                           })()}
-                        </td>                        <td className="p-4">
+                        </td>
+                        <td className="p-4">
                           <FilterByCompliance
                             complianceId={checklistInfo[response.checklist_id]?.compliance?.id}
                             isFiltered={!!complianceFilter && checklistInfo[response.checklist_id]?.compliance?.id.toString() === complianceFilter}
@@ -685,9 +687,9 @@ export default async function Page(props: any) {
                             </p>
                             <p className="text-xs text-slate-500">
                               {formatDistanceToNow(new Date(response.created_at), { addSuffix: true })}
-                            </p>
-                          </div>
-                        </td>                        <td className="p-4">
+                            </p>                          </div>
+                        </td>
+                        <td className="p-4">
                           <Link
                             href={`/protected/checklist/${response.id}`}
                             className="px-3 py-1.5 text-xs font-medium bg-sky-50 text-sky-700 rounded-lg hover:bg-sky-100 transition-all duration-200 border border-sky-200 inline-flex items-center gap-2"
