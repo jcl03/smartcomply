@@ -45,7 +45,7 @@ interface DashboardLayoutProps {
 const navigation = [
   { name: "Dashboard", href: "/protected", icon: Home },
   { name: "User Management", href: "/protected/user-management", icon: Users, adminOrManagerOnly: true },
-  { name: "Tenant Management", href: "/protected/tenant", icon: Folder, adminOnly: true },
+  { name: "Team Management", href: "/protected/tenant", icon: Folder, adminOnly: true },
   { name: "Compliance", href: "/protected/compliance", icon: Shield },
   { name: "Checklists", href: "/protected/checklist", icon: FileText, managerOnly: true },
   { name: "Audits", href: "/protected/Audit", icon: CheckCircle, excludeForAdmin: true },

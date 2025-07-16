@@ -8,7 +8,9 @@ import {
   Activity,
   Calendar,
   FileText,
-  XCircle
+  XCircle,
+  Users,
+  Info
 } from "lucide-react";
 
 export default async function AuditPage() {
@@ -37,16 +39,16 @@ export default async function AuditPage() {
     const { data: tableCheck, error: tableError } = await supabase
       .from('audit')
       .select('id')
-      .limit(1);    if (tableError) {
-      if (process.env.NODE_ENV === 'development') {
-        console.log("Audit table check failed:", tableError);
-        console.log("Table error details:", {
-          message: tableError.message,
-          details: tableError.details,
-          hint: tableError.hint,
-          code: tableError.code
-        });
-      }
+      .limit(1);
+
+    if (tableError) {
+      console.log("Audit table check failed:", tableError);
+      console.log("Table error details:", {
+        message: tableError.message,
+        details: tableError.details,
+        hint: tableError.hint,
+        code: tableError.code
+      });
       // Table doesn't exist or has issues, use empty array
       throw new Error("Audit table not accessible");
     }
@@ -90,45 +92,37 @@ export default async function AuditPage() {
       auditsQuery = auditsQuery.eq('user_id', user.id);
     }
     
-    const { data: audits, error } = await auditsQuery;    if (error) {
+    const { data: audits, error } = await auditsQuery;
+
+    if (error) {
       console.error("Error fetching audits:", error);
-      if (process.env.NODE_ENV === 'development') {
-        console.error("Detailed error information:", {
-          message: error.message || 'No message',
-          details: error.details || 'No details',
-          hint: error.hint || 'No hint',
-          code: error.code || 'No code',
-          fullError: JSON.stringify(error, null, 2)
-        });
-      }
+      console.error("Detailed error information:", {
+        message: error.message || 'No message',
+        details: error.details || 'No details',
+        hint: error.hint || 'No hint',
+        code: error.code || 'No code',
+        fullError: JSON.stringify(error, null, 2)
+      });
       throw error;
     }
 
-    if (process.env.NODE_ENV === 'development') {
-      console.log(`Successfully fetched ${audits?.length || 0} audits`);
-    }
+    console.log(`Successfully fetched ${audits?.length || 0} audits`);
   
-    let auditsWithProfiles: any[] = [];    if (!audits || audits.length === 0) {
-      if (process.env.NODE_ENV === 'development') {
-        console.log("No audit records found in database");
-      }
+    let auditsWithProfiles: any[] = [];
+
+    if (!audits || audits.length === 0) {
+      console.log("No audit records found in database");
       auditsWithProfiles = [];
     } else {
       // Process real audits with user profiles
-      if (process.env.NODE_ENV === 'development') {
-        console.log(`Processing ${audits.length} real audit records`);
-      }
+      console.log(`Processing ${audits.length} real audit records`);
       
       // Use the new API function to fetch profiles
       const userIds = Array.from(new Set(audits.map(audit => audit.user_id)));
-      if (process.env.NODE_ENV === 'development') {
-        console.log("Fetching profiles for user IDs:", userIds);
-      }
+      console.log("Fetching profiles for user IDs:", userIds);
       
       const profiles = await getUserProfiles(userIds);
-      if (process.env.NODE_ENV === 'development') {
-        console.log(`Retrieved ${profiles.length} user profiles`);
-      }
+      console.log(`Retrieved ${profiles.length} user profiles`);
 
       // Merge profiles with audits
       auditsWithProfiles = audits.map(audit => {
@@ -145,16 +139,15 @@ export default async function AuditPage() {
               (user.email || userProfile?.email || '') : 
               ''
           }
-        };      });
+        };
+      });
       
-      if (process.env.NODE_ENV === 'development') {
-        console.log("Final audits with profiles:", auditsWithProfiles.map(a => ({ 
-          id: a.id, 
-          user_id: a.user_id, 
-          user_name: a.user_profile?.full_name,
-          has_profile: !!a.user_profile
-        })));
-      }
+      console.log("Final audits with profiles:", auditsWithProfiles.map(a => ({ 
+        id: a.id, 
+        user_id: a.user_id, 
+        user_name: a.user_profile?.full_name,
+        has_profile: !!a.user_profile
+      })));
     }
 
     return (

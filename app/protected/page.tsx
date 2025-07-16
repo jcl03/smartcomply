@@ -509,7 +509,7 @@ export default async function ProtectedPage() {
                           dashboardData.audits.some(audit => 
                             audit.form_id === form.id && 
                             dashboardData.userProfiles.some(profile => 
-                              profile.id === audit.auditor_id && profile.manager_id === user.id
+                              profile.id === audit.user_id && profile.manager_id === user.id
                             )
                           )
                         ).length || 0} Forms
@@ -521,7 +521,7 @@ export default async function ProtectedPage() {
                         dashboardData.audits.some(audit => 
                           audit.form_id === form.id && 
                           dashboardData.userProfiles.some(profile => 
-                            profile.id === audit.auditor_id && profile.manager_id === user.id
+                            profile.id === audit.user_id && profile.manager_id === user.id
                           )
                         )
                       ).slice(0, 6).map((form, index) => (
@@ -557,10 +557,9 @@ export default async function ProtectedPage() {
                     <div className="flex items-center justify-between mb-4">
                       <h4 className="text-lg font-semibold">Team Compliance Status</h4>
                       <span className="bg-emerald-100 text-emerald-700 px-3 py-1 rounded-lg text-sm font-medium">
-                        {(() => {
-                          const teamAudits = dashboardData.audits.filter(audit => 
-                            dashboardData.userProfiles.some(profile => 
-                              profile.id === audit.auditor_id && profile.manager_id === user.id
+                        {(() => {                          const teamAudits = dashboardData.audits.filter(audit =>
+                            dashboardData.userProfiles.some(profile =>
+                              profile.id === audit.user_id && profile.manager_id === user.id
                             )
                           );
                           const completedAudits = teamAudits.filter(audit => audit.status === 'completed');
@@ -575,7 +574,7 @@ export default async function ProtectedPage() {
                         .filter(profile => profile.manager_id === user.id)
                         .slice(0, 5)
                         .map((teamMember, index) => {
-                          const memberAudits = dashboardData.audits.filter(audit => audit.auditor_id === teamMember.id);
+                          const memberAudits = dashboardData.audits.filter(audit => audit.user_id === teamMember.id);
                           const completedAudits = memberAudits.filter(audit => audit.status === 'completed');
                           const completionRate = memberAudits.length > 0 ? (completedAudits.length / memberAudits.length) * 100 : 0;
                           
@@ -691,7 +690,7 @@ export default async function ProtectedPage() {
                       .slice(0, 8)
                       .map((response, index) => {
                         const user = dashboardData.userProfiles.find(profile => profile.id === response.user_id);
-                        const form = formsData?.find(form => form.id === response.form_id);
+                        const compliance = response.checklist?.[0]?.compliance?.[0]?.name;
                         
                         return (
                           <div key={index} className="flex items-center justify-between p-4 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors">
@@ -703,7 +702,7 @@ export default async function ProtectedPage() {
                               </div>
                               <div>
                                 <div className="font-medium text-slate-900">
-                                  {user?.full_name || 'Unknown User'} completed {form?.name || 'a form'}
+                                  {user?.full_name || 'Unknown User'} completed {compliance || 'a checklist'}
                                 </div>
                                 <div className="text-sm text-slate-600">
                                   {safeFormatDistanceToNow(response.created_at)}

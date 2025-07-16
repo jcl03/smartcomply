@@ -445,6 +445,7 @@ export async function getDashboardData(userRole: string, userId?: string) {
       .select(`
         id,
         user_id,
+        form_id,
         status,
         created_at,
         result,
@@ -485,11 +486,11 @@ export async function getDashboardData(userRole: string, userId?: string) {
     const { data: checklistResponses } = await checklistQuery;
 
     // Get user profiles for admin dashboard
-    let userProfiles: { id: string; full_name: string; email: string; role: string; created_at: string; last_sign_in_at: string }[] = [];
+    let userProfiles: { id: string; full_name: string; email: string; role: string; created_at: string; last_sign_in_at: string; manager_id?: string }[] = [];
     if (userRole === 'admin') {
       const { data: profiles } = await supabase
         .from('view_user_profiles')
-        .select('id, full_name, email, role, created_at, last_sign_in_at');
+        .select('id, full_name, email, role, created_at, last_sign_in_at, manager_id');
       userProfiles = profiles || [];
     }
 

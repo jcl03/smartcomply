@@ -22,6 +22,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { format, formatDistanceToNow } from "date-fns";
 import Link from "next/link";
+import AuditRecommendations from "@/components/audit/audit-recommendations";
 import { generatePDF } from "@/utils/pdf-utils";
 
 interface AuditDetailData {
@@ -788,6 +789,35 @@ export default function AuditDetailView({ audit, isManager, currentUserId }: Aud
           </Card>
         )}
       </div>
+
+      {/* AI Recommendations for Failed Audits */}
+      {audit.result === 'failed' && (
+        <div className="mt-6">
+          <AuditRecommendations 
+            auditData={{
+              title: audit.title || `Audit #${audit.id}`,
+              status: audit.status,
+              findings: (() => {
+                const findings: string[] = [];
+                if (audit.audit_data && typeof audit.audit_data === 'object') {
+                  Object.entries(audit.audit_data).forEach(([key, value]) => {
+                    if (typeof value === 'object' && value !== null) {
+                      Object.entries(value).forEach(([fieldKey, fieldValue]) => {
+                        if (fieldValue === false || fieldValue === 'No' || fieldValue === '' || fieldValue === null) {
+                          findings.push(`${fieldKey}: ${fieldValue || 'Not completed'}`);
+                        }
+                      });
+                    }
+                  });
+                }
+                return findings.length > 0 ? findings : ['Audit failed - please review all responses'];
+              })(),
+              riskLevel: audit.percentage < 50 ? 'high' : audit.percentage < 70 ? 'medium' : 'low',
+              complianceArea: audit.form?.compliance?.name || 'General Compliance'
+            }}
+          />
+        </div>
+      )}
 
       {/* Hidden content for PDF generation - includes ALL tabs */}
       <div ref={pdfRef} className="hidden">

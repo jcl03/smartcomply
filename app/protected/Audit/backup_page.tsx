@@ -3,14 +3,13 @@ import { createClient } from "@/utils/supabase/server";
 import { redirect } from "next/navigation";
 import DashboardLayout from "@/components/dashboard/dashboard-layout";
 import AuditHistoryComponent from "@/components/audit/audit-history";
+import AuditFormResponses from "@/components/audit/audit-form-responses";
 import { Card } from "@/components/ui/card";
 import { 
   Activity,
   Calendar,
   FileText,
-  XCircle,
-  Users,
-  Info
+  XCircle
 } from "lucide-react";
 
 export default async function AuditPage() {
@@ -39,21 +38,19 @@ export default async function AuditPage() {
     const { data: tableCheck, error: tableError } = await supabase
       .from('audit')
       .select('id')
-      .limit(1);
-
-    if (tableError) {
-      console.log("Audit table check failed:", tableError);
-      console.log("Table error details:", {
-        message: tableError.message,
-        details: tableError.details,
-        hint: tableError.hint,
-        code: tableError.code
-      });
+      .limit(1);    if (tableError) {
+      if (process.env.NODE_ENV === 'development') {
+        console.log("Audit table check failed:", tableError);
+        console.log("Table error details:", {
+          message: tableError.message,
+          details: tableError.details,
+          hint: tableError.hint,
+          code: tableError.code
+        });
+      }
       // Table doesn't exist or has issues, use empty array
       throw new Error("Audit table not accessible");
-    }
-
-    // Use simple query without JOIN to avoid issues
+    }    // Use simple query without JOIN to avoid issues, but include form data
     let auditsQuery = supabase
       .from('audit')
       .select(`
@@ -72,7 +69,19 @@ export default async function AuditPage() {
         verified_by,
         verified_at,
         corrective_action,
-        tenant_id
+        tenant_id,
+        audit_data,
+        form:form_id (
+          id,
+          form_schema,
+          compliance_id,
+          status,
+          date_created,
+          compliance:compliance_id (
+            id,
+            name
+          )
+        )
       `)
       .order('created_at', { ascending: false });
 
@@ -92,37 +101,45 @@ export default async function AuditPage() {
       auditsQuery = auditsQuery.eq('user_id', user.id);
     }
     
-    const { data: audits, error } = await auditsQuery;
-
-    if (error) {
+    const { data: audits, error } = await auditsQuery;    if (error) {
       console.error("Error fetching audits:", error);
-      console.error("Detailed error information:", {
-        message: error.message || 'No message',
-        details: error.details || 'No details',
-        hint: error.hint || 'No hint',
-        code: error.code || 'No code',
-        fullError: JSON.stringify(error, null, 2)
-      });
+      if (process.env.NODE_ENV === 'development') {
+        console.error("Detailed error information:", {
+          message: error.message || 'No message',
+          details: error.details || 'No details',
+          hint: error.hint || 'No hint',
+          code: error.code || 'No code',
+          fullError: JSON.stringify(error, null, 2)
+        });
+      }
       throw error;
     }
 
-    console.log(`Successfully fetched ${audits?.length || 0} audits`);
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`Successfully fetched ${audits?.length || 0} audits`);
+    }
   
-    let auditsWithProfiles: any[] = [];
-
-    if (!audits || audits.length === 0) {
-      console.log("No audit records found in database");
+    let auditsWithProfiles: any[] = [];    if (!audits || audits.length === 0) {
+      if (process.env.NODE_ENV === 'development') {
+        console.log("No audit records found in database");
+      }
       auditsWithProfiles = [];
     } else {
       // Process real audits with user profiles
-      console.log(`Processing ${audits.length} real audit records`);
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`Processing ${audits.length} real audit records`);
+      }
       
       // Use the new API function to fetch profiles
       const userIds = Array.from(new Set(audits.map(audit => audit.user_id)));
-      console.log("Fetching profiles for user IDs:", userIds);
+      if (process.env.NODE_ENV === 'development') {
+        console.log("Fetching profiles for user IDs:", userIds);
+      }
       
       const profiles = await getUserProfiles(userIds);
-      console.log(`Retrieved ${profiles.length} user profiles`);
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`Retrieved ${profiles.length} user profiles`);
+      }
 
       // Merge profiles with audits
       auditsWithProfiles = audits.map(audit => {
@@ -139,15 +156,16 @@ export default async function AuditPage() {
               (user.email || userProfile?.email || '') : 
               ''
           }
-        };
-      });
+        };      });
       
-      console.log("Final audits with profiles:", auditsWithProfiles.map(a => ({ 
-        id: a.id, 
-        user_id: a.user_id, 
-        user_name: a.user_profile?.full_name,
-        has_profile: !!a.user_profile
-      })));
+      if (process.env.NODE_ENV === 'development') {
+        console.log("Final audits with profiles:", auditsWithProfiles.map(a => ({ 
+          id: a.id, 
+          user_id: a.user_id, 
+          user_name: a.user_profile?.full_name,
+          has_profile: !!a.user_profile
+        })));
+      }
     }
 
     return (
@@ -169,19 +187,16 @@ export default async function AuditPage() {
                         <FileText className="h-8 w-8 text-white" />
                       </div>
                       <div className="absolute -top-1 -right-1 w-4 h-4 bg-emerald-500 rounded-full border-2 border-white animate-pulse"></div>
-                    </div>
-                    <div>
+                    </div>                    <div>
                       <p className="text-sm font-medium text-slate-600 mb-1">Audit Management</p>
                       <h1 className="text-3xl lg:text-4xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent">
-                        Audit History
+                        Audit Form Responses
                       </h1>
                     </div>
-                  </div>
-                  <p className="text-lg text-slate-600 max-w-2xl">
-                    Track and manage audit records with verification workflow and tenant-based access control.
+                  </div>                  <p className="text-lg text-slate-600 max-w-2xl">
+                    Review audit form responses organized by sections with detailed response data and verification status.
                   </p>
-                  
-                  <div className="flex items-center gap-6 pt-2">
+                    <div className="flex items-center gap-6 pt-2">
                     <div className="flex items-center gap-2 text-sm text-slate-500">
                       <div className="w-2 h-2 bg-emerald-500 rounded-full"></div>
                       <span>System Operational</span>
@@ -192,15 +207,13 @@ export default async function AuditPage() {
                     </div>
                     <div className="flex items-center gap-2 text-sm text-slate-500">
                       <Activity className="h-4 w-4" />
-                      <span>{auditsWithProfiles.length} Records</span>
+                      <span>{auditsWithProfiles.length} Forms</span>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
-          </div>
-
-          {/* Empty State Notice */}
+          </div>          {/* Empty State Notice */}
           {(!audits || audits.length === 0) && (
             <Card className="bg-gradient-to-r from-slate-50 to-gray-50 border border-slate-200 rounded-2xl shadow-lg">
               <div className="p-6">
@@ -209,17 +222,17 @@ export default async function AuditPage() {
                     <FileText className="h-6 w-6 text-slate-600" />
                   </div>
                   <div className="flex-1">
-                    <h3 className="text-lg font-semibold text-slate-900 mb-2">No Audit Records Found</h3>
+                    <h3 className="text-lg font-semibold text-slate-900 mb-2">No Audit Forms Found</h3>
                     <p className="text-slate-700 mb-4">
-                      There are currently no audit records in the database. Audit records will appear here once they are created.
+                      There are currently no audit forms in the database. Audit form responses will appear here once they are created.
                     </p>
                     <div className="bg-white/50 rounded-lg p-4 border border-slate-200">
-                      <h4 className="font-medium text-slate-800 mb-2">Audit Management Features:</h4>
+                      <h4 className="font-medium text-slate-800 mb-2">Audit Form Features:</h4>
                       <ul className="text-sm text-slate-700 space-y-1">
-                        <li>• <strong>Tenant Support:</strong> Audits are associated with specific tenants</li>
-                        <li>• <strong>Verification Workflow:</strong> Audits can be verified, accepted, or rejected by managers</li>
-                        <li>• <strong>Corrective Actions:</strong> Track required actions for failed audits</li>
-                        <li>• <strong>Access Control:</strong> Managers see only audits from their tenant</li>
+                        <li>• <strong>Section-based Responses:</strong> Responses organized by form sections</li>
+                        <li>• <strong>Multi-format Support:</strong> Text, images, arrays, and documents</li>
+                        <li>• <strong>Verification Workflow:</strong> Forms can be verified, accepted, or rejected</li>
+                        <li>• <strong>Tenant Support:</strong> Access control based on organizational structure</li>
                       </ul>
                     </div>
                   </div>
@@ -228,37 +241,9 @@ export default async function AuditPage() {
             </Card>
           )}
 
-          {/* Audits Table */}
+          {/* Audit Form Responses */}
           {auditsWithProfiles.length > 0 && (
-            <Card className="bg-white/90 backdrop-blur-md border-slate-200/50 rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-500 overflow-hidden">
-              <div className="bg-gradient-to-r from-slate-800 via-slate-700 to-slate-800 text-white p-6 relative overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-r from-blue-600/10 via-sky-500/10 to-indigo-600/10"></div>
-                <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-white/5 to-transparent rounded-full -translate-y-16 translate-x-16"></div>
-                
-                <div className="relative z-10 flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <div className="bg-white/20 backdrop-blur-sm p-3 rounded-xl border border-white/30">
-                      <FileText className="h-6 w-6" />
-                    </div>
-                    <div>
-                      <h3 className="text-xl font-bold">Audit Records</h3>
-                      <p className="text-slate-300 text-sm">View and manage audit history</p>
-                    </div>
-                  </div>
-                  <div className="bg-white/10 px-3 py-1 rounded-lg text-sm font-medium">
-                    {auditsWithProfiles.length} Total
-                  </div>
-                </div>
-              </div>
-              
-              <div className="p-6">
-                <AuditHistoryComponent
-                  audits={auditsWithProfiles || []} 
-                  isManager={isManager}
-                  currentUserId={user.id}
-                />
-              </div>
-            </Card>
+            <AuditFormResponses audits={auditsWithProfiles} />
           )}
         </div>
       </DashboardLayout>
@@ -284,16 +269,14 @@ export default async function AuditPage() {
                         <XCircle className="h-8 w-8 text-white" />
                       </div>
                       <div className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full border-2 border-white animate-pulse"></div>
-                    </div>
-                    <div>
+                    </div>                    <div>
                       <p className="text-sm font-medium text-red-600 mb-1">System Alert</p>
                       <h1 className="text-3xl lg:text-4xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent">
-                        Audit History
+                        Audit Form Responses
                       </h1>
                     </div>
-                  </div>
-                  <p className="text-lg text-slate-600 max-w-2xl">
-                    We're experiencing difficulties loading your audit data. Please try refreshing the page or contact support if the issue persists.
+                  </div>                  <p className="text-lg text-slate-600 max-w-2xl">
+                    We're experiencing difficulties loading your audit form data. Please try refreshing the page or contact support if the issue persists.
                   </p>
                   
                   <div className="flex items-center gap-6 pt-2">
