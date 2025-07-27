@@ -27,16 +27,16 @@ export default async function AddUserPage() {
   if (!fullCurrentUserProfile || !['admin', 'manager'].includes(fullCurrentUserProfile.role)) {
     return redirect("/protected");
   }
-    // Fetch tenants based on role
+    // Fetch teams based on role
   let tenants: { id: number; name: string }[];
   if (fullCurrentUserProfile.role === 'admin') {
-    // Admins can assign users to any tenant
+    // Admins can assign users to any team
     tenants = await getAllTenants();
   } else if (fullCurrentUserProfile.role === 'manager') {
-    // Managers can only invite users to their own tenant
+    // Managers can only invite users to their own team
     tenants = fullCurrentUserProfile.tenant_id ? [{
       id: fullCurrentUserProfile.tenant_id,
-      name: fullCurrentUserProfile.tenant?.name || 'Manager Tenant'
+      name: fullCurrentUserProfile.tenant?.name || 'Manager Team'
     }] : [];
   } else {
     tenants = [];
@@ -87,7 +87,7 @@ export default async function AddUserPage() {
                 {/* Pass the action as a prop */}
                 <AddUserForm 
                   action={inviteUser} 
-                  tenants={tenants} 
+                  teams={tenants} 
                   currentUserRole={fullCurrentUserProfile.role}
                 />
               </div>

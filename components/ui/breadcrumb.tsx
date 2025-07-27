@@ -32,6 +32,8 @@ const pathLabels: Record<string, string> = {
   '/protected/invite': 'Invite',
   '/protected/cert': 'Certificate Management',
   '/protected/cert/add': 'Add Certificate',
+  '/protected/tenant': 'Team',
+  '/protected/tenant/add': 'Add Team',
 };
 
 // Dynamic route patterns
@@ -167,6 +169,9 @@ function generateBreadcrumbsFromPath(pathname: string): BreadcrumbItem[] {
         } else if (prevSegment === 'cert' && segment.match(/^[0-9a-f-]+$/)) {
           // This is a certificate ID
           label = 'Certificate Details';
+        } else if (prevSegment === 'tenant' && segment.match(/^[0-9a-f-]+$/)) {
+          // This is a team ID
+          label = 'Team Details';
         } else if (dynamicRouteLabels[segment]) {
           // First check if it's a known dynamic route label
           label = dynamicRouteLabels[segment];

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState } from "react";
 import { CardContent, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -37,25 +37,33 @@ function SubmitButton() {
 
 type ServerAction = (formData: FormData) => Promise<ActionResult>;
 
-interface Tenant {
+interface Team {
   id: number;
   name: string;
 }
 
 interface AddUserFormProps {
   action: ServerAction;
-  tenants: Tenant[];
+  teams: Team[];
   currentUserRole: string;
 }
 
-export default function AddUserForm({ action, tenants, currentUserRole }: AddUserFormProps) {
+export default function AddUserForm({ action, teams, currentUserRole }: AddUserFormProps) {
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
   const [selectedRole, setSelectedRole] = useState(currentUserRole === "manager" ? "user" : "");
+  const [selectedTeamId, setSelectedTeamId] = useState("");
   
   const isAdminRole = selectedRole === "admin";
   const isCurrentUserManager = currentUserRole === "manager";
-  const managerTenantId = isCurrentUserManager && tenants.length === 1 ? tenants[0].id.toString() : "";
+  const managerTeamId = isCurrentUserManager && teams.length === 1 ? teams[0].id.toString() : "";
+  
+  // Set initial team selection for managers
+  React.useEffect(() => {
+    if (isCurrentUserManager && managerTeamId) {
+      setSelectedTeamId(managerTeamId);
+    }
+  }, [isCurrentUserManager, managerTeamId]);
   
   async function clientAction(formData: FormData) {
     setErrorMessage("");
@@ -73,6 +81,8 @@ export default function AddUserForm({ action, tenants, currentUserRole }: AddUse
           form.reset();
           // Reset role to appropriate default
           setSelectedRole(isCurrentUserManager ? "user" : "");
+          // Reset team selection
+          setSelectedTeamId("");
         }
       }
     } catch (error: any) {
@@ -87,8 +97,8 @@ export default function AddUserForm({ action, tenants, currentUserRole }: AddUse
       )}
       
       {/* Hidden tenant input for managers to ensure tenant is submitted */}
-      {isCurrentUserManager && managerTenantId && (
-        <input type="hidden" name="tenant_id" value={managerTenantId} />
+      {isCurrentUserManager && managerTeamId && (
+        <input type="hidden" name="tenant_id" value={managerTeamId} />
       )}
       {/* Success Message */}
       {successMessage && (
@@ -184,16 +194,17 @@ export default function AddUserForm({ action, tenants, currentUserRole }: AddUse
           )}
         </div>
 
-        {/* Tenant Field - Only required for non-admin roles */}
+        {/* Team Field - Only required for non-admin roles */}
         <div className="space-y-3">
           <Label htmlFor="tenant_id" className="text-gray-900 font-semibold text-base">
-            Tenant {!isAdminRole && <span className="text-red-500">*</span>}
+            Team {!isAdminRole && <span className="text-red-500">*</span>}
           </Label>          <select 
             id="tenant_id" 
             name="tenant_id"
             disabled={isAdminRole || isCurrentUserManager}
             required={!isAdminRole && !isCurrentUserManager}
-            value={isAdminRole ? "" : (isCurrentUserManager ? managerTenantId : "")}
+            value={isAdminRole ? "" : (isCurrentUserManager ? managerTeamId : selectedTeamId)}
+            onChange={(e) => setSelectedTeamId(e.target.value)}
             className={`flex h-14 w-full rounded-xl border px-4 py-3 text-base transition-all duration-200 ${
               isAdminRole || isCurrentUserManager
                 ? 'border-gray-200 bg-gray-100 text-gray-600 cursor-not-allowed' 
@@ -202,14 +213,14 @@ export default function AddUserForm({ action, tenants, currentUserRole }: AddUse
           >
             {isAdminRole ? (
               <option value="">Not required for admin users</option>
-            ) : isCurrentUserManager && tenants.length === 1 ? (
-              <option value={tenants[0].id}>{tenants[0].name}</option>
+            ) : isCurrentUserManager && teams.length === 1 ? (
+              <option value={teams[0].id}>{teams[0].name}</option>
             ) : (
               <>
-                <option value="">Select a tenant...</option>
-                {tenants.map((tenant) => (
-                  <option key={tenant.id} value={tenant.id}>
-                    {tenant.name}
+                <option value="">Select a team...</option>
+                {teams.map((team) => (
+                  <option key={team.id} value={team.id}>
+                    {team.name}
                   </option>
                 ))}
               </>
@@ -218,10 +229,10 @@ export default function AddUserForm({ action, tenants, currentUserRole }: AddUse
             <div className="w-1 h-1 bg-blue-500 rounded-full"></div>
             <p>
               {isAdminRole 
-                ? "Admin users don't require a tenant assignment. They have system-wide access." 
+                ? "Admin users don't require a team assignment. They have system-wide access." 
                 : isCurrentUserManager 
-                  ? `Invited users will be assigned to your tenant: ${tenants[0]?.name || 'your tenant'}`
-                  : "Select the organization/tenant this user will belong to."
+                  ? `Invited users will be assigned to your team: ${teams[0]?.name || 'your team'}`
+                  : "Select the organization/team this user will belong to."
               }
             </p>
           </div>

@@ -6,7 +6,7 @@ import Link from "next/link";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Plus, Edit3, Trash2, Folder, ArrowUpRight } from "lucide-react";
 
-export default async function TenantManagementPage() {
+export default async function TeamManagementPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return redirect("/sign-in");
@@ -16,8 +16,8 @@ export default async function TenantManagementPage() {
     return redirect("/protected");
   }
 
-  // Fetch tenants
-  const { data: tenants, error } = await supabase
+  // Fetch teams
+  const { data: teams, error } = await supabase
     .from("tenant")
     .select("id, name")
     .order("id");
@@ -40,14 +40,14 @@ export default async function TenantManagementPage() {
                     </div>
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-slate-600 mb-1">Tenant Management</p>
+                    <p className="text-sm font-medium text-slate-600 mb-1">Team Management</p>
                     <h1 className="text-3xl lg:text-4xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent">
-                      Organization Tenants
+                      Organization Teams
                     </h1>
                   </div>
                 </div>
                 <p className="text-lg text-slate-600 max-w-2xl">
-                  Manage tenants for your organization. Add, edit, or remove tenants as needed.
+                  Manage teams for your organization. Add, edit, or remove teams as needed.
                 </p>
                 <div className="flex items-center gap-6 pt-2">
                   <div className="flex items-center gap-2 text-sm text-slate-500">
@@ -67,8 +67,8 @@ export default async function TenantManagementPage() {
                 >
                   <Plus className="h-6 w-6" />
                   <div className="text-left">
-                    <p className="text-sm font-medium">Add Tenant</p>
-                    <p className="text-xs text-sky-100">Create new tenant</p>
+                    <p className="text-sm font-medium">Add Team</p>
+                    <p className="text-xs text-sky-100">Create new team</p>
                   </div>
                 </Link>
               </div>
@@ -85,12 +85,12 @@ export default async function TenantManagementPage() {
                   <Folder className="h-6 w-6" />
                 </div>
                 <div>
-                  <h3 className="text-xl font-bold">Tenants</h3>
-                  <p className="text-slate-300 text-sm">Manage tenants for your organization</p>
+                  <h3 className="text-xl font-bold">Teams</h3>
+                  <p className="text-slate-300 text-sm">Manage teams for your organization</p>
                 </div>
               </div>
               <div className="bg-white/10 px-3 py-1 rounded-lg text-sm font-medium">
-                {tenants?.length || 0} Total
+                {teams?.length || 0} Total
               </div>
             </div>
           </div>
@@ -104,15 +104,14 @@ export default async function TenantManagementPage() {
                     <th className="text-left p-4 font-semibold text-slate-700">Actions</th>
                   </tr>
                 </thead>
-                <tbody>
-                  {tenants && tenants.length > 0 ? tenants.map((tenant: any) => (
-                    <tr key={tenant.id} className="group border-b border-slate-100 hover:bg-gradient-to-r hover:from-slate-50 hover:to-sky-50 transition-all duration-300">
-                      <td className="p-4">{tenant.id}</td>
-                      <td className="p-4">{tenant.name}</td>
+                <tbody>{teams && teams.length > 0 ? teams.map((team: any) => (
+                    <tr key={team.id} className="group border-b border-slate-100 hover:bg-gradient-to-r hover:from-slate-50 hover:to-sky-50 transition-all duration-300">
+                      <td className="p-4">{team.id}</td>
+                      <td className="p-4">{team.name}</td>
                       <td className="p-4">
                         <div className="flex gap-2">
                           <Link
-                            href={`/protected/tenant/${tenant.id}/edit`}
+                            href={`/protected/tenant/${team.id}/edit`}
                             className="group/btn flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-sky-100 to-blue-100 text-sky-700 text-sm font-medium rounded-xl hover:from-sky-200 hover:to-blue-200 hover:shadow-md transition-all duration-300 border border-sky-200"
                           >
                             <Edit3 className="h-4 w-4" />
@@ -120,7 +119,7 @@ export default async function TenantManagementPage() {
                             <ArrowUpRight className="h-3 w-3 opacity-0 group-hover/btn:opacity-100 transition-opacity" />
                           </Link>
                           <Link
-                            href={`/protected/tenant/${tenant.id}/delete`}
+                            href={`/protected/tenant/${team.id}/delete`}
                             className="group/btn flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-red-100 to-rose-100 text-red-700 text-sm font-medium rounded-xl hover:from-red-200 hover:to-rose-200 hover:shadow-md transition-all duration-300 border border-red-200"
                           >
                             <Trash2 className="h-4 w-4" />
@@ -131,7 +130,7 @@ export default async function TenantManagementPage() {
                     </tr>
                   )) : (
                     <tr>
-                      <td colSpan={3} className="p-4 text-center text-gray-400">No tenants found.</td>
+                      <td colSpan={3} className="p-4 text-center text-gray-400">No teams found.</td>
                     </tr>
                   )}
                 </tbody>

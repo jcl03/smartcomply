@@ -8,7 +8,7 @@ import Link from "next/link";
 import { createClient } from "@/utils/supabase/client";
 import { useRouter } from "next/navigation";
 
-export default function AddTenantPage() {
+export default function AddTeamPage() {
   const supabase = createClient();
   const router = useRouter();
   const [error, setError] = useState("");
@@ -24,7 +24,7 @@ export default function AddTenantPage() {
     const formData = new FormData(form);
     const name = formData.get("name") as string;
     if (!name) {
-      setError("Tenant name is required.");
+      setError("Team name is required.");
       inputRef.current?.focus();
       return;
     }
@@ -47,9 +47,9 @@ export default function AddTenantPage() {
                 <FolderPlus className="h-8 w-8 text-white" />
               </div>
               <div className="flex-1">
-                <h1 className="text-4xl font-bold text-white mb-3">Add New Tenant</h1>
+                <h1 className="text-4xl font-bold text-white mb-3">Add New Team</h1>
                 <p className="text-white/90 text-lg leading-relaxed max-w-2xl">
-                  Register a new tenant for your organization. Each tenant represents a separate entity or client.
+                  Register a new team for your organization. Each team represents a separate entity or client.
                 </p>
               </div>
             </div>
@@ -58,7 +58,7 @@ export default function AddTenantPage() {
               className="flex items-center gap-2 px-6 py-3 rounded-xl bg-white/20 backdrop-blur-sm text-white hover:bg-white/30 transition-all duration-200 font-medium shadow-sm hover:shadow-md"
             >
               <ArrowLeft className="h-4 w-4" />
-              Back to Tenant Management
+              Back to Team Management
             </Link>
           </div>
         </div>
@@ -73,8 +73,8 @@ export default function AddTenantPage() {
                     <Shield className="h-6 w-6 text-blue-600" />
                   </div>
                   <div>
-                    <h2 className="text-xl font-semibold text-gray-900">Tenant Configuration</h2>
-                    <p className="text-gray-600">Configure tenant details</p>
+                    <h2 className="text-xl font-semibold text-gray-900">Team Configuration</h2>
+                    <p className="text-gray-600">Configure team details</p>
                   </div>
                 </div>
               </div>
@@ -89,7 +89,7 @@ export default function AddTenantPage() {
                       required
                       ref={inputRef}
                       className="mt-1 block w-full rounded-md border-2 border-blue-400 shadow-lg focus:border-blue-600 focus:ring-2 focus:ring-blue-200 bg-white text-gray-900 text-lg px-4 py-3 transition-all duration-200 placeholder-gray-400"
-                      placeholder="Enter tenant name..."
+                      placeholder="Enter team name..."
                     />
                   </div>
                   {error && <div className="text-red-600 font-medium">{error}</div>}
@@ -97,7 +97,7 @@ export default function AddTenantPage() {
                     type="submit"
                     className="bg-blue-600 text-white px-6 py-3 rounded-xl font-semibold text-lg shadow-md hover:bg-blue-700 transition-all duration-200"
                   >
-                    Add Tenant
+                    Add Team
                   </button>
                 </form>
               </div>
@@ -113,7 +113,7 @@ export default function AddTenantPage() {
                     <Shield className="h-5 w-5 text-blue-600" />
                   </div>
                   <div>
-                    <h3 className="text-lg font-semibold text-gray-900">Tenant Registration Steps</h3>
+                    <h3 className="text-lg font-semibold text-gray-900">Team Registration Steps</h3>
                     <p className="text-gray-600 text-sm">Step-by-step overview</p>
                   </div>
                 </div>
@@ -124,21 +124,21 @@ export default function AddTenantPage() {
                     <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-full flex items-center justify-center text-sm font-semibold flex-shrink-0 shadow-sm">1</div>
                     <div className="flex-1">
                       <p className="font-semibold text-gray-900 mb-1">Enter Details</p>
-                      <p className="text-gray-600 text-sm leading-relaxed">Fill in the tenant name and submit the form</p>
+                      <p className="text-gray-600 text-sm leading-relaxed">Fill in the team name and submit the form</p>
                     </div>
                   </div>
                   <div className="flex items-start gap-4">
                     <div className="w-8 h-8 bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-full flex items-center justify-center text-sm font-semibold flex-shrink-0 shadow-sm">2</div>
                     <div className="flex-1">
-                      <p className="font-semibold text-gray-900 mb-1">Tenant Created</p>
-                      <p className="text-gray-600 text-sm leading-relaxed">Tenant is added to the system and visible in the list</p>
+                      <p className="font-semibold text-gray-900 mb-1">Team Created</p>
+                      <p className="text-gray-600 text-sm leading-relaxed">Team is added to the system and visible in the list</p>
                     </div>
                   </div>
                   <div className="flex items-start gap-4">
                     <div className="w-8 h-8 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-full flex items-center justify-center text-sm font-semibold flex-shrink-0 shadow-sm">3</div>
                     <div className="flex-1">
-                      <p className="font-semibold text-gray-900 mb-1">Manage Tenant</p>
-                      <p className="text-gray-600 text-sm leading-relaxed">Edit or remove tenants as needed</p>
+                      <p className="font-semibold text-gray-900 mb-1">Manage Team</p>
+                      <p className="text-gray-600 text-sm leading-relaxed">Edit or remove teams as needed</p>
                     </div>
                   </div>
                 </div>

@@ -229,11 +229,12 @@ export default async function UserManagementPage() {
           
           <div className="p-6">
             <div className="overflow-x-auto">
-              <table className="w-full">                <thead className="bg-gradient-to-r from-slate-50 to-sky-50 border-b border-slate-200">
+              <table className="w-full">
+                <thead className="bg-gradient-to-r from-slate-50 to-sky-50 border-b border-slate-200">
                   <tr>
                     <th className="text-left p-4 font-semibold text-slate-700">User</th>
                     <th className="text-left p-4 font-semibold text-slate-700">Role</th>
-                    <th className="text-left p-4 font-semibold text-slate-700">Tenant</th>
+                    <th className="text-left p-4 font-semibold text-slate-700">Team</th>
                     <th className="text-left p-4 font-semibold text-slate-700">Status</th>
                     <th className="text-left p-4 font-semibold text-slate-700">Member Since</th>
                     <th className="text-left p-4 font-semibold text-slate-700">Last Active</th>
@@ -294,7 +295,7 @@ export default async function UserManagementPage() {
                           ) : (
                             <span className="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-lg border bg-gradient-to-r from-yellow-100 to-amber-100 text-yellow-700 border-yellow-200">
                               <div className="w-2 h-2 rounded-full bg-yellow-500"></div>
-                              No Tenant
+                              No Team
                             </span>
                           )}
                         </div>

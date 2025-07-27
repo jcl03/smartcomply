@@ -31,14 +31,14 @@ export default async function DeleteTenantPage({ params }: { params: Promise<{ i
   return (
     <DashboardLayout userProfile={currentUserProfile}>
       <div className="max-w-xl mx-auto p-8">
-        <h1 className="text-2xl font-bold mb-6">Delete Tenant</h1>
-        <p className="mb-4">Are you sure you want to delete tenant <span className="font-semibold">{tenant.name}</span>?</p>
+        <h1 className="text-2xl font-bold mb-6">Delete Team</h1>
+        <p className="mb-4">Are you sure you want to delete team <span className="font-semibold">{tenant.name}</span>?</p>
         <form action={handleDeleteTenant}>
           <button
             type="submit"
             className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700"
           >
-            Delete Tenant
+            Delete Team
           </button>
         </form>
       </div>

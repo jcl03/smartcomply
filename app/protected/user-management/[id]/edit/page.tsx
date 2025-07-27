@@ -204,11 +204,11 @@ export default async function EditUserPage({ params }: { params: Promise<{ id: s
               <div className="space-y-2">
                 <div className="flex items-center gap-2 mb-1">
                   <Settings className="h-4 w-4 text-sky-600" />
-                  <Label className="text-sm font-medium text-sky-700">Tenant</Label>
+                  <Label className="text-sm font-medium text-sky-700">Team</Label>
                 </div>
                 <div className="bg-sky-50/50 p-3 rounded-lg border border-sky-200">
                   <p className="font-semibold text-sky-900">
-                    {profileWithTenant.tenant ? profileWithTenant.tenant.name : 'No Tenant Assigned'}
+                    {profileWithTenant.tenant ? profileWithTenant.tenant.name : 'No Team Assigned'}
                   </p>
                 </div>
               </div>
@@ -267,7 +267,7 @@ export default async function EditUserPage({ params }: { params: Promise<{ id: s
                 tenants={tenants}
               />
             )}
-          </CardContent>        </Card>        {/* Tenant Management Card - Only show for admin users and non-admin target users */}
+          </CardContent>        </Card>        {/* Team Management Card - Only show for admin users and non-admin target users */}
         {fullCurrentUserProfile.role === 'admin' && profileWithTenant.role !== 'admin' && (
           <Card className="bg-white/80 backdrop-blur-sm border-indigo-200 shadow-md hover:shadow-lg transition-all duration-300">
             <CardHeader className="bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-t-xl">
@@ -275,7 +275,7 @@ export default async function EditUserPage({ params }: { params: Promise<{ id: s
                 <div className="bg-white/20 p-2 rounded-lg">
                   <Settings className="h-5 w-5" />
                 </div>
-                <CardTitle className="text-lg">Tenant Management</CardTitle>
+                <CardTitle className="text-lg">Team Management</CardTitle>
               </div>
             </CardHeader>
             <CardContent className="p-6">
